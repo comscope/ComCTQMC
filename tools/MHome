@@ -1,0 +1,29 @@
+include ../include/msource/MakefileHome.in
+
+HEADERS = ../include/mpi/Utilities.h ../include/measurements/Measurements.h ../include/io/Vector.h ../include/io/Matrix.h ../include/JsonX.h  
+
+all:  READRFUNC READCFUNC READALLCFUNC
+
+READRFUNC:  ReadRFunc.C $(HEADERS)
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@  ReadRFunc.C $(LDFLAGS) $(LIBS)
+
+READCFUNC:  ReadCFunc.C $(HEADERS)
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@  ReadCFunc.C $(LDFLAGS) $(LIBS)
+
+READALLCFUNC:  ReadAllCFunc.C $(HEADERS)
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@  ReadAllCFunc.C $(LDFLAGS) $(LIBS)
+
+READALLCFUNCERROR:  ReadAllCFuncError.C $(HEADERS)
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@  ReadAllCFuncError.C $(LDFLAGS) $(LIBS)
+
+SUMSUSC:  SumSusc.C $(HEADERS)
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@  SumSusc.C $(LDFLAGS) $(LIBS)
+
+clean:
+	rm -f *.o READRFUNC READCFUNC SUMSUSC
+
+
+
+
+
+ 
