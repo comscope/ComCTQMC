@@ -16,11 +16,11 @@ namespace io {
         inline static std::string name() { return name(T());};
         
         Tensor() = default;
-        Tensor(std::size_t I, std::size_t J, std::size_t K, std::size_t L, T value = .0) : I_(I), J_(J), K_(K), L_(L), data_(I_*J_*K_*L_, value) {};
+        Tensor(std::size_t I, std::size_t J, std::size_t K, std::size_t L) : I_(I), J_(J), K_(K), L_(L) {};
         Tensor(Tensor const&) = default;
-        Tensor(Tensor&& other) noexcept : I_(other.I_), J_(other.J_),K_(other.K_), L_(other.L_), data_(std::move(other.data_)) { other.I_ = other.J_ = other.K_ = other.L_ = 0;};
+        Tensor(Tensor&& other) noexcept : I_(other.I_), J_(other.J_),K_(other.K_), L_(other.L_), ijkl_(std::move(other.ijkl_)), data_(std::move(other.data_)), entries_(std::move(other.entries_)) { other.I_ = other.J_ = other.K_ = other.L_ = 0;};
         Tensor& operator=(Tensor const&) = default;
-        Tensor& operator=(Tensor&& other) { I_ = other.I_; J_ = other.J_; K_ = other.K_; L_ = other.L_; other.I_ = other.J_ = other.K_ = other.L_ = 0; data_ = std::move(other.data_);  return *this;};
+        Tensor& operator=(Tensor&& other) { I_ = other.I_; J_ = other.J_; K_ = other.K_; L_ = other.L_; other.I_ = other.J_ = other.K_ = other.L_ = 0; data_ = std::move(other.data_); entries_ = std::move(other.entries_); ijkl_ = std::move(other.ijkl_);  return *this;};
         ~Tensor() = default;
 
         int const& I() const { return I_;};
@@ -30,16 +30,58 @@ namespace io {
         
         T* data() { return data_.data();};
         T const* data() const { return data_.data();};
+        std::vector<std::vector<int>> const& ijkl() const { return ijkl_;}
         
-        T& operator()(int i, int j, int k, int l) { return data_.at(i + j*I_ + k*I_*J_ + l*I_*J_*K_);};
-        T const& operator()(int i, int j, int k, int l) const { return data_.at(i + j*I_ + k*I_*J_ + l*I_*J_*K_);};
+        
+        T& operator()(int const i, int const j, int const k, int const l){ return this->operator()(this->index(i,j,k,l)); }
+        T const& operator()(int const i, int const j, int const k, int const l) const { return this->operator()(this->index(i,j,k,l)); }
+        
+        T const at(int const i, int const j, int const k, int const l) const { return this->at(this->index(i,j,k,l)); }
+        
+        std::string const& entry(int const i, int const j, int const k, int const l) const { return this->entry(this->index(i,j,k,l)); }
+        bool const& is(int const i, int const j, int const k, int const l) const { return this->is(this->index(i,j,k,l)); }
+        
+        
+        inline T& operator()(int const i){
+            if (data_.find(i) == data_.end())
+                throw std::runtime_error("Cannot update element of " + this->name() + " that does not yet exist\n");
+            return data_.at(i);
+        };
+        inline T const& operator()(int i) const {
+            if (data_.find(i) != data_.end())
+                return data_.at(i);
+            else
+                return zero;
+        };
+        
+        inline T const at(int i) const {
+            if (data_.find(i) != data_.end())
+                return data_.at(i);
+            else
+                return zero;
+        };
+        
+        inline std::string const& entry(int i) const {
+            if (entries_.find(i) != entries_.end())
+                return entries_.at(i);
+            else
+                return empty_entry;
+        };
+                              
+
+        inline bool is(int i) const { return (data_.find(i) == data_.end()) ? false : true; }
+
+        inline void emplace (int const i, int const j, int const k, int const l, std::string const& entry, T const v){
+            
+            ijkl_.push_back(std::vector<int>({this->index(i,j,k,l),i,j,k,l}));
+            this->emplace(this->index(i,j,k,l),entry,v);
+        }
         
         Tensor& resize(int I, int J, int K, int L, T value = .0) {
-            I_ = I; J_ = J; K_ = K; L_ = L; data_.resize(I_*J_*K_*L_, value);
             return *this;
         };
         Tensor& conj() {
-            Tensor temp; temp.data_.resize(I_*J_*K_*L_);
+            Tensor temp; temp.data_.resize(I_*J_*K_*L_); temp.entries_.resize(I_*J_*K_*L_);
             temp.I_ = J_; temp.J_ = I_; temp.K_ = K_; temp.L_ = L_;
             
             for(int i = 0; i < I_; ++i)
@@ -51,6 +93,7 @@ namespace io {
             return *this = std::move(temp);
         };
         
+        /*
         void read(jsx::value const& source) {
             I_ = source(0).int64();
             J_ = source(1).int64();
@@ -69,16 +112,28 @@ namespace io {
         };
         bool& b64() const {
             return data_.b64();
-        };
+        };*/
         
     private:
-        int I_ = 0, J_ = 0, K_ = 0, L_ = 0;;
-        Vector<T> data_;
+        int I_ = 0, J_ = 0, K_ = 0, L_ = 0;
+        std::vector<std::vector<int>> ijkl_;
+        std::map<int,T> data_;
+        std::map<int,std::string> entries_;
 
+        inline int index(int const i, int const j, int const k, int const l) const { return i + j*I_ + k*I_*J_ + l*I_*J_*K_;}
+        inline void emplace (int const i, std::string const& entry, T const v){
+            entries_.emplace(i,entry);
+            data_.emplace(i,v);
+        }
+        
+        T const zero = 0.;
+        std::string const empty_entry = "";
+        
         inline static std::string name(double const&) { return "io::rtens";};
         inline static std::string name(std::complex<double> const&) { return "io::ctens";};
+        
     };
-
+    
     
     typedef Tensor<double> rtens;
     typedef Tensor<std::complex<double>> ctens;

@@ -31,17 +31,24 @@ namespace obs {
             ~Function() = default;
     
             void operator()(ut::KeyType key) {
-                constexpr double p = partType == PartType::Fermion ? -1. : 1.;
                 
+                bool antisymmetrize = false;
                 if(key < 0) {
-                    data_[0] =  p;  data_[1] = p*((2.*key)/ut::KeyMax + 1.);
-                } else {
-                    data_[0] = 1.;  data_[1] =   ((2.*key)/ut::KeyMax - 1.);
+                    key += ut::KeyMax;
+                    antisymmetrize = true;
                 }
+                
+                data_[0] = 1.;
+                data_[1] = ((2.*key)/ut::KeyMax - 1.);
                 
                 double const x = data_[1];
                 for(std::size_t l = 2; l < data_.size(); ++l)
                     data_[l] = ((2*l - 1)*x*data_[l - 1] - (l - 1)*data_[l - 2])/l;
+                
+                if (antisymmetrize){
+                    constexpr double p = partType == PartType::Fermion ? -1. : 1.;
+                    for (auto& x : data_) x*=p;
+                }
             };
             
             std::vector<double> const& operator()() {

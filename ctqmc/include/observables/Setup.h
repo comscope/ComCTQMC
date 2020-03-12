@@ -18,11 +18,11 @@ namespace obs {
         void operator()(ut::wrap<W> w, jsx::value const& jParams, data::Data<Value>& data, Observables<Value>& observables) const {
             
             if(jParams.is(W::name())) {
-                std::cout << "Begin setting up " + W::name() + " observables" << std::endl;
+                mpi::cout << "Begin setting up " + W::name() + " observables" << std::endl;
                 
                 setup_worm_obs<Mode>(jParams, data, observables[get_index<W>::value], w);
                 
-                std::cout << "End setting up " + W::name() + " observables" << std::endl;
+                mpi::cout << "End setting up " + W::name() + " observables" << std::endl;
             }
             
         }
