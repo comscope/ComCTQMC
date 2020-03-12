@@ -166,7 +166,7 @@ namespace obs {
             
             void add(Value const sign, cfg::FermionicTime const& op1, cfg::FermionicTime const& op2, cfg::BosonicTime const& op3) {
                 fermion_(op1.key() - op2.key());
-                boson_(op3.key() - op2.key());
+                boson_(op2.key() - op3.key());
                 
                 auto data = data_.data();
                 for(auto b : boson_())
