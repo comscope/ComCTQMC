@@ -47,6 +47,17 @@ namespace io {
             return *this = std::move(temp);
         };
         
+        Matrix conj() const {
+            Matrix temp; temp.data_.resize(I_*J_);
+            temp.I_ = J_; temp.J_ = I_;
+            
+            for(int i = 0; i < I_; ++i)
+                for(int j = 0; j < J_; ++j)
+                    temp(j, i) = ut::conj(operator()(i, j));
+            
+            return temp;
+        };
+        
         void read(jsx::value const& source) {
             I_ = source(0).int64();
             J_ = source(1).int64();

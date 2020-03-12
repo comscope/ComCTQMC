@@ -20,7 +20,7 @@ namespace evalsim {
         
         // catch worm-evalsims that are not yet implemented
         template<typename Value, typename W>
-        jsx::value evalsim(ut::wrap<W>, jsx::value const& jParams, jsx::value const& jMeasurements, jsx::value const& jPartition, jsx::value& jObservables) {
+        jsx::value evalsim(ut::wrap<W>, jsx::value const& jParams, jsx::value const& jMeasurements, jsx::value const& jPartition, jsx::value const& jObservables) {
             throw std::runtime_error("evalsim for " + W::name() + " worm not implemented");
         }
         
@@ -91,7 +91,7 @@ namespace evalsim {
                 std::cout << "End evaluating " + W::name() + " worm measurements" << std::endl;
             }
         }
-        void operator()(ut::wrap<cfg::partition::Worm> w, jsx::value const& jParams, jsx::value const& jMeasurements, jsx::value& jObservables) const {
+        void operator()(ut::wrap<cfg::partition::Worm> w, jsx::value const& jParams, jsx::value const& jMeasurements, jsx::value const& jObservables) const {
         };
     };
     
@@ -122,8 +122,12 @@ namespace evalsim {
         
         cfg::for_each_type<cfg::Worm>::apply(worm_clean_functor<Value>(), jParams, jMeasurements);
         
-        
         cfg::for_each_type<cfg::Worm>::apply(worm_evalsim_functor<Value>(), jParams, jMeasurements, jObservables);
+        
+        if (jParams.is("kernels")){
+            jObservables["kernels"] = worm::evaluateKernels<Value>(jParams,jObservables);
+            jObservables["Asymptotic Full Vertex"] = worm::evaluateFullVertexFromKernels<Value>(jParams,jObservables);
+        }
         
         
         return jObservables;
