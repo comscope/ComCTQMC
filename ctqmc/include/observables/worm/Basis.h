@@ -90,7 +90,7 @@ namespace obs {
             void add(Value const sign, cfg::FermionicTime const& op1, cfg::FermionicTime const& op2, cfg::FermionicTime const& op3, cfg::FermionicTime const& op4) {
                 fermion12_(op1.key() - op2.key());
                 fermion34_(op3.key() - op4.key());
-                boson32_(op3.key() - op2.key());
+                boson32_(op2.key() - op3.key());
                 
                 auto data = data_.data();
                 for(auto b32 : boson32_())
