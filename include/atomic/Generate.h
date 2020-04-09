@@ -333,9 +333,9 @@ namespace ga {
 
         jHloc["interaction"] = get_observable<Order::normal>(Tensor<Value>(hloc, typename Tensor<Value>::Interaction()), blockStates);
         transform<Value>(jHloc("transformation"), jHloc("interaction"));
-
+        
         jHloc["filling"] = get_sector_qn(blockStates, std::vector<double>(hloc.N(), 1.));
-
+        
         io::Matrix<Value> one_body(hloc.N(), hloc.N()); one_body.b64() = b64;
         for(int fDagger = 0; fDagger < hloc.N(); ++fDagger)
             for(int f = 0; f < hloc.N(); ++f)
@@ -356,7 +356,7 @@ namespace ga {
         for(auto& jBlock : jHloc("eigen values").array())   jsx::at<io::rvec>(jBlock).b64() = b64;
         for(auto& jBlock : jHloc("transformation").array()) jsx::at<io::Matrix<Value>>(jBlock("matrix")).b64() = b64;
         for(auto& jBlock : jHloc("interaction").array())    jsx::at<io::Matrix<Value>>(jBlock("matrix")).b64() = b64;
-
+        
         return jHloc;
     };
     

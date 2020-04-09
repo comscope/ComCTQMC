@@ -29,7 +29,6 @@ namespace mc {
     {
         params::complete_impurity<Value>(jParams);
         
-        
         data::Data<Value> data(jParams, Mode());
         data::setup_data<Mode>(jParams, data);
         

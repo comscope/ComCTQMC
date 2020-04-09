@@ -176,7 +176,7 @@ namespace meas {
         
         for(auto& jWorm : jIn.object()) {
             if (jWorm.first==pName){
-                reduce(jOut[jWorm.first], 1., jWorm.second, E(), b64);
+                reduce(jOut[jWorm.first], pSteps/pEta/signxZp, jWorm.second, E(), b64);
                 jOut["WL"][jWorm.first][pSpec]["steps"] = pSteps;
                 jOut["WL"][jWorm.first][pSpec]["eta"] = pEta;
             } else {

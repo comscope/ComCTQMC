@@ -156,13 +156,24 @@ namespace evalsim {
                 jsx::value const jHybMatrix = jParams("hybridisation")("matrix");
                 
                 std::vector<io::cmat> selfenergy(green.size(), io::cmat(jHybMatrix.size(), jHybMatrix.size()));
+                std::vector<io::cmat> weiss(green.size(), io::cmat(jHybMatrix.size(), jHybMatrix.size()));
+                
+                for(std::size_t n = 0; n < green.size(); ++n)
+                    for(std::size_t i = 0; i < jHybMatrix.size(); ++i){
+                        for(std::size_t j = 0; j < jHybMatrix.size(); ++j){
+                            if (jHybMatrix(i)(j).string() != "")
+                                weiss[n](i,j) = 1.0/((i == j ? iomega(n) + mu : .0) - oneBody(i, j) - hyb[n](i, j));
+                            
+                        }
+                    }
                 
                 for(std::size_t n = 0; n < green.size(); ++n) {
                     io::cmat green_inv = linalg::inv(green[n]);
+                    io::cmat weiss_inv = linalg::inv(weiss[n]);
                     
                     for(std::size_t i = 0; i < jHybMatrix.size(); ++i)
                         for(std::size_t j = 0; j < jHybMatrix.size(); ++j)
-                            selfenergy[n](i, j) = (i == j ? iomega(n) + mu : .0) - oneBody(i, j) - hyb[n](i, j) - green_inv(i, j);
+                            selfenergy[n](i, j) = weiss_inv(i,j) - green_inv(i, j);
                 }
                 
                 return selfenergy;

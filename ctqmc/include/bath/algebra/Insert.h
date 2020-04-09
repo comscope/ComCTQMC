@@ -28,7 +28,7 @@ namespace bath {
         };
         
         void add(Insert upd,  Bath<Value> const& bath, Hyb<Value> const& hyb) {
-            if(guard_) throw std::runtime_error("bath::Update<Insert>: multi-insert not implemented");
+            if(guard_) throw std::runtime_error("bath::Update<Insert>: use multi-erase, not multiple erases");
             
             int const N = bath.opsL_.size();
             

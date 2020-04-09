@@ -127,7 +127,8 @@ namespace evalsim {
                 
                 for(std::size_t i = 0; i < jMatrix.size(); ++i)
                     for(std::size_t j = 0; j < jMatrix.size(); ++j) {
-                        auto const entry = std::to_string(2*i)+"_"+std::to_string(2*j+1);
+                        //auto const entry = std::to_string(2*i)+"_"+std::to_string(2*j+1);
+                        auto const entry = jMatrix(i)(j).string();
                         
                         if (std::abs(matrix(i,j))) {
                             if(!temp.count(entry))
@@ -247,6 +248,7 @@ namespace evalsim {
                 jsx::value jFunction;
                 
                 std::map<std::string, io::cvec> functions = get_function_entries(functionsMatrix, jHybMatrix);
+                
                 for(auto& function : functions){
                     jFunction[function.first]["function"] = std::move(function.second);
                 }
