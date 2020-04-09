@@ -54,7 +54,7 @@ namespace evalsim {
             
             std::cout << "OK" << std::endl;
             
-            
+            /*
             std::cout << "Calculating green moments ... " << std::flush;
             
             std::vector<io::Matrix<Value>> greenMoments = func::green::compute_green_moments<Value>(jParams, hybMoments, jPartition, jObservables("partition")("scalar"));
@@ -86,6 +86,14 @@ namespace evalsim {
             jObservablesOut["green"] = func::write_functions(jParams, jHybMatrix, green, greenMoments);
             
             std::cout << "Ok" << std::endl;
+             */
+            
+            
+            
+            jsx::value jObservablesOut;
+            jObservablesOut["self-energy"] =  func::write_functions<Value>(jParams, jHybMatrix, self);
+            jObservablesOut["green"] =  func::write_functions<Value>(jParams, jHybMatrix, green);
+            
             
             return jObservablesOut;
         }

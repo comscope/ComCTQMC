@@ -77,8 +77,10 @@ extern "C" {
     void zgemv_(char const*, int const*, int const*, ut::complex const*, ut::complex const*, int const*, ut::complex const*, int const*, ut::complex const*, ut::complex*, int const*);
     void zgemm_(char const*, char const*, int const*, int const*, int const*, const ut::complex*, const ut::complex*, int const*, const ut::complex*, int const*, const ut::complex*, ut::complex*, int const*);
     void zheev_(char const*, char const*, int const*, ut::complex*, int const* lda, double*, ut::complex*, int*, double*, int*);
+    void zheevd_(char const*, char const*, int const*, ut::complex*, int const*, double*, ut::complex*, int*, double*, int*, int*, int*, int*);
     void zgesv_(int const*, int const*, ut::complex*, int const*, int*, ut::complex*, int const*, int*);
     void zgesvd_(char const*, char const*, int const*, int const*, ut::complex*, int const*, double*, ut::complex*, int const*, ut::complex*, int const*, ut::complex*, int const*, double*, int*);
+    void zgesdd_(char const*, int const*, int const*, ut::complex*, int const*, double*, ut::complex*, int const*, ut::complex*, int const*, ut::complex*, int const*, double*, int*, int*);
 }
 
 
@@ -134,8 +136,12 @@ inline void gemv(const char* trans, int const* m, int const* n, ut::complex cons
 inline void gemm(char const* transa, char const* transb, int const* m, int const* n, int const* k, ut::complex const* alpha, ut::complex const* a, int const* lda, ut::complex const* b, int const* ldb, ut::complex const* beta, ut::complex* c, int const* ldc) {
     zgemm_(transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
 }
+
 inline void heev(char const* jobz, char const* uplo, int const* n, ut::complex* a, int const* lda, double* w, ut::complex* work, int* lwork, double* rwork, int* info) {
     zheev_(jobz, uplo, n, a, lda, w, work, lwork, rwork, info);
+}
+inline void heevd(char const* jobz, char const* uplo, int const* n, ut::complex* a, int const* lda, double* w, ut::complex* work, int* lwork, double* rwork, int* lrwork, int* iwork, int* liwork, int* info) {
+    zheevd_(jobz, uplo, n, a, lda, w, work, lwork, rwork, lrwork,iwork, liwork, info);
 }
 inline void gesv(int const* n, int const* nrhs, ut::complex* a, int const* lda, int* ipiv, ut::complex* b, int const* ldb, int* info) {
     zgesv_(n, nrhs, a, lda, ipiv, b, ldb, info);

@@ -50,9 +50,9 @@ namespace bath {
     struct Matrix {
         Matrix() = delete;
         explicit Matrix(int dim) : dim_(dim), data_(dim_*dim_) {};
-        Matrix(Matrix const&) = delete;
+        Matrix(Matrix const&) = default;
         Matrix(Matrix&&) = default;
-        Matrix& operator=(Matrix const&) = delete;
+        Matrix& operator=(Matrix const&) = default;
         Matrix& operator=(Matrix&&) = default;
         ~Matrix() = default;
         
@@ -83,15 +83,45 @@ namespace bath {
         int flavor_;
         mutable Value bulla_;
     };
-
+/*
+ std::vector<Operator<Value>> opsL_;
+ std::vector<Operator<Value>> opsR_;
+ std::map<ut::KeyType, int> posL_;
+ std::map<ut::KeyType, int> posR_;
+ */
     
+
+
     template<typename Value>
     struct Bath {
 		Bath() : det_(1.), B_(0) {};
-        Bath(Bath const& bath) = delete;
-        Bath(Bath&& bath) = delete;
-        Bath& operator=(Bath const& bath) = delete;
-        Bath& operator=(Bath&& bath) = delete;
+        
+        //do I need to bring the update pointer along? seems unlikely.
+        Bath(Bath const& bath) :
+        opsL_(bath.opsL_), opsR_(bath.opsR_),
+        posL_(bath.posL_), posR_(bath.posR_),
+        det_(bath.det_), B_(bath.B_){};
+        
+        Bath(Bath&& bath) :
+        opsL_(std::move(bath.opsL_)), opsR_(std::move(bath.opsR_)),
+        posL_(std::move(bath.posL_)), posR_(std::move(bath.posR_)),
+        det_(std::move(bath.det_)), B_(std::move(bath.B_)){};
+        
+        
+        Bath& operator=(Bath const& bath){
+            opsL_ = bath.opsL_; opsR_ = bath.opsR_;
+            posL_ = bath.posL_; posR_ = bath.posR_;
+            det_ = bath.det_; B_ = bath.B_;
+            return *this;
+            
+        }
+        Bath& operator=(Bath&& bath){
+            opsL_ = std::move(bath.opsL_); opsR_ = std::move(bath.opsR_);
+            posL_ = std::move(bath.posL_); posR_ = std::move(bath.posR_);
+            det_ = std::move(bath.det_); B_ = std::move(bath.B_);
+            return *this;
+        }
+        
         ~Bath() = default;
 
 		std::vector<Operator<Value>> const& opsL() const { return opsL_;};
@@ -102,6 +132,26 @@ namespace bath {
         };
         void insertR(ut::KeyType key, int flavor) {
             posR_[key] = opsR_.size(); opsR_.push_back(Operator<Value>(key, flavor));
+        };
+        
+        int eraseL(ut::KeyType key) {
+            int sign = 1;
+            auto const itL = posL_.find(key); auto const posL = itL->second;
+            if(posL != opsL_.size() - 1)
+                sign*=-1;
+            posL_[opsL_.back().key()] = posL; opsL_[posL] = opsL_.back();
+            posL_.erase(itL); opsL_.pop_back();
+            return sign;
+        };
+        
+        int eraseR(ut::KeyType key) {
+            int sign = 1;
+            auto const itR = posR_.find(key); auto const posR = itR->second;
+            if(posR != opsR_.size() - 1)
+                sign*=-1;
+            posR_[opsR_.back().key()] = posR; opsR_[posR] = opsR_.back();
+            posR_.erase(itR); opsR_.pop_back();
+            return sign;
         };
 		
         Matrix<Value>& B() { return B_;};

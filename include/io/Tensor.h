@@ -81,14 +81,15 @@ namespace io {
             return *this;
         };
         Tensor& conj() {
-            Tensor temp; temp.data_.resize(I_*J_*K_*L_); temp.entries_.resize(I_*J_*K_*L_);
+            Tensor temp;
             temp.I_ = J_; temp.J_ = I_; temp.K_ = K_; temp.L_ = L_;
             
             for(int i = 0; i < I_; ++i)
                 for(int j = 0; j < J_; ++j)
                     for(int k = 0; k < K_; ++k)
-                        for(int l = 0; l < L_; ++l)
+                        for(int l = 0; l < L_; ++l){
                             temp(l, k, j, i) = ut::conj(operator()(i, j, k, l));
+                        }
             
             return *this = std::move(temp);
         };

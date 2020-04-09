@@ -6,6 +6,7 @@
 
 #include "InsertErasePairCsc.h"
 #include "InsertErasePairStd.h"
+#include "InsertEraseQuadStd.h"
 
 #include "../../markovchain/Update.h"
 #include "../../markovchain/MarkovChain.h"
@@ -23,6 +24,11 @@ namespace upd {
             
             markovChain.add(mch::unique_update_ptr<Value>(new upd::Generic< InsertCsc<Space>, Mode, Value >(1., jParams, data)),
                             mch::unique_update_ptr<Value>(new upd::Generic< EraseCsc<Space>, Mode, Value >(1., jParams, data)));
+            
+            if (jParams.is("quad insert") and jParams("quad insert").boolean()){
+                        markovChain.add(mch::unique_update_ptr<Value>(new upd::Generic< QuadInsertStd<Space>, Mode, Value >(1., jParams, data)),
+                                        mch::unique_update_ptr<Value>(new upd::Generic< QuadEraseStd<Space>, Mode, Value >(1., jParams, data)));
+            }
             
             mpi::cout << "Ok" << std::endl;
             

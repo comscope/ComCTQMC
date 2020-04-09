@@ -16,7 +16,8 @@
 namespace bath {
     
     struct Erase {
-        ut::KeyType keyL, keyR;
+        ut::KeyType keyL;
+        ut::KeyType keyR;
     };
     
     template<typename Value>
@@ -27,7 +28,7 @@ namespace bath {
         };
         
         void add(Erase upd, Bath<Value> const& bath, Hyb<Value> const& hyb) {
-            if(guard_) throw std::runtime_error("bath::Update<Erase>: multi-erase not implemented");
+            if(guard_) throw std::runtime_error("bath::Update<Erase>: use multi-erase, not multiple erases");
             
             itL_ = bath.posL_.find(upd.keyL); itR_ = bath.posR_.find(upd.keyR); guard_ = true;
         };
