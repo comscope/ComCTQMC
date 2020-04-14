@@ -679,6 +679,7 @@ __global__ void kerLauncher(Kernel<Value>* kernel, int const N, Byte* memory)
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+template <>
 imp::Batcher<Device, double>::Batcher(std::size_t size) :
 size_(size),
 numberOfKernels_(0),
@@ -701,6 +702,7 @@ memory_(alloc->get<Byte>(
     cudaErrchk(cudaMallocHost(reinterpret_cast<void**>(&hostCallBackBuffer_), size_*sizeof(double)));
 }
 
+template <>
 imp::Batcher<Device, ut::complex>::Batcher(std::size_t size) :
 size_(size),
 numberOfKernels_(0),
