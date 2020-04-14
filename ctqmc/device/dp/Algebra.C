@@ -723,7 +723,7 @@ memory_(alloc->get<Byte>(
     cudaErrchk(cudaStreamCreate(&stream_));
     
     cudaErrchk(cudaMallocHost(reinterpret_cast<void**>(&hostKernelBuffer_), size_*sizeof(Kernel<ut::complex>)));
-    cudaErrchk(cudaMallocHost(reinterpret_cast<void**>(&hostCallBackBuffer_), size_*sizeof(cuda_value_trait_t(ut::complex))));
+    cudaErrchk(cudaMallocHost(reinterpret_cast<void**>(&hostCallBackBuffer_), size_*sizeof(cuda_value_trait_t<ut::complex>)));
 }
 
 template <typename Value>
