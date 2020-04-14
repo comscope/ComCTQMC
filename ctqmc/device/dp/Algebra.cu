@@ -582,7 +582,7 @@ template <typename Value>
 struct Add {
     cuda_value_trait_t<Value> const* source;
     cuda_value_trait_t<Value>* dest;
-    cuda_value_trait_t<Value> fact;
+    cuda_value_trait_t<Value>* fact; //CUDA doesn't like non-pointer thrust::complex because it has a copy constructor.
     int size;
 };
 
@@ -591,7 +591,8 @@ __global__ void kerAdd(Add<Value> args)
 {
     int const index = blockDim.x*blockIdx.x + threadIdx.x;
     
-    if(index < args.size) args.dest[index] += args.fact*args.source[index];
+    if(index < args.size) args.dest[index] += *(args.fact)*args.source[index];
+    //if(index < args.size) args.dest[index] += args.source[index];
 };
 
 template <typename Value>
@@ -601,7 +602,7 @@ void imp::add(Matrix<Device, Value>& dest, ut::Zahl<Value> const& fact, Matrix<D
     
     args.source    = source.data().ptr();
     args.dest      = dest.data().ptr();
-    args.fact      = fact.get()*ut::exp(source.exponent()).get();
+    *(args.fact)   = fact.get()*ut::exp(source.exponent()).get();
     args.size      = source.I()*source.J();
 }
 
@@ -668,6 +669,7 @@ __global__ void kerLauncher(Kernel<Value>* kernel, int const N, Byte* memory)
         } else if(ker.id == device::index<Add<Value>, KerArgs<Value>>::value) {
             
             auto& args = get_device<Add<Value>>(ker.args);
+            if (args.fact == nullptr) args.fact = new cuda_value_trait_t<Value>;
             kerAdd<Value><<<(args.size + 256 - 1)/256, 256>>>(args);
             
         }
