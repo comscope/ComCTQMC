@@ -613,7 +613,7 @@ template <typename Value>
 using KerArgs = variant<CopyEvolveL<Value>, Mult<Value>, EvolveL<Value>, Trace<Value>, TraceAtB<Value>, Norm<Value>, Add<Value>>;
 
 template <typename Value>
-struct alignas(16) imp::Kernel {
+struct alignas(alignof(cuda_value_trait_t<Value>)*2) imp::Kernel {
     KerArgs<Value> args;
     int id;
 };
