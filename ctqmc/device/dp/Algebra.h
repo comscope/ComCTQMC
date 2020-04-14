@@ -12,6 +12,8 @@
 #include <vector>
 #include <algorithm>
 
+#include <thrust/complex.h>
+
 #include "../include/Allocator.h"
 
 #include "../../include/Utilities.h"
@@ -22,7 +24,24 @@
 #include "../../../include/io/Matrix.h"
 
 namespace imp {
-    
+
+
+    //need an interface between std::complex<double> and cuDoubleComplex
+    template <typename Value>
+    struct cuda_value{};
+
+    template <>
+    struct cuda_value<double>{
+        using type = double;
+    };
+
+    template <>
+    struct cuda_value<ut::complex>{
+        using type = thrust::complex<double>;
+    };
+
+    template <typename Value> using cuda_value_trait_t = typename cuda_value<Value>::type;
+
     
     struct Device {};
     
@@ -35,12 +54,11 @@ namespace imp {
     void release_device();
     
 
-    
-    
+    template <typename Value>
     struct Kernel;
     
-    template<>
-    struct Batcher<Device, double> : itf::Batcher<double> {
+    template<typename Value>
+    struct Batcher<Device, Value> : itf::Batcher<Value> {
         enum class Phase { record, execute, finalize };
         
         Batcher() = delete;
@@ -51,7 +69,9 @@ namespace imp {
         Batcher& operator=(Batcher&&) = delete;
         ~Batcher();
         
-        double* get_callback(std::function<void(double)> callBack);
+        //generic get function
+        cuda_value_trait_t<Value>* get_callback(std::function<void(cuda_value_trait_t<Value>)> callBack);
+        
         template<typename K> K& get_kernel();
         
         int is_ready();
@@ -64,13 +84,13 @@ namespace imp {
         Phase phase_;
         cudaStream_t stream_;
 
-        Kernel* hostKernelBuffer_;
-        device::Allocator::Data<Kernel> deviceKernelBuffer_;
+        Kernel<Value>* hostKernelBuffer_;
+        device::Allocator::Data<Kernel<Value>> deviceKernelBuffer_;
         
-        std::vector<std::function<void(double)>>  callBack_;
-        double* hostCallBackBuffer_;
-        device::Allocator::Data<double> deviceCallBackBuffer_;
-        
+        std::vector<std::function<void(cuda_value_trait_t<Value>)>>  callBack_;
+        Value* hostCallBackBuffer_;
+        device::Allocator::Data<cuda_value_trait_t<Value>> deviceCallBackBuffer_;
+    
         device::Allocator::Data<device::Byte> memory_;
     };
     
@@ -126,9 +146,9 @@ namespace imp {
     };
     
     
-    template<>
-    struct Matrix<Device, double> {
-        using data_type = typename device::Allocator::template Data<double>;
+    template<typename Value>
+    struct Matrix<Device, Value> {
+        using data_type = typename device::Allocator::template Data<cuda_value_trait_t<Value>>;
         
         struct Identity { Identity(int d) : dim(d) {}; int const dim;};
         struct Zero { Zero(int d) : dim(d) {}; int const dim;};
@@ -137,7 +157,8 @@ namespace imp {
         Matrix(int size);
         Matrix(Identity const& identity);
         Matrix(Zero const& zero);
-        Matrix(int I, int J, io::rmat const& mat);
+        Matrix(int I, int J, io::Matrix<Value> const& mat);
+        
         Matrix(Matrix const&) = delete;
         Matrix(Matrix&&) = delete;
         Matrix& operator=(Matrix const&) = delete;
@@ -159,21 +180,35 @@ namespace imp {
         double exponent_;
     };
 
-    
-    
-    void copyEvolveL(Matrix<Device, double>& dest, Vector<Device> const& prop, Matrix<Device, double> const& source, itf::Batcher<double>& batcher);
-    void mult(Matrix<Device, double>& dest, Matrix<Device, double> const& L, Matrix<Device, double> const& R, itf::Batcher<double>& batcher);
-    void evolveL(Vector<Device> const& prop, Matrix<Device, double>& arg, itf::Batcher<double>& batcher);
+    template <typename Value>
+    void copyEvolveL(Matrix<Device, Value>& dest, Vector<Device> const& prop, Matrix<Device, Value> const& source, itf::Batcher<Value>& batcher);
 
-    void trace(ut::Zahl<double>* Z, ut::Zahl<double>* accZ, Matrix<Device, double> const& matrix, itf::Batcher<double>& batcher);
-    void traceAtB(ut::Zahl<double>* Z, ut::Zahl<double>* accZ, Matrix<Device, double> const& A, Matrix<Device, double> const& B, itf::Batcher<double>& batcher);
-    void norm(double* norm, Matrix<Device, double> const& matrix, itf::Batcher<double>& batcher);
+    template <typename Value>
+    void mult(Matrix<Device, Value>& dest, Matrix<Device, Value> const& L, Matrix<Device, Value> const& R, itf::Batcher<Value>& batcher);
 
-    void density_matrix(Matrix<Device, double>& dest, Matrix<Device, double> const& B, Vector<Device> const& prop, Matrix<Device, double> const& A, Energies<Device> const& energies, itf::Batcher<double>& batcher);  // async
-    void add(Matrix<Device, double>& dest, ut::Zahl<double> const& fact, Matrix<Device, double> const& source, itf::Batcher<double>& batcher);
+    template <typename Value>
+    void evolveL(Vector<Device> const& prop, Matrix<Device, Value>& arg, itf::Batcher<Value>& batcher);
 
-    void add(double* dest, double fact, Matrix<Device, double> const& source);    
-    
+    template <typename Value>
+    void trace(ut::Zahl<Value>* Z, ut::Zahl<Value>* accZ, Matrix<Device, Value> const& matrix, itf::Batcher<Value>& batcher);
+
+    template <typename Value>
+    void traceAtB(ut::Zahl<Value>* Z, ut::Zahl<Value>* accZ, Matrix<Device, Value> const& A, Matrix<Device, Value> const& B, itf::Batcher<Value>& batcher);
+
+    template <typename Value>
+    void norm(double* norm, Matrix<Device, Value> const& matrix, itf::Batcher<Value>& batcher);
+
+    template <typename Value>
+    void density_matrix(Matrix<Device, Value>& dest, Matrix<Device, Value> const& B, Vector<Device> const& prop, Matrix<Device, Value> const& A, Energies<Device> const& energies, itf::Batcher<Value>& batcher);  // async
+
+    template <typename Value>
+    void add(Matrix<Device, Value>& dest, ut::Zahl<Value> const& fact, Matrix<Device, Value> const& source, itf::Batcher<Value>& batcher);
+
+    template <typename Value>
+    void add(Value* dest, Value fact, Matrix<Device, Value> const& source);
+
+
+
 }
 
 
