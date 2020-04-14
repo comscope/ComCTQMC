@@ -60,8 +60,9 @@ namespace mc {
         
         
         std::int64_t thermSteps = 0, measSteps = 0, stream = 0;
-        if(jParams.is("restart") and jParams("restart").boolean())
+        if(jParams.is("restart") and jParams("restart").boolean()){
             meas::restart(jParams, jParams("measurements"), jSimulation["measurements"]); jParams["measurements"] = jsx::empty_t();
+        }
             //I kind of want to free the memory from jParams[measurements] earlier. However, code complains because of jSimulation
         
         while(simulations.size()) {
