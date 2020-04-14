@@ -612,6 +612,7 @@ void imp::add(Matrix<Device, Value>& dest, ut::Zahl<Value> const& fact, Matrix<D
 template <typename Value>
 using KerArgs = variant<CopyEvolveL<Value>, Mult<Value>, EvolveL<Value>, Trace<Value>, TraceAtB<Value>, Norm<Value>, Add<Value>>;
 
+//is this alignas correct?
 template <typename Value>
 struct alignas(alignof(cuda_value_trait_t<Value>)*2) imp::Kernel {
     KerArgs<Value> args;
@@ -722,7 +723,7 @@ memory_(alloc->get<Byte>(
     cudaErrchk(cudaStreamCreate(&stream_));
     
     cudaErrchk(cudaMallocHost(reinterpret_cast<void**>(&hostKernelBuffer_), size_*sizeof(Kernel<ut::complex>)));
-    cudaErrchk(cudaMallocHost(reinterpret_cast<void**>(&hostCallBackBuffer_), size_*sizeof(ut::complex)));
+    cudaErrchk(cudaMallocHost(reinterpret_cast<void**>(&hostCallBackBuffer_), size_*sizeof(cuda_value_trait_t(ut::complex))));
 }
 
 template <typename Value>
