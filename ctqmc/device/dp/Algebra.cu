@@ -582,7 +582,7 @@ template <typename Value>
 struct Add {
     cuda_value_trait_t<Value> const* source;
     cuda_value_trait_t<Value>* dest;
-    cuda_value_trait_t<Value>* fact; //CUDA doesn't like non-pointer thrust::complex because it has a copy constructor.
+    cuda_value_trait_t<Value>* fact = nullptr; //CUDA doesn't like non-pointer thrust::complex because it has a copy constructor.
     int size;
 };
 
