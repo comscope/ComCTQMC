@@ -71,26 +71,14 @@ int main(int argc, char** argv)
             std::cout << "Rank " << mpi::rank() << " gets simulations [" << mcIds.front() << ", " << mcIds.back() << ") and uses device " << pciId.data() <<  std::endl;
             
             imp::init_device(pciId, processesPerDevice);
-            if(jParams.is("complex") ? jParams("complex").boolean() : false) {
-                mc::montecarlo<imp::Device, ut::complex>(jParams, jSimulation);
-                mc::statistics<ut::complex>(jParams, jSimulation);
-            } else {
-                mc::montecarlo<imp::Device, double>(jParams, jSimulation);
-                mc::statistics<double>(jParams, jSimulation);
-            }
-            
-            
+            mc::montecarlo<imp::Device, double>(jParams, jSimulation);
+            mc::statistics<double>(jParams, jSimulation);
             imp::release_device();
         } else {
             std::cout << "Rank " << mpi::rank() << " gets simulations [" << mcIds.front() << ", " << mcIds.back() << ") and uses host" << std::endl;
             
-            if(jParams.is("complex") ? jParams("complex").boolean() : false) {
-                mc::montecarlo<imp::Host, ut::complex>(jParams, jSimulation);
-                mc::statistics<ut::complex>(jParams, jSimulation);
-            } else {
-                mc::montecarlo<imp::Host, double>(jParams, jSimulation);
-                mc::statistics<double>(jParams, jSimulation);
-            }
+            mc::montecarlo<imp::Host, double>(jParams, jSimulation);
+            mc::statistics<double>(jParams, jSimulation);
         }
         mpi::reduce<mpi::op::sum>(mode, mpi::master);
         jSimulation["info"]["number of GPUs"] = jsx::int64_t(mode);
