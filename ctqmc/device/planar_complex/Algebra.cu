@@ -11,15 +11,6 @@
 #include "../../../include/BlasLapack.h"
 #include "../../../include/mpi/Basic.h"
 
-__device__ bool TEST_COMPLEX_PARTS = true; //works if false -- i.e., no complex parts are dealt with
-__device__ bool TEST_DGEMM = true; //works
-__device__ bool TEST_NORM = true; //works
-__device__ bool TEST_TRACE = true; //works
-__device__ bool TEST_TRACE_ATB = true; //works
-__device__ bool TEST_COPYEVOLVE = true; //works
-__device__ bool TEST_EVOLVE = true; //works
-__device__ bool TEST_ADD = true; //works
-
 #ifdef HAVE_CUBLAS
 
 #include <cublasLt.h>
@@ -289,9 +280,8 @@ __global__ void kerCopyEvolveL(CopyEvolveL<ut::complex> args) {
     int const i = blockIdx.x; int const j = threadIdx.x;
 
     args.dest[j + blockDim.x*i] = exp(args.time*args.energies[i] - args.shift)*args.source[j + blockDim.x*i];
-    if(TEST_COMPLEX_PARTS and TEST_COPYEVOLVE){
-        args.dest[j + blockDim.x*i + args.size] = exp(args.time*args.energies[i] - args.shift)*args.source[j + blockDim.x*i + args.size];
-    }
+    args.dest[j + blockDim.x*i + args.size] = exp(args.time*args.energies[i] - args.shift)*args.source[j + blockDim.x*i + args.size];
+    
 };
 
 
@@ -485,14 +475,13 @@ __device__ void cutlass_gemm(Mult<ut::complex> const& args, Byte*& memory)
     
     
     cutlass_kernel<KernelClass><<< params_rr.grid, params_rr.block, sizeof(typename KernelClass::SharedStorage)>>>(params_rr);
-    if (TEST_COMPLEX_PARTS and TEST_DGEMM){
     cutlass_kernel<KernelClass><<< params_ri.grid, params_ri.block, sizeof(typename KernelClass::SharedStorage)>>>(params_ri);
     
     __syncthreads(); //needed?
     
     cutlass_kernel<KernelClass><<< params_ii.grid, params_ii.block, sizeof(typename KernelClass::SharedStorage)>>>(params_ii);
     cutlass_kernel<KernelClass><<< params_ir.grid, params_ir.block, sizeof(typename KernelClass::SharedStorage)>>>(params_ir);
-    }
+    
 };
 
 #endif
@@ -569,9 +558,8 @@ __global__ void kerEvolveL(EvolveL<ut::complex> args) {
     int const i = blockIdx.x; int const j = threadIdx.x;
     
     args.arg[j + blockDim.x*i] *= exp(args.time*args.energies[i] - args.shift);
-    if (TEST_COMPLEX_PARTS and TEST_EVOLVE){
     args.arg[j + blockDim.x*i + args.size] *= exp(args.time*args.energies[i] - args.shift);
-    }
+    
 };
 
 
@@ -711,16 +699,11 @@ __global__ void kerTrace(Trace<ut::complex> args) {
     
     while(i < args.dim) {
         
-        if (TEST_COMPLEX_PARTS and TEST_TRACE){
-            cache[threadIdx.x] += cuda_value_scalar<ut::complex>(
-                                                                 args.arg[(args.dim + 1)*i],
-                                                                 args.arg[(args.dim + 1)*i + args.size]
-                                                                 );
-            //printf(args.arg[(args.dim + 1)*i + args.size]);
-        } else {
-            cache[threadIdx.x] += args.arg[(args.dim + 1)*i];
-        }
-        
+        cache[threadIdx.x] += cuda_value_scalar<ut::complex>(
+                                                            args.arg[(args.dim + 1)*i],
+                                                            args.arg[(args.dim + 1)*i + args.size]
+                                                            );
+
         i += BlockDim;
     }
     
@@ -777,17 +760,15 @@ __global__ void kerTraceAtB(TraceAtB<ut::complex> args) {
     
     while(i < args.size) {
         
-        if (TEST_COMPLEX_PARTS and TEST_TRACE_ATB){
-            cache[threadIdx.x] += cuda_value_scalar<ut::complex>(
-                                                                  args.At[i            ] * args.B[i            ] //real x real
-                                                                 -args.At[i + args.size] * args.B[i + args.size] //imag x imag
-                                                                 ,args.At[i + args.size] * args.B[i            ] //imag x real
-                                                                 +args.At[i            ] * args.B[i + args.size] //real x imag
+
+        cache[threadIdx.x] += cuda_value_scalar<ut::complex>(
+                                                             args.At[i            ] * args.B[i            ] //real x real
+                                                            -args.At[i + args.size] * args.B[i + args.size] //imag x imag
+                                                            ,args.At[i + args.size] * args.B[i            ] //imag x real
+                                                            +args.At[i            ] * args.B[i + args.size] //real x imag
                                                                  );
             
-        } else {
-            cache[threadIdx.x] += args.At[i]*args.B[i];
-        }
+
         
         i += BlockDim;
     }
@@ -845,12 +826,8 @@ __global__ void kerNorm(Norm<ut::complex> args) {
     
     while(i < args.size) {
 
-        if (TEST_COMPLEX_PARTS and TEST_NORM){
-            cache[threadIdx.x] += args.arg[i]*args.arg[i] + args.arg[i + args.size]*args.arg[i + args.size];
-        } else {
-            cache[threadIdx.x] += args.arg[i]*args.arg[i];
-        }
-        
+        cache[threadIdx.x] += args.arg[i]*args.arg[i] + args.arg[i + args.size]*args.arg[i + args.size];
+
         i += BlockDim;
     }
     
@@ -915,12 +892,11 @@ __global__ void kerAdd(Add<ut::complex> args)
     
     //could give this to 2x or 4x threads. Probably a small part of GPU time though
     if(index < args.size){
+    
         args.dest[index]            += cuCreal(args.fact)*args.source[index];           //real x real
-        if (TEST_COMPLEX_PARTS and TEST_ADD){
         args.dest[index]            -= cuCimag(args.fact)*args.source[index+args.size]; //imag * imag
         args.dest[index+args.size]  += cuCimag(args.fact)*args.source[index];           //imag * real
         args.dest[index+args.size]  += cuCreal(args.fact)*args.source[index+args.size]; //real * imag
-        }
         
     }
     
