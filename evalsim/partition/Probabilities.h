@@ -54,7 +54,7 @@ namespace evalsim {
         {
             jsx::value jProbabilities;  
             
-            std::cout << "Reading impurity probabilities ... " << std::flush;
+            mpi::cout << "Reading impurity probabilities ... " << std::flush;
             
             jsx::value jHamiltonianEff = get_effective_hamiltonian<Value>(jParams);
             jsx::value jDensityMatrix = meas::read_density_matrix<Value>(jParams, jMeasurements("density matrix"));
@@ -135,7 +135,7 @@ namespace evalsim {
             }
             jProbabilities["occupation numbers"] = std::move(temp);
             
-            std::cout << "Ok" << std::endl;
+            mpi::cout << "Ok" << std::endl;
             
             return jProbabilities;
         }

@@ -37,22 +37,42 @@ namespace evalsim {
             
             for(std::size_t i = 0; i < jHybMatrix.size(); ++i) greenMoments[0](i, i)  = 1.;
             
-            for(std::size_t i = 0; i < jHybMatrix.size(); ++i)
-                for(std::size_t j = 0; j < jHybMatrix.size(); ++j)
-                {
-                    std::string entry = jHybMatrix(i)(j).string();
+            
+            std::size_t const N = jHybMatrix.size();
+            std::size_t const size = N*N;
+            std::size_t const rank = mpi::rank();
+            std::size_t const chunk = (size + mpi::number_of_workers() - 1)/mpi::number_of_workers();
+            std::vector<Value> tmp1(size,0);
+            std::vector<Value> tmp2(size,0);
+            
+            for(std::size_t index = rank*chunk; index < chunk*(rank + 1); ++index){
+                if (index>=size) break;
+                
+                std::size_t const i = index%(N);
+                std::size_t const j = index/(N);
                     
-                    if(!entry.empty()) {
-                        jsx::value temp;
+                std::string entry = jHybMatrix(i)(j).string();
+                    
+                if(!entry.empty()) {
+                    jsx::value temp;
                         
-                        linalg::mult<Value>('n', 'c', 1., jC(i), jParams("operators")(j), .0, temp);
-                        linalg::mult<Value>('c', 'n', 1., jParams("operators")(j), jC(i), 1., temp);
-                        greenMoments[1](i, j) += linalg::trace<Value>(jDensityMatrix, temp);
+                    linalg::mult<Value>('n', 'c', 1., jC(i), jParams("operators")(j), .0, temp);
+                    linalg::mult<Value>('c', 'n', 1., jParams("operators")(j), jC(i), 1., temp);
+                    tmp1[i*N+j] += linalg::trace<Value>(jDensityMatrix, temp);
                         
-                        linalg::mult<Value>('n', 'c', 1., jC(i), jC(j), .0, temp);
-                        linalg::mult<Value>('c', 'n', 1., jC(j), jC(i), 1., temp);
-                        greenMoments[2](i, j) += linalg::trace<Value>(jDensityMatrix, temp);
-                    }
+                    linalg::mult<Value>('n', 'c', 1., jC(i), jC(j), .0, temp);
+                    linalg::mult<Value>('c', 'n', 1., jC(j), jC(i), 1., temp);
+                    tmp2[i*N+j] += linalg::trace<Value>(jDensityMatrix, temp);
+                }
+            }
+            
+            mpi::reduce<mpi::op::sum>(tmp1, mpi::master);
+            mpi::reduce<mpi::op::sum>(tmp2, mpi::master);
+            
+            for (std::size_t i=0; i<N; i++)
+                for (std::size_t j=0; j<N; j++){
+                    greenMoments[1](i,j) = tmp1[i*N+j];
+                    greenMoments[2](i,j) = tmp2[i*N+j];
                 }
             
             

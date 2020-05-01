@@ -21,7 +21,7 @@ namespace evalsim {
             
             for(auto jqn : jPartition("quantum numbers").object()) {
                 
-                std::cout << "Reading " << jqn.first << " susceptibility ... " << std::flush;
+                mpi::cout << "Reading " << jqn.first << " susceptibility ... " << std::flush;
                 
                 auto const qn = jsx::at<io::rvec>(jqn.second);
                 
@@ -41,10 +41,10 @@ namespace evalsim {
                 function[0] += beta*jsx::at<io::rvec>(jScalar(jqn.first + jqn.first)).at(0);
                 function[0] -= beta*jsx::at<io::rvec>(jScalar(jqn.first)).at(0)*jsx::at<io::rvec>(jScalar(jqn.first)).at(0);
                 
-                std::cout << "Ok" << std::endl;
+                mpi::cout << "Ok" << std::endl;
                 
                 
-                std::cout << "Adding " << jqn.first << " susceptibility high frequency tail ... " << std::flush;
+                mpi::cout << "Adding " << jqn.first << " susceptibility high frequency tail ... " << std::flush;
                 
                 std::size_t const nFit = std::max(static_cast<int>(function.size()/10.), 1);
                 
@@ -61,7 +61,7 @@ namespace evalsim {
                 jSusc[jqn.first]["function"] = function;
                 jSusc[jqn.first]["moment"] = io::rvec{{ moment }};
                 
-                std::cout << "Ok" << std::endl;
+                mpi::cout << "Ok" << std::endl;
             }
             
             
