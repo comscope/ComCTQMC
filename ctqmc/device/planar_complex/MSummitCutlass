@@ -14,8 +14,8 @@ Algebra.o
 	$(CXX_MPI) $(CXXFLAGS) $(CPPFLAGS) -c $<
 
 .cu.o:
-	$(NVCC) -DHAVE_CUBLAS $(NVCCFLAGS) $(CPPFLAGS) -dc $< -o $@bj.o
-	$(NVCC) -DHAVE_CUBLAS -arch=sm_70 -dlink -lcublas_device $@bj.o -o $@         
+	$(NVCC) $(NVCCFLAGS) $(CPPFLAGS) -dc $< -o $@bj.o
+	$(NVCC) -arch=sm_70 -dlink -lcublas_device $@bj.o -o $@         
 
 all:     CTQMC_CUTLASS
 
