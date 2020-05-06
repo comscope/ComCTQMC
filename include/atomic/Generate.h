@@ -288,6 +288,7 @@ namespace ga {
                              std::vector<double> const& qn)
     {
         io::rvec Qn;
+        double const eps = 1E-4;
         
         for(auto const& states : blockStates) {
             double value = .0;
@@ -301,7 +302,7 @@ namespace ga {
                 for(std::size_t f = 0; f < qn.size(); ++f)
                     if(FlavorState(state).test(f)) temp += qn[f];
                 
-                if(value != temp)
+                if(std::abs(value  - temp) > eps)
                     throw std::runtime_error("Problem with quantum numbers.");
             }
             
