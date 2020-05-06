@@ -23,41 +23,36 @@ int main(int argc, char** argv)
         std::size_t const streamsPerProcess  = jParams("sim per device").int64();
         std::size_t const processesPerDevice = 1;
         
-        std::vector<char> pciIds; int const deviceCount = imp::get_pci_ids(pciIds);
         std::vector<char> nodeNames = mpi::processor_name();
-        
-        std::cout << "Rank " << mpi::rank() << " is sitting on node " << nodeNames.data() << " and sees " << deviceCount << " device(s):";
-        for(int id = 0; id < deviceCount; ++id) std::cout << " " << &pciIds[id*imp::pci_id_size()];
-        std::cout << std::endl;
-        
-        mpi::gather(pciIds, mpi::master); mpi::gather(nodeNames, mpi::master);
-        
-        std::vector<char> pciId; std::vector<std::int64_t> mcIds;
+        mpi::gather(nodeNames, mpi::master);
+                
+        std::vector<int> deviceId(mpi::number_of_workers(), -1);
+        std::vector<std::int64_t> mcIds; //Id of Markov chain
         if(mpi::rank() == mpi::master) {
-            pciId.resize(mpi::number_of_workers()*imp::pci_id_size(), '\0');
             
-            std::map<std::string, std::map<std::string, std::size_t>> guard; std::int64_t mcId = 0;
+            int deviceCount = 0; cudaErrchk(cudaGetDeviceCount(&deviceCount));
+            std::map<std::string,int> rank_on_node;
+            
+            std::int64_t mcId = 0;
             for(int rank = 0; rank < mpi::number_of_workers(); ++rank) {
                 std::string const nodeName(&nodeNames[rank*mpi::processor_name_size()], mpi::processor_name_size());
                 
-                for(unsigned int id = 0; id < deviceCount; ++id) {
-                    std::string const currentPciId(&pciIds[(deviceCount*rank + id)*imp::pci_id_size()], imp::pci_id_size());
+                if(!rank_on_node.count(nodeName)) rank_on_node[nodeName] = 0;
+                else rank_on_node[nodeName]++;
                     
-                    if(!guard[nodeName].count(currentPciId)) guard[nodeName][currentPciId] = 0;
-                    
-                    if(guard[nodeName][currentPciId] < processesPerDevice) {
-                        ++guard[nodeName][currentPciId];
-                        std::copy(currentPciId.begin(), currentPciId.end(), pciId.begin() + rank*imp::pci_id_size());
-                        break;
-                    }
-                }
+                if(rank_on_node[nodeName] < deviceCount)
+                    deviceId[rank] = rank_on_node[nodeName];
+                
+                //mpi::cout << rank_on_node[nodeName] << " " << nodeName << " " << rank << " " << deviceId[rank] << "\n";
                 
                 mcIds.push_back(mcId);
-                mcId += pciId[rank*imp::pci_id_size()] != '\0' ? streamsPerProcess : 1;
+                mcId += deviceId[rank] != -1 ? streamsPerProcess : 1;
                 mcIds.push_back(mcId);
             }
         }
-        mpi::scatter(pciId, imp::pci_id_size(), mpi::master);  mpi::scatter(mcIds, 2, mpi::master);
+        mpi::bcast(deviceId, mpi::master);  mpi::scatter(mcIds, 2, mpi::master);
+        
+        mpi::cout << mpi::rank() << " " << deviceId[mpi::rank()] << "\n";
         
         jsx::value jSimulation = jsx::array_t(mcIds.back() - mcIds.front());
         for(auto mcId = mcIds.front(); mcId < mcIds.back(); ++mcId)
@@ -66,11 +61,11 @@ int main(int argc, char** argv)
                 { "config", jsx::read("config_" + std::to_string(mcId) + ".json", jsx::object_t()) }
             };
         
-        std::int64_t mode = (pciId[0] != '\0' and streamsPerProcess > 0) ? 1 : 0;
+        std::int64_t mode = (deviceId[mpi::rank()] != -1 and streamsPerProcess > 0) ? 1 : 0;
         if(mode) {
-            std::cout << "Rank " << mpi::rank() << " gets simulations [" << mcIds.front() << ", " << mcIds.back() << ") and uses device " << pciId.data() <<  std::endl;
+            std::cout << "Rank " << mpi::rank() << " gets simulations [" << mcIds.front() << ", " << mcIds.back() << ") and uses device " << deviceId[mpi::rank()] <<  std::endl;
             
-            imp::init_device(pciId, processesPerDevice);
+            imp::init_device(deviceId[mpi::rank()], processesPerDevice);
             if(jParams.is("complex") ? jParams("complex").boolean() : false) {
                 mc::montecarlo<imp::Device, ut::complex>(jParams, jSimulation);
                 mc::statistics<ut::complex>(jParams, jSimulation);

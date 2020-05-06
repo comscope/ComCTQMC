@@ -60,7 +60,7 @@ namespace imp {
     
     int pci_id_size();
     int get_pci_ids(std::vector<char>&);
-    void init_device(std::vector<char> const&, std::size_t);
+    void init_device(int const, std::size_t);
     void release_device();
     
 
