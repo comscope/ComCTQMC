@@ -75,7 +75,7 @@ namespace opt {
     
     
     template<typename Value>
-    jsx::value transform(Observable const& tensor, Transformation<Value> const& transformation) {
+    jsx::value transform(Observable const& tensor, Transformation<Value> const& transformation, bool ising) {
         if(transformation.J() != tensor.N())
             throw std::runtime_error("opt::get_tensor: missmatch between tensor and transformation dimension");
         
@@ -102,6 +102,9 @@ namespace opt {
                     for(int f2 = 0; f2 < transformation.I(); ++f2) {
                         Value temp = .0;
                         
+                        if(ising)
+                            if(!((f1Dagg == f2 && f2Dagg == f1) || (f1Dagg == f1 && f2Dagg == f2))) continue;
+                        
                         for(int g1Dagg = 0; g1Dagg < transformation.J(); ++g1Dagg)
                             for(int g1 = 0; g1 < transformation.J(); ++g1)
                                 for(int g2Dagg = 0; g2Dagg < transformation.J(); ++g2Dagg)
@@ -123,7 +126,7 @@ namespace opt {
     
     
     template<typename Value>
-    inline void complete_observables(jsx::value const& jParams, jsx::value& jObservables) {
+    inline void complete_observables(jsx::value const& jParams, jsx::value& jObservables, bool ising) {
         if(jObservables.is<jsx::empty_t>()) jObservables = jsx::object_t();
         
         for(auto& obs : jObservables.object())
@@ -131,7 +134,7 @@ namespace opt {
                 Observable observable = get_observable(jParams("basis"), obs.first);
                 Transformation<Value> transformation(observable.N(), jParams("basis").is("transformation") ? jParams("basis")("transformation") : jsx::empty_t());
                 
-                obs.second = transform(observable, transformation);
+                obs.second = transform(observable, transformation, ising);
             }
     }
     
