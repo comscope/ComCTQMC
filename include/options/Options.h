@@ -143,11 +143,9 @@ namespace opt {
             if (one_body_in.I() != one_body.I() || one_body_in.J() != one_body.J())
                 throw std::runtime_error("one-body matrix is the wrong size");
             
-            for(int fDagg = 0; fDagg < N; ++fDagg)
-                for(int f = 0; f < N; ++f)
-                    one_body(fDagg, f) = one_body_in(fDagg,f);
-
-            mpi::cout << "ok ... " << std::flush;
+            one_body = std::move(one_body_in);
+            
+            mpi::cout << " Ok ... " << std::flush;
                 
         } else {
             
