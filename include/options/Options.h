@@ -123,19 +123,95 @@ namespace opt {
         
         return jTensors;
     }
+
+    template <typename Value>
+    jsx::value read_observable(jsx::value const& jObservable, int const N, bool ising){
+        
+        jsx::value jTensors;
+        
+        io::PrettyMatrix<Value> one_body(N,N);
+        io::Vector<Value> two_body(N*N*N*N,0);
+        
+        
+        if (jObservable.is("one body")){
+
+            mpi::cout << "one body part ... " << std::flush;
+            
+            auto tmp = jObservable("one body");
+            auto const& one_body_in = jsx::at<io::PrettyMatrix<Value>>(tmp);
+            
+            if (one_body_in.I() != one_body.I() || one_body_in.J() != one_body.J())
+                throw std::runtime_error("one-body matrix is the wrong size");
+            
+            for(int fDagg = 0; fDagg < N; ++fDagg)
+                for(int f = 0; f < N; ++f)
+                    one_body(fDagg, f) = one_body_in(fDagg,f);
+
+            mpi::cout << "ok ... " << std::flush;
+                
+        } else {
+            
+            mpi::cout << "no one body part found -- setting to 0 ...";
+            
+        }
+        
+        jTensors["one body"] = std::move(one_body);
+        
+        
+        
+        
+        
+        if (jObservable.is("two body")){
+            
+            mpi::cout << "two body part ... " << std::flush;
+            
+            auto const& two_body_in = jsx::at<io::Vector<Value>>(jObservable("one body"));
+        
+            if (two_body_in.size() != two_body.size())
+                throw std::runtime_error("two-body matrix is the wrong size");
+             
+                for(int f1Dagg = 0; f1Dagg < N; ++f1Dagg)
+                    for(int f1 = 0; f1 < N; ++f1)
+                        for(int f2Dagg = 0; f2Dagg < N; ++f2Dagg)
+                            for(int f2 = 0; f2 < N; ++f2){
+                                if (ising)
+                                    if(!((f1Dagg == f2 && f2Dagg == f1) || (f1Dagg == f1 && f2Dagg == f2))) continue;
+                                
+                                std::size_t index = N*N*N*f1Dagg + N*N*f1 +  N*f2Dagg + f2;
+                                
+                                two_body[index] = two_body_in[index];
+                            }
+        } else {
+                   
+            mpi::cout << "no two body part found -- setting to 0 ...";
+                   
+        }
+        
+        jTensors["two body"] = two_body;
+        
+        return jTensors;
+        
+    }
     
     
     template<typename Value>
     inline void complete_observables(jsx::value const& jParams, jsx::value& jObservables, bool ising) {
+        
         if(jObservables.is<jsx::empty_t>()) jObservables = jsx::object_t();
         
-        for(auto& obs : jObservables.object())
+        for(auto& obs : jObservables.object()){
             if(!obs.second.size()) {
                 Observable observable = get_observable(jParams("basis"), obs.first);
                 Transformation<Value> transformation(observable.N(), jParams("basis").is("transformation") ? jParams("basis")("transformation") : jsx::empty_t());
                 
                 obs.second = transform(observable, transformation, ising);
+            } else {
+                mpi::cout << "Reading in and checking observable " << obs.first << " ... " << std::flush;
+                obs.second = read_observable<Value>(obs.second, jParams("hybridisation")("matrix").size(), ising);
+                mpi::cout << "ok" << std::endl;
             }
+
+        }
     }
     
 };
