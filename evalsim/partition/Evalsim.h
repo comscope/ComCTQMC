@@ -27,6 +27,8 @@ namespace evalsim {
         
         template<typename Value>
         jsx::value evalsim(jsx::value jParams, jsx::value const& jMeasurements) {
+
+            bool const ising = jParams("hloc")("two body").is("approximation") ? (jParams("hloc")("two body")("approximation").string() == "ising") : false;
             
             jParams["hloc"] = ga::read_hloc<Value>("hloc.json");
             
@@ -41,7 +43,7 @@ namespace evalsim {
             
             opt::complete_qn<Value>(jParams, jPartition["quantum numbers"]);
             
-            opt::complete_observables<Value>(jParams, jPartition["observables"]);
+            opt::complete_observables<Value>(jParams, jPartition["observables"],ising);
             
             for(auto& jObs : jPartition("observables").object())
                 jObs.second = ga::construct_observable<Value>(jParams("hloc"), jObs.second);
