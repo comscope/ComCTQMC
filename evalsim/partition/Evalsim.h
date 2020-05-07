@@ -45,8 +45,11 @@ namespace evalsim {
             
             opt::complete_observables<Value>(jParams, jPartition["observables"],ising);
             
-            for(auto& jObs : jPartition("observables").object())
+            for(auto& jObs : jPartition("observables").object()){
+                mpi::cout << "constructing observable " << jObs.first << " ... " << std::flush;
                 jObs.second = ga::construct_observable<Value>(jParams("hloc"), jObs.second);
+                mpi::cout << " Ok" << std::endl;
+            }
 
             
             jsx::value jObservables;
