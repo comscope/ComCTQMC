@@ -69,8 +69,6 @@ int imp::get_pci_ids(std::vector<char>& pciIds) {
     int deviceCount=0;
     cudaErrchk(cudaGetDeviceCount(&deviceCount));
         
-    std::cout << mpi::rank() << "\n";
-        
     pciIds.resize(deviceCount*pci_id_size(), '\0');
     for(int id = 0; id < deviceCount; ++id) get_pci_id(&pciIds[id*pci_id_size()], id);
     
@@ -80,8 +78,6 @@ int imp::get_pci_ids(std::vector<char>& pciIds) {
 void imp::init_device(int const deviceId, std::size_t processesPerDevice) {
     //int deviceId = mpi::rank_on_node(); //cudaErrchk(cudaDeviceGetByPCIBusId(&deviceId, pciId.data()));
     cudaErrchk(cudaSetDevice(deviceId));
-    
-    std::cout << mpi::rank() << " " << deviceId << "\n";
     
     cudaDeviceProp deviceProperties; cudaErrchk(cudaGetDeviceProperties(&deviceProperties, deviceId));
     if(deviceProperties.computeMode != cudaComputeModeExclusive && deviceProperties.computeMode != cudaComputeModeExclusiveProcess)
