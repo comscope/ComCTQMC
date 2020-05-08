@@ -59,7 +59,7 @@ namespace mch {
         void thermalised() {
             
             //Guard against calling this multiple times -- which happens when there are GPU
-            if (!thermalised){
+            if (!thermalised_){
                     
                 if(!restart_){
                     normalise_eta();  fill<std::int64_t>(steps_,0); totalSteps_ = 0;
@@ -68,7 +68,6 @@ namespace mch {
                 //All mp images should have the same eta
                 for(auto active : active_)
                     for (auto & eta : eta_[active]){
-                        std::cout << eta.second << " " << mpi::rank() << "\n";
                         mpi::reduce<mpi::op::sum>(eta.second, mpi::master);
                     
                         if(mpi::rank() == mpi::master)
