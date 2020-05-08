@@ -62,7 +62,8 @@ namespace opt {
         if(jqn.is<jsx::empty_t>()) jqn = jsx::object_t();
         if(!jqn.is("N")) jqn["N"] = jsx::array_t(jParams("hybridisation")("matrix").size(), jsx::real64_t{1.});
         
-        for(auto& qn : jqn.object())
+        std::vector<std::string> qn_to_delete;
+        for(auto& qn : jqn.object()){
             if(qn.second.is<jsx::object_t>()) {
                 Basis<Value> basis = get_basis<Value>(jParams("basis"));
                 
@@ -71,6 +72,20 @@ namespace opt {
                 
                 qn.second = basis.qns().at(qn.first);
             }
+            
+            auto Qn = ga::construct_sector_qn(jParams("hloc"), qn.second, false);
+            if (!Qn.size()){
+                mpi::cout << " ... " << qn.first << " does not survive ... " << std::flush;
+                qn_to_delete.push_back(qn.first);
+            }
+        }
+        
+        for (auto const& key : qn_to_delete){
+            auto& qn = jqn.object();
+            auto const it = qn.find(key);
+            qn.erase(it);
+        }
+        
     };
     
     
@@ -197,6 +212,7 @@ namespace opt {
         
         if(jObservables.is<jsx::empty_t>()) jObservables = jsx::object_t();
         
+        std::vector<std::string> obs_to_delete;
         for(auto& obs : jObservables.object()){
             if(!obs.second.size()) {
                 Observable observable = get_observable(jParams("basis"), obs.first);
@@ -206,10 +222,23 @@ namespace opt {
             } else {
                 mpi::cout << "Reading in and checking observable " << obs.first << " ... " << std::flush;
                 obs.second = read_observable<Value>(obs.second, jParams("hybridisation")("matrix").size(), ising);
-                mpi::cout << "ok" << std::endl;
             }
 
+            obs.second = ga::construct_observable<Value>(jParams("hloc"), obs.second, false);
+            
+            if (obs.second.is<jsx::empty_t>())
+                obs_to_delete.push_back(obs.first);
+            
+            mpi::cout << " Ok" << std::endl;
         }
+        
+        //clean up observables which dont survive, i.e., meet commutation requirements
+        for (auto const& key : obs_to_delete){
+            auto& obs = jObservables.object();
+            auto const it = obs.find(key);
+            obs.erase(it);
+        }
+        
     }
     
 };

@@ -59,17 +59,33 @@ namespace evalsim {
             jsx::value jHamiltonianEff = get_effective_hamiltonian<Value>(jParams);
             jsx::value jDensityMatrix = meas::read_density_matrix<Value>(jParams, jMeasurements("density matrix"));
             
-            std::vector<std::vector<double>> data;
             
+            //Collect list of probabilities that have survived the criterion
+            std::vector<std::string> surviving;
+            for(int qn = 0; qn < jPartition("probabilities").size(); ++qn) {
+                std::string const name = jPartition("probabilities")(qn).string();
+                if(name == "energy" || jPartition("quantum numbers").is(name) || jPartition("observables").is(name))
+                    surviving.push_back(name);
+            }
+            
+            jsx::array_t temp;
+            for(auto& entry : surviving) {
+                temp.push_back(jsx::string_t(entry));
+            }
+            jProbabilities["surviving"] = std::move(temp);
+            
+            
+            
+            std::vector<std::vector<double>> data;
             for(int sector = 0; sector < jParams("hloc")("eigen values").size(); ++sector)
                 for(int i = 0; i < jsx::at<io::rvec>(jParams("hloc")("eigen values")(sector)).size(); ++i) {
-                    std::vector<double> temp(jPartition("probabilities").size() + 1);
+                    std::vector<double> temp(surviving.size() + 1);
                     temp.back() = std::abs(jsx::at<io::Matrix<Value>>(jDensityMatrix(sector)("matrix"))(i, i));     // take abs(real) value ?
                     data.push_back(temp);
                 }
             
-            for(int qn = 0; qn < jPartition("probabilities").size(); ++qn) {
-                std::string const name = jPartition("probabilities")(qn).string();
+            for(int qn = 0; qn < surviving.size(); ++qn) {
+                std::string const name = surviving[qn];
                 
                 if(jPartition("quantum numbers").is(name)) {
                     auto Qn = ga::construct_sector_qn(jParams("hloc"), jPartition("quantum numbers")(name));
@@ -93,18 +109,20 @@ namespace evalsim {
                         for(int i = 0; i < jsx::at<io::rvec>(jParams("hloc")("eigen values")(sector)).size(); ++i)
                             data[index++][qn] = truncate(ut::real(jsx::at<io::Matrix<Value>>(jHamiltonianEff(sector)("matrix"))(i, i)), 8);
                     
-                } else
-                    throw std::runtime_error("quantum number " + name + " for labeling probabilities not found");
+                }
             }
             
-            if(jPartition("probabilities").size()) std::sort(data.begin(), data.end(), VecLess(jPartition("probabilities").size() + 1, 0, jPartition("probabilities").size()));
             
-            jsx::array_t temp;
+            if(surviving.size()) std::sort(data.begin(), data.end(), VecLess(surviving.size() + 1, 0, surviving.size()));
+            
+            
+            temp.clear();
             for(auto& entry : data) {
                 temp.push_back(jsx::array_t(entry.begin(), entry.end()));
                 temp.back().array().back() = io::rvec{{entry.back()}};
             }
             jProbabilities["quantum numbers"] = std::move(temp);
+            
             
             
             {
