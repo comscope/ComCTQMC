@@ -58,52 +58,57 @@ namespace mch {
         
         void thermalised() {
             
-            if(!restart_){
-                normalise_eta();  fill<std::int64_t>(steps_,0); totalSteps_ = 0;
-            }
-            
-            //All mp images should have the same eta
-            for(auto active : active_)
-                for (auto & eta : eta_[active]){
-                    mpi::reduce<mpi::op::sum>(eta.second, mpi::master);
-                
-                    if(mpi::rank() == mpi::master)
-                        eta.second /= mpi::number_of_workers();
+            //Guard against calling this multiple times -- which happens when there are GPU
+            if (!thermalised){
                     
-                    mpi::bcast(eta.second, mpi::master);
+                if(!restart_){
+                    normalise_eta();  fill<std::int64_t>(steps_,0); totalSteps_ = 0;
                 }
-            
-            
-            // let user decide how much time should be spent in partition space (default 50%)
-            /* eqn follows frmo starts from
-             \eta_z' V_z / (\eta_z' V_z + \Sum_O \eta_O V_O) = zFrac_       (1)
-             and
-             \eta_z V_z / (\eta_z V_z + \Sum_O \eta_O V_O = 1 / N_{spaces}  (2)
-             
-             // from (2) input \eta V_z into (1)
-            */
-            
-            if (!restart_ and number_of_spaces_ > 1)
-                eta_[get_index<cfg::partition::Worm>::value].at(cfg::worm::Index<cfg::partition::Worm>::string()) *= (number_of_spaces_ - 1.) / (1./zFrac_ - 1.);
-            
-            double const partition = eta_[get_index<cfg::partition::Worm>::value].at(cfg::worm::Index<cfg::partition::Worm>::string());
+                
+                //All mp images should have the same eta
+                for(auto active : active_)
+                    for (auto & eta : eta_[active]){
+                        std::cout << eta.second << " " << mpi::rank() << "\n";
+                        mpi::reduce<mpi::op::sum>(eta.second, mpi::master);
+                    
+                        if(mpi::rank() == mpi::master)
+                            eta.second /= mpi::number_of_workers();
+                        
+                        mpi::bcast(eta.second, mpi::master);
+                    }
+                
+                
+                // let user decide how much time should be spent in partition space (default 50%)
+                /* eqn follows frmo starts from
+                 \eta_z' V_z / (\eta_z' V_z + \Sum_O \eta_O V_O) = zFrac_       (1)
+                 and
+                 \eta_z V_z / (\eta_z V_z + \Sum_O \eta_O V_O = 1 / N_{spaces}  (2)
+                 
+                 // from (2) input \eta V_z into (1)
+                */
+                
+                if (!restart_ and number_of_spaces_ > 1)
+                    eta_[get_index<cfg::partition::Worm>::value].at(cfg::worm::Index<cfg::partition::Worm>::string()) *= (number_of_spaces_ - 1.) / (1./zFrac_ - 1.);
+                
+                double const partition = eta_[get_index<cfg::partition::Worm>::value].at(cfg::worm::Index<cfg::partition::Worm>::string());
 
-            //Let user know what eta's were chosen
-            //and normalize to eta_z=1
-            for(auto active : active_){
-                
-                mpi::cout << names_[active] << ": ";
-                
-                for (auto & eta : eta_[active]){
-                    eta.second /= partition;  // Tradition ...
-                
-                    mpi::cout << "eta_" << eta.first << " = " << eta.second << " | ";
+                //Let user know what eta's were chosen
+                //and normalize to eta_z=1
+                for(auto active : active_){
+                    
+                    mpi::cout << names_[active] << ": ";
+                    
+                    for (auto & eta : eta_[active]){
+                        eta.second /= partition;  // Tradition ...
+                    
+                        mpi::cout << "eta_" << eta.first << " = " << eta.second << " | ";
+                    }
+                    
+                    mpi::cout << std::endl;
                 }
                 
-                mpi::cout << std::endl;
+                thermalised_ = true;
             }
-            
-            thermalised_ = true;
         };
         
         template<typename W>
