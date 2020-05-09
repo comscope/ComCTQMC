@@ -450,7 +450,7 @@ namespace ga {
         
         jsx::value jObservable = get_observable<Order::alternating>(Tensor<Value>(jTensors), blockStates, throw_error);
         
-        if (!throw_error anbd jObservable.is<jsx::empty_t>()) return jObservable;
+        if (!throw_error and jObservable.is<jsx::empty_t>()) return jObservable;
         
         transform<Value>(jHloc("transformation"), jObservable);
         
