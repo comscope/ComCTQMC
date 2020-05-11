@@ -43,16 +43,12 @@ int main(int argc, char** argv)
                 if(rank_on_node[nodeName] < deviceCount)
                     deviceId[rank] = rank_on_node[nodeName];
                 
-                //mpi::cout << rank_on_node[nodeName] << " " << nodeName << " " << rank << " " << deviceId[rank] << "\n";
-                
                 mcIds.push_back(mcId);
-                mcId += deviceId[rank] != -1 ? streamsPerProcess : 1;
+                mcId += (deviceId[rank] != -1 and streamsPerProcess) ? streamsPerProcess : 1;
                 mcIds.push_back(mcId);
             }
         }
         mpi::bcast(deviceId, mpi::master);  mpi::scatter(mcIds, 2, mpi::master);
-        
-        mpi::cout << mpi::rank() << " " << deviceId[mpi::rank()] << "\n";
         
         jsx::value jSimulation = jsx::array_t(mcIds.back() - mcIds.front());
         for(auto mcId = mcIds.front(); mcId < mcIds.back(); ++mcId)
