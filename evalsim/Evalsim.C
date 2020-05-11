@@ -30,19 +30,18 @@ int main(int argc, char** argv)
         
         jsx::value jObservables0 = get_observables(jParams, std::string(argv[1]) + ".meas.json");
         
-        if (mpi::rank() == mpi::master){
             std::size_t number_of_mpi_processes = mpi::read(std::string(argv[1]) + ".info.json")("number of mpi processes").int64();
             
-            if(number_of_mpi_processes > 1 && jParams.is("error") && jParams("error").string() == "serial") {
-                meas::Error error;
+        if(number_of_mpi_processes > 1 && jParams.is("error") && jParams("error").string() == "serial") {
+            meas::Error error;
                 
-                for(std::size_t i = 0; i < number_of_mpi_processes; ++i)
-                    error.add(get_observables(jParams, std::string(argv[1]) + ".meas" + std::to_string(i) + ".json"), jObservables0);
+            for(std::size_t i = 0; i < number_of_mpi_processes; ++i)
+                error.add(get_observables(jParams, std::string(argv[1]) + ".meas" + std::to_string(i) + ".json"), jObservables0);
      
-                mpi::write(error.finalize(number_of_mpi_processes, jObservables0), std::string(argv[1]) + ".err.json");
-            }
-            
+            mpi::write(error.finalize(number_of_mpi_processes, jObservables0), std::string(argv[1]) + ".err.json");
         }
+            
+        
         mpi::write(jObservables0, std::string(argv[1]) + ".obs.json");
         
         mpi::cout << "End post-processing at " << std::asctime(std::localtime(&(time = std::time(nullptr)))) << std::endl;
