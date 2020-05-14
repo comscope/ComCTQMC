@@ -180,21 +180,16 @@ namespace meas {
                 jOut["WL"][jWorm.first][pSpec]["steps"] = pSteps;
                 jOut["WL"][jWorm.first][pSpec]["eta"] = pEta;
             } else {
-                for (auto& type : jWorm.second.object()){
-                    if (type.first == "dynamic"){
-                        reduce(jOut[jWorm.first][type.first], 1., type.second, E(), b64); //TODO: dynamic is measured in green, static in green_imprsum; this is for dynamic in partition
-                    } else {
-                        for (auto& func : type.second.object()){
-                            auto const wSteps = reduce_steps(jWL(jWorm.first)(func.first)("steps").int64(), E());
-                            auto const wEta = jWL(jWorm.first)(func.first)("eta").real64();
-                            auto const Zw = wSteps/wEta;
+                for (auto& type : jWorm.second.object())
+                    for (auto& func : type.second.object()){
+                        auto const wSteps = reduce_steps(jWL(jWorm.first)(func.first)("steps").int64(), E());
+                        auto const wEta = jWL(jWorm.first)(func.first)("eta").real64();
+                        auto const Zw = wSteps/wEta;
                             
-                            reduce(jOut[jWorm.first][type.first][func.first], Zw/signxZp, func.second, E(), b64);
-                            jOut["WL"][jWorm.first][func.first]["steps"] = wSteps;
-                            jOut["WL"][jWorm.first][func.first]["eta"] = wEta;
-                        }
+                        reduce(jOut[jWorm.first][type.first][func.first], Zw/signxZp, func.second, E(), b64);
+                        jOut["WL"][jWorm.first][func.first]["steps"] = wSteps;
+                        jOut["WL"][jWorm.first][func.first]["eta"] = wEta;
                     }
-                }
             }
         }
         
