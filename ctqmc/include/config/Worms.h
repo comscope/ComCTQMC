@@ -32,7 +32,7 @@ namespace cfg {
     
     namespace green_impr {
         
-        constexpr char name[] = "green impr";
+        constexpr char name[] = "green_impr";
         
         using Worm = WormTuple<name, opBulla, opDagg>;
         
@@ -40,7 +40,7 @@ namespace cfg {
     
     namespace green_imprsum {
         
-        constexpr char name[] = "green imprsum";
+        constexpr char name[] = "green_imprsum";
         
         using Worm = WormTuple<name, opBullaSum, opDagg>;
         
@@ -56,7 +56,7 @@ namespace cfg {
     
     namespace vertex_impr {
         
-        constexpr char name[] = "vertex impr";
+        constexpr char name[] = "vertex_impr";
         
         using Worm = WormTuple<name, opBulla, opDagg, op, opDagg>;
         
@@ -64,7 +64,7 @@ namespace cfg {
     
     namespace vertex_imprsum {
         
-        constexpr char name[] = "vertex imprsum";
+        constexpr char name[] = "vertex_imprsum";
         
         using Worm = WormTuple<name, opBullaSum, opDagg, op, opDagg>;
         
