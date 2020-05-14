@@ -101,6 +101,7 @@ namespace evalsim {
     jsx::value evalsim(jsx::value const& jParams, jsx::value& jMeasurements) {
         jsx::value jObservables;
         
+        
         mpi::cout << "Begin evaluating partition measurements" << std::endl;
         
         jObservables[cfg::partition::Worm::name()] = partition::evalsim<Value>(jParams, jMeasurements(cfg::partition::Worm::name()));
