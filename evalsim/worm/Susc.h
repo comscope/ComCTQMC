@@ -20,6 +20,9 @@ namespace evalsim {
             auto const name = cfg::susc_ph::Worm::name();
             jsx::value jWorm = jParams(name);
             
+            
+            func::BosonFrequencies<Value> frequencies(jWorm);
+            
             ////Hybridization function
             
             std::cout << "Reading hybridisation function ... " << std::flush;
@@ -41,7 +44,7 @@ namespace evalsim {
             
             std::cout << "Computing susceptibility ... " << std::flush;
             
-            func::susc::ph::compute_and_subtract_disconnected<Value>(jParams,jObservables("partition")("occupation"), susc);
+            func::susc::ph::compute_and_subtract_disconnected<Value>(jParams,jObservables("partition")("occupation"), frequencies, susc);
             
             std::cout << "Ok" << std::endl;
             
