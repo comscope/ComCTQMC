@@ -28,7 +28,7 @@ namespace evalsim {
         template<typename Value>
         jsx::value evalsim(jsx::value jParams, jsx::value const& jMeasurements) {
 
-            bool const ising = jParams("hloc")("two body").is("approximation") ? (jParams("hloc")("two body")("approximation").string() == "ising") : false;
+            bool const ising = (jParams("hloc")("two body").is<jsx::object_t>() && jParams("hloc")("two body").is("approximation")) ? (jParams("hloc")("two body")("approximation").string() == "ising") : false;
             
             jParams["hloc"] = ga::read_hloc<Value>("hloc.json");
             

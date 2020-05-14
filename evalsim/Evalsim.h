@@ -101,35 +101,33 @@ namespace evalsim {
     jsx::value evalsim(jsx::value const& jParams, jsx::value& jMeasurements) {
         jsx::value jObservables;
         
-        
         mpi::cout << "Begin evaluating partition measurements" << std::endl;
         
         jObservables[cfg::partition::Worm::name()] = partition::evalsim<Value>(jParams, jMeasurements(cfg::partition::Worm::name()));
         
         mpi::cout << "End evaluating partition measurements" << std::endl;
         
-        if (mpi::rank() == mpi::master){
-            add_dynamics(jParams, jMeasurements, cfg::green::name, "_impr");
-            add_dynamics(jParams, jMeasurements, cfg::green::name, "_imprsum");
+        add_dynamics(jParams, jMeasurements, cfg::green::name, "_impr");
+        add_dynamics(jParams, jMeasurements, cfg::green::name, "_imprsum");
             
-            add_dynamics(jParams, jMeasurements, cfg::vertex::name, "_impr");
-            add_dynamics(jParams, jMeasurements, cfg::vertex::name, "_imprsum");
+        add_dynamics(jParams, jMeasurements, cfg::vertex::name, "_impr");
+        add_dynamics(jParams, jMeasurements, cfg::vertex::name, "_imprsum");
             
-            add_dynamics(jParams, jMeasurements, cfg::hedin_ph::name, "_impr");
-            add_dynamics(jParams, jMeasurements, cfg::hedin_ph::name, "_imprsum");
+        add_dynamics(jParams, jMeasurements, cfg::hedin_ph::name, "_impr");
+        add_dynamics(jParams, jMeasurements, cfg::hedin_ph::name, "_imprsum");
             
-            add_dynamics(jParams, jMeasurements, cfg::hedin_pp::name, "_impr");
-            add_dynamics(jParams, jMeasurements, cfg::hedin_pp::name, "_imprsum");
+        add_dynamics(jParams, jMeasurements, cfg::hedin_pp::name, "_impr");
+        add_dynamics(jParams, jMeasurements, cfg::hedin_pp::name, "_imprsum");
             
-            cfg::for_each_type<cfg::Worm>::apply(worm_clean_functor<Value>(), jParams, jMeasurements);
+        cfg::for_each_type<cfg::Worm>::apply(worm_clean_functor<Value>(), jParams, jMeasurements);
             
-            cfg::for_each_type<cfg::Worm>::apply(worm_evalsim_functor<Value>(), jParams, jMeasurements, jObservables);
+        cfg::for_each_type<cfg::Worm>::apply(worm_evalsim_functor<Value>(), jParams, jMeasurements, jObservables);
             
-            if (jParams.is("kernels")){
-                jObservables["kernels"] = worm::evaluateKernels<Value>(jParams,jObservables);
-                jObservables["Asymptotic Full Vertex"] = worm::evaluateFullVertexFromKernels<Value>(jParams,jObservables);
-            }
+        if (jParams.is("kernels")){
+            jObservables["kernels"] = worm::evaluateKernels<Value>(jParams,jObservables);
+            jObservables["Asymptotic Full Vertex"] = worm::evaluateFullVertexFromKernels<Value>(jParams,jObservables);
         }
+        
         
         return jObservables;
         

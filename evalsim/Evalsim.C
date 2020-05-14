@@ -30,7 +30,7 @@ int main(int argc, char** argv)
         
         jsx::value jObservables0 = get_observables(jParams, std::string(argv[1]) + ".meas.json");
         
-            std::size_t number_of_mpi_processes = mpi::read(std::string(argv[1]) + ".info.json")("number of mpi processes").int64();
+        std::size_t number_of_mpi_processes = mpi::read(std::string(argv[1]) + ".info.json")("number of mpi processes").int64();
             
         if(number_of_mpi_processes > 1 && jParams.is("error") && jParams("error").string() == "serial") {
             meas::Error error;
