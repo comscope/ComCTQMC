@@ -43,18 +43,17 @@ namespace evalsim {
                              
                             connected[n].emplace(i,j,k,l,
                                                  improved_estimator[n].entry(i,j,k,l),
-                                                 0);
+                                                 0.0);
                             
                             for(std::size_t m = 0; m < jHybMatrix.size(); ++m){
                                 
                                 connected[n](i,j,k,l) += std::abs(green[w](m,i)) ?
-                                ( green[w](m,i) * self[w](m,i) * disconnected[n](i,j,k,l)
+                                (green[w](m,i) * self[w](m,i) * disconnected[n](i,j,k,l)
                                  - green[w](m,i) * improved_estimator[n](i,j,k,l) )/
                                 ( (i==m ? 1.0 : 0.0) + green[w](m,i) * self[w](m,i) )
                                 : 0;
-                                
+
                             }
-                            
                         }
                     }
             }
@@ -121,7 +120,7 @@ namespace evalsim {
                         for(std::size_t nu = 0; nu < nMatGB; ++nu){
                             int n = i_w+nu*nMatGF;
                             int i_w_g = green_OM.pos(omega_f(i_w));
-                            int w = green_OM.pos(omega_b(nu)-omega_f(i_w));
+                            int w = green_OM.pos(omega_f(i_w)-omega_b(nu));
                             
                             for(auto const ijkl : full_in_connected_out[n].ijkl()){
                             
@@ -135,9 +134,9 @@ namespace evalsim {
                                 std::string const entry = jHybMatrix(l)(l).string();
                                 auto const& occ = jsx::at<io::Vector<Value>>(jOccupation(entry));
                                             
-                                full_in_connected_out[n](i,j,k,l) -= green[i_w_g](i,i)*( beta*((i==j and k==l and !omega_b(nu)) ? (occ[0]) : 0.0)
+                                full_in_connected_out[n](i,j,k,l) += green[i_w_g](i,i)*( beta*((i==j and k==l and !omega_b(nu)) ? (occ[0]) : 0.0)
                                                                                               - ((i==k and l==j) ? green[w](l,l) : 0 ));
-
+                                //susc = disc - full
                             }
                         }
                 }
