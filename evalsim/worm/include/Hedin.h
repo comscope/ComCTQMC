@@ -213,14 +213,14 @@ namespace evalsim {
                         for(std::size_t nu = 0; nu < nMatGB; ++nu){
                             int n = i_w+nu*nMatGF;
                             int i_w_g = green_OM.pos(omega_f(i_w));
-                            int w = green_OM.pos(omega_f(i_w)-omega_b(nu));
+                            int w = green_OM.pos(omega_b(nu)-omega_f(i_w));
                             
                             for(std::size_t i = 0; i < jHybMatrix.size(); ++i)
                                 for(std::size_t j = 0; j < jHybMatrix.size(); ++j)
                                     for(std::size_t k = 0; k < jHybMatrix.size(); ++k)
                                         for(std::size_t l = 0; l < jHybMatrix.size(); ++l){
                                             
-                                            auto const disc = -((i==k and j==l ? 1. : 0.) - (i==l and j==k ? 1. : 0.))*green[i_w_g](i,i)*green[w](j,j);
+                                            auto const disc = ((i==k and j==l ? 1. : 0.) - (i==l and j==k ? 1. : 0.))*green[i_w_g](i,i)*green[w](j,j);
                                             
                                             if (disc.real() or disc.imag())
                                                  disconnected[n].emplace(i,j,k,l,
@@ -247,7 +247,7 @@ namespace evalsim {
                         for(std::size_t nu = 0; nu < nMatGB; ++nu){
                             int n = i_w+nu*nMatGF;
                             int i_w_g = green_OM.pos(omega_f(i_w));
-                            int w = green_OM.pos(omega_f(i_w)-omega_b(nu));
+                            int w = green_OM.pos(omega_b(nu)-omega_f(i_w));
                             
                             for(auto const ijkl : full_in_connected_out[n].ijkl()){
                             
@@ -258,7 +258,7 @@ namespace evalsim {
                                             
                                 full_in_connected_out[n](i,j,k,l)*=-1.0;
                                             
-                                full_in_connected_out[n](i,j,k,l) -= ((i==k and j==l ? 1. : 0.) - (i==l and j==k ? 1. : 0.))*green[i_w_g](i,i)*green[w](j,j);
+                                full_in_connected_out[n](i,j,k,l) += ((i==k and j==l ? 1. : 0.) - (i==l and j==k ? 1. : 0.))*green[i_w_g](i,i)*green[w](j,j);
                                             
                             }
                         }
