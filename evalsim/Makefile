@@ -1,4 +1,4 @@
-include ../include/msource/MakefileHomeMPI.in
+include ../Makefile.in
 
 HEADERS =  
 
