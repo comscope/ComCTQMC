@@ -3,6 +3,7 @@
     "complex": false,
     "restart": false,
     "partition fraction": 0.2,
+    "sim per device": 0,
     "hloc": {
         "one body": [ 
             [ 0, 0 ], 
