@@ -19,17 +19,30 @@ If you use ComCTQMC, please cite our pre-print (Arxiv paper to come).
 
 Download the repository and unzip it, e.g., `tar -xzvf ComCTQMC.tar.gz`
 
-The executables of ComCTQMC are compiled using `make`, and there are two executables to compile: `CTQMC` and `EVALSIM`. These Makefiles for these executables are located in ComCTQMC/ctqmc/ and ComCTQMC/evalsim/, respectively. In order for the Makefiles in these directories to work, one must define which compilers and libraries to use. (See the next section for a list of required libraries and compilers.)  The file ComCTQMC/Makefile.in provides fields in which to set these options, along with other compiler flags you might need to get ComCTQMC working on your computer or cluster. This file provides guidance on what these options mean and how to set them. There are also a number of examples located in ComCTQMC/cluster_makefiles which can be used to compile on Cori (NERSC/LBNL), Summit (OLCF/ORNL), or a Mac. 
+The executables of ComCTQMC are compiled using `make`, and there are two executables to compile: `CTQMC` and `EVALSIM`. 
+
+Before making these executables, one must define which compilers and libraries to use. (See the next section for a list of required libraries and compilers.) The file ComCTQMC/Makefile.in provides fields in which to set these options, along with other compiler flags you might need to get ComCTQMC working on your computer or cluster. There are a number of examples located in ComCTQMC/cluster_makefiles which can be used to compile on Cori (NERSC/LBNL), Summit (OLCF/ORNL), or a Mac. The user guide provides some additional guidance on Makefile.in
+
+Once configured, one should execute the following commands in the ~/ComCTQMC/ directory
+
+(cpu version) `make cpu`
+(gpu version) `make gpu`
+
+This will generate two executables: `~/ComCTQMC/bin/CTQMC` and `~/ComCTQMC/bin/EVALSIM`
+
+If you change libraries, one should invoke `make clean` before building the executables
 
 ## Requirements
 
 A C++11 capable compiler. The code has been tested using GNU, clang, and intel commpilers. IBM (cray) compilers are not currently supported.
 
-BLAS and LAPACK libraries -- tested with with INTEL MKL, IBM ESSL, and NETLIB-LAPACK libraries.
-
-(optional) CUDA libraries and compiler -- required for the GPU accelerated  version of the code. Tested with Cuda/10.1
+BLAS and LAPACK libraries -- tested with with Intel MKL, IBM ESSL, and NETLIB-LAPACK libraries.
 
 (optional) MPI libraries -- required for parallelization across CPUs. Tested with OpenMPI and (IBM's) Spectrum-MPI libraries.
+
+(optional) CUDA libraries and compiler -- required for the GPU accelerated version of the code. Tested with Cuda/10.1
+
+(optional) CUTLASS libraries -- required for the GPU accelerated version of the code. Provided with ComCTQMC.
 
 # Usage
 
@@ -47,5 +60,4 @@ The general workflow required to use ComCTQMC is as follow:
 
 For a description of the input and output files, we refer the reader to the user guide UserGuide.pdf.
 
-Basic tutorials are available in ComCTQMC/examples
-
+Examples are available in ComCTQMC/examples
