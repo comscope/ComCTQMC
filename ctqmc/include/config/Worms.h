@@ -32,7 +32,7 @@ namespace cfg {
     
     namespace green_impr {
         
-        constexpr char name[] = "green_impr";
+        constexpr char name[] = "green impr";
         
         using Worm = WormTuple<name, opBulla, opDagg>;
         
@@ -40,7 +40,7 @@ namespace cfg {
     
     namespace green_imprsum {
         
-        constexpr char name[] = "green_imprsum";
+        constexpr char name[] = "green imprsum";
         
         using Worm = WormTuple<name, opBullaSum, opDagg>;
         
@@ -56,7 +56,7 @@ namespace cfg {
     
     namespace vertex_impr {
         
-        constexpr char name[] = "vertex_impr";
+        constexpr char name[] = "vertex impr";
         
         using Worm = WormTuple<name, opBulla, opDagg, op, opDagg>;
         
@@ -64,7 +64,7 @@ namespace cfg {
     
     namespace vertex_imprsum {
         
-        constexpr char name[] = "vertex_imprsum";
+        constexpr char name[] = "vertex imprsum";
         
         using Worm = WormTuple<name, opBullaSum, opDagg, op, opDagg>;
         
@@ -96,7 +96,7 @@ namespace cfg {
     
     namespace hedin_ph_impr {
         
-        constexpr char name[] = "hedin ph_impr";
+        constexpr char name[] = "hedin ph impr";
         
         using Worm = WormTuple<name, opBulla, opDagg, bilinearPH>;
         
@@ -104,7 +104,7 @@ namespace cfg {
     
     namespace hedin_ph_imprsum {
         
-        constexpr char name[] = "hedin ph_imprsum";
+        constexpr char name[] = "hedin ph imprsum";
         
         using Worm = WormTuple<name, opBullaSum, opDagg, bilinearPH>;
         
@@ -120,7 +120,7 @@ namespace cfg {
     
     namespace hedin_pp_impr {
         
-        constexpr char name[] = "hedin pp_impr";
+        constexpr char name[] = "hedin pp impr";
         
         using Worm = WormTuple<name, opBulla, op, bilinearPP>;
         
@@ -128,7 +128,7 @@ namespace cfg {
     
     namespace hedin_pp_imprsum {
         
-        constexpr char name[] = "hedin pp_imprsum";
+        constexpr char name[] = "hedin pp imprsum";
         
         using Worm = WormTuple<name, opBullaSum, op, bilinearPP>;
         

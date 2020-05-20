@@ -108,17 +108,17 @@ namespace evalsim {
         
         mpi::cout << "End evaluating partition measurements" << std::endl;
         
-        add_dynamics(jParams, jMeasurements, cfg::green::name, "_impr");
-        add_dynamics(jParams, jMeasurements, cfg::green::name, "_imprsum");
+        add_dynamics(jParams, jMeasurements, cfg::green::name, " impr");
+        add_dynamics(jParams, jMeasurements, cfg::green::name, " imprsum");
             
-        add_dynamics(jParams, jMeasurements, cfg::vertex::name, "_impr");
-        add_dynamics(jParams, jMeasurements, cfg::vertex::name, "_imprsum");
+        add_dynamics(jParams, jMeasurements, cfg::vertex::name, " impr");
+        add_dynamics(jParams, jMeasurements, cfg::vertex::name, " imprsum");
             
-        add_dynamics(jParams, jMeasurements, cfg::hedin_ph::name, "_impr");
-        add_dynamics(jParams, jMeasurements, cfg::hedin_ph::name, "_imprsum");
+        add_dynamics(jParams, jMeasurements, cfg::hedin_ph::name, " impr");
+        add_dynamics(jParams, jMeasurements, cfg::hedin_ph::name, " imprsum");
             
-        add_dynamics(jParams, jMeasurements, cfg::hedin_pp::name, "_impr");
-        add_dynamics(jParams, jMeasurements, cfg::hedin_pp::name, "_imprsum");
+        add_dynamics(jParams, jMeasurements, cfg::hedin_pp::name, " impr");
+        add_dynamics(jParams, jMeasurements, cfg::hedin_pp::name, " imprsum");
             
         cfg::for_each_type<cfg::Worm>::apply(worm_clean_functor<Value>(), jParams, jMeasurements);
             
