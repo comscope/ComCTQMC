@@ -108,6 +108,9 @@ int main(int argc, char** argv)
         mpi::write(jSimulation("measurements"), std::string(argv[1]) + ".meas.json");
         mpi::write(jSimulation("info"),         std::string(argv[1]) + ".info.json");
         
+        if(jSimulation.is("error")) mpi::write(jSimulation("error"), std::string(argv[1]) + ".err.json");
+        if(jSimulation.is("resample")) jsx::write(jSimulation("resample"), std::string(argv[1]) + ".meas" + std::to_string(mpi::rank()) + ".json");
+        
         mpi::cout << "Task of worker finished at " << std::asctime(std::localtime(&(time = std::time(nullptr)))) << std::endl;
     }
     catch (ut::out_of_memory error) {
