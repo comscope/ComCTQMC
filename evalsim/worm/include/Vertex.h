@@ -37,6 +37,8 @@ namespace evalsim {
                                 int i_w_g = green_OM.pos(omega_f(i_w));
                                 int w = green_OM.pos(omega_f(j_w) - omega_b(nu));
                                 
+                                if (i_w_g < 0 or w < 0) throw std::runtime_error("vertex:: insufficient frequencies in green's function to compute disconnected part");
+                                
                                 for(std::size_t i = 0; i < jHybMatrix.size(); ++i)
                                     for(std::size_t j = 0; j < jHybMatrix.size(); ++j)
                                         for(std::size_t k = 0; k < jHybMatrix.size(); ++k)
@@ -75,6 +77,8 @@ namespace evalsim {
                                 
                                 int i_w_g = green_OM.pos(omega_f(i_w));
                                 int w = green_OM.pos(omega_f(j_w)-omega_b(nu));
+                                
+                                if (i_w_g < 0 or w < 0) throw std::runtime_error("vertex:: insufficient frequencies in green's function to compute disconnected part");
                                 
                                 for(auto const ijkl : full_in_connected_out[n].ijkl()){
                                 
