@@ -21,10 +21,11 @@ namespace evalsim {
                 namespace ph {
                     
                     template <typename Value>
-                    void compute_and_subtract_disconnected(jsx::value const& jParams, jsx::value const& jOccupation, std::vector<io::ctens>& full_in_connected_out){
+                    void compute_and_subtract_disconnected(jsx::value const& jParams, jsx::value const& jOccupation, BosonFrequencies<Value> const& frequencies, std::vector<io::ctens>& full_in_connected_out){
                         
                         double const beta = jParams("beta").real64();
                         jsx::value const jHybMatrix = jParams("hybridisation")("matrix");
+                        auto const omega = frequencies.omega_b();
                         
                         for(std::size_t n = 0; n < full_in_connected_out.size(); ++n){
                             for(auto const ijkl : full_in_connected_out[n].ijkl()){
@@ -36,7 +37,7 @@ namespace evalsim {
                                                 
                                 full_in_connected_out[n](i,j,k,l) *= -1;
                                                 
-                                if (!n and i==j and k==l){
+                                if (!omega(n) and i==j and k==l){
                                     std::string const entry_ij = jHybMatrix(i)(j).string();
                                     std::string const entry_kl = jHybMatrix(k)(l).string();
                                     auto const& occ_ij = jsx::at<io::Vector<Value>>(jOccupation(entry_ij));

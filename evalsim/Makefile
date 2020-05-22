@@ -1,14 +1,17 @@
-include ../include/msource/MakefileHome.in
+include ../Makefile.in
 
 HEADERS =  
 
 all:  EVALSIM 
+cpu:  EVALSIM
+gpu:  EVALSIM
 
 EVALSIM:  Evalsim.C $(HEADERS)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@  Evalsim.C $(LDFLAGS) $(LIBS)
+	$(CXX_MPI) $(CPPFLAGS) $(CXXFLAGS) -o $@  Evalsim.C $(LDFLAGS) $(LIBS)
+	mv EVALSIM ../bin/.
 
 clean:
-	rm -f *.o EVALSIM 
+	rm -f *.o ../bin/EVALSIM EVALSIM
 
 
 

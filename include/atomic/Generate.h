@@ -159,7 +159,8 @@ namespace ga {
     
     template<Order order, typename Value>
     jsx::value get_observable(Tensor<Value> const& tensor,
-                              BlockStates const& blockStates)
+                              BlockStates const& blockStates,
+                              bool const throw_error = true) //if false, instead return jsx::empty on error
     {
         jsx::value jObservable = jsx::array_t(blockStates.size());
 
@@ -180,8 +181,11 @@ namespace ga {
                             if(stateI.sign() != 0) {
                                 auto it = std::find(blockState.begin(), blockState.end(), stateI.state());
                                 
-                                if(it == blockState.end())
-                                    throw std::runtime_error("Something is wrong with the partitioning of the states");
+                                if(it == blockState.end()){
+                                    if (throw_error) throw std::runtime_error("Something is wrong with the partitioning of the states");
+                                    else {mpi::cout << " not a good observable; removing from list ... " ; return jsx::empty();}
+                                }
+                                
                                 
                                 matrix(it - blockState.begin(), state_indexJ) += tensor.t(f1, f2)*static_cast<double>(stateI.sign());
                             }
@@ -197,8 +201,10 @@ namespace ga {
                                     if(stateI.sign() != 0) {
                                         auto it = std::find(blockState.begin(), blockState.end(), stateI.state());
                                         
-                                        if(it == blockState.end())
-                                            throw std::runtime_error("Something is wrong with the partitioning of the states");
+                                        if(it == blockState.end()){
+                                            if (throw_error) throw std::runtime_error("Something is wrong with the partitioning of the states");
+                                            else {mpi::cout << " not a good observable; removing from list ... " ; return jsx::empty();}
+                                        }
                                         
                                         matrix(it - blockState.begin(), state_indexJ) += tensor.V(f1, f2, f3, f4)*static_cast<double>(stateI.sign());
                                     }
@@ -285,9 +291,11 @@ namespace ga {
     };
 
     io::rvec get_sector_qn(BlockStates const& blockStates,
-                             std::vector<double> const& qn)
+                             std::vector<double> const& qn,
+                           bool const throw_error = true)
     {
         io::rvec Qn;
+        double const eps = 1E-4;
         
         for(auto const& states : blockStates) {
             double value = .0;
@@ -301,8 +309,11 @@ namespace ga {
                 for(std::size_t f = 0; f < qn.size(); ++f)
                     if(FlavorState(state).test(f)) temp += qn[f];
                 
-                if(value != temp)
-                    throw std::runtime_error("Problem with quantum numbers.");
+                if(std::abs(value  - temp) > eps){
+                    if (throw_error) throw std::runtime_error("Problem with quantum numbers.");
+                    else {mpi::cout << " not a good qn; removing from list " ; return io::rvec();}
+                }
+                    
             }
             
             Qn.push_back(value);
@@ -417,9 +428,9 @@ namespace ga {
     
     //-----------------------------------------------------------------------------------------------------
     
-    io::rvec construct_sector_qn(jsx::value const& jHloc, jsx::value jqn)
+    io::rvec construct_sector_qn(jsx::value const& jHloc, jsx::value jqn, bool throw_error = true)
     {
-        return get_sector_qn(get_block_states(jHloc), jsx::at<io::rvec>(jqn));
+        return get_sector_qn(get_block_states(jHloc), jsx::at<io::rvec>(jqn), throw_error);
     };
     
     template<typename Value>
@@ -433,11 +444,13 @@ namespace ga {
     };
 
     template<typename Value>
-    jsx::value construct_observable(jsx::value const& jHloc, jsx::value const& jTensors)
+    jsx::value construct_observable(jsx::value const& jHloc, jsx::value const& jTensors, bool const throw_error = true)
     {
         BlockStates blockStates = get_block_states(jHloc);
         
-        jsx::value jObservable = get_observable<Order::alternating>(Tensor<Value>(jTensors), blockStates);
+        jsx::value jObservable = get_observable<Order::alternating>(Tensor<Value>(jTensors), blockStates, throw_error);
+        
+        if (!throw_error and jObservable.is<jsx::empty_t>()) return jObservable;
         
         transform<Value>(jHloc("transformation"), jObservable);
         

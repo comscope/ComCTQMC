@@ -24,9 +24,6 @@ namespace evalsim {
             jParams["hloc"] = ga::read_hloc<Value>("hloc.json");
             jParams["operators"] = ga::construct_annihilation_operators<Value>(jParams("hloc"));
             
-            if(jParams.is("dyn"))
-                jParams("dyn")("functions") = mpi::read(jParams("dyn")("functions").string());
-            
             double const beta = jParams("beta").real64();
             func::iOmega const iomega(beta); auto const oneBody = jsx::at<io::Matrix<Value>>(jParams("hloc")("one body"));
             jsx::value const jHybMatrix = jParams("hybridisation")("matrix");

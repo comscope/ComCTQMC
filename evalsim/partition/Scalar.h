@@ -25,7 +25,7 @@ namespace evalsim {
 
             jScalar["k"] = jMeasurements("scalar")("k");
             
-            std::cout << "Calculating quantum number observables ... " << std::flush;
+            mpi::cout << "Calculating quantum number observables ... " << std::flush;
 
             auto const& sectorProb = jsx::at<io::rvec>(jMeasurements("sector prob"));
             
@@ -42,21 +42,21 @@ namespace evalsim {
                 jScalar[jqn.first + jqn.first] = io::rvec{{valval}};
             }
             
-            std::cout << "Ok" << std::endl;
+            mpi::cout << "Ok" << std::endl;
             
             
             jsx::value jDensityMatrix = meas::read_density_matrix<Value>(jParams, jMeasurements("density matrix"));
             
 
-            std::cout << "Calculating observables ... " << std::flush;
+            mpi::cout << "Calculating observables ... " << std::flush;
             
             for(auto const& jObs : jPartition("observables").object())
                 jScalar[jObs.first] = io::rvec{{ut::real(linalg::trace<Value>(jDensityMatrix, jObs.second))}};
             
-            std::cout << "Ok" << std::endl;
+            mpi::cout << "Ok" << std::endl;
             
             
-            std::cout << "Calculating energy ... " << std::flush;
+            mpi::cout << "Calculating energy ... " << std::flush;
              
             jsx::value jHamiltonianEff = get_effective_hamiltonian<Value>(jParams);
             
@@ -64,7 +64,7 @@ namespace evalsim {
             if(jParams.is("dyn")) energy += jsx::at<io::rvec>(jMeasurements("dyn energy"))[0];
             jScalar["energy"] = io::rvec{{energy}};
             
-            std::cout << "Ok" << std::endl;
+            mpi::cout << "Ok" << std::endl;
             
             
             return jScalar;

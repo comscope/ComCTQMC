@@ -35,7 +35,7 @@ namespace params {
             jsx::value jMeas = jEntry("meas");
             jEntry.object().erase("meas");
             
-            std::map<std::string, std::string> map{{"",""}, {"impr", "_impr"}, {"imprsum", "_imprsum"}};
+            std::map<std::string, std::string> map{{"",""}, {"impr", " impr"}, {"imprsum", " imprsum"}};
             
             for(auto& meas : jMeas.array()) {
                 if(!map.count(meas.string()))

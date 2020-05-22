@@ -27,6 +27,8 @@ namespace evalsim {
         
         template<typename Value>
         jsx::value evalsim(jsx::value jParams, jsx::value const& jMeasurements) {
+
+            bool const ising = (jParams("hloc")("two body").is<jsx::object_t>() && jParams("hloc")("two body").is("approximation")) ? (jParams("hloc")("two body")("approximation").string() == "ising") : false;
             
             jParams["hloc"] = ga::read_hloc<Value>("hloc.json");
             
@@ -41,11 +43,7 @@ namespace evalsim {
             
             opt::complete_qn<Value>(jParams, jPartition["quantum numbers"]);
             
-            opt::complete_observables<Value>(jParams, jPartition["observables"]);
-            
-            for(auto& jObs : jPartition("observables").object())
-                jObs.second = ga::construct_observable<Value>(jParams("hloc"), jObs.second);
-
+            opt::complete_observables<Value>(jParams, jPartition["observables"],ising);
             
             jsx::value jObservables;
             
@@ -65,29 +63,29 @@ namespace evalsim {
             
             
             
-            std::cout << "Reading hybridisation function ... " << std::flush;
+            mpi::cout << "Reading hybridisation function ... " << std::flush;
             
             std::vector<io::cmat> hyb; std::vector<io::Matrix<Value>> hybMoments;
             
             std::tie(hyb, hybMoments) = func::get_hybridisation<Value>(jParams);
             
-            std::cout << "Ok" << std::endl;
+            mpi::cout << "Ok" << std::endl;
             
             
             
-            std::cout << "Reading green function ... " << std::flush;
+            mpi::cout << "Reading green function ... " << std::flush;
             
             std::vector<io::cmat> green = meas::read_functions<Value>(jMeasurements("green"), jParams, jPartition, hyb.size());
             
-            std::cout << "Ok" << std::endl;
+            mpi::cout << "Ok" << std::endl;
             
             
             
-            std::cout << "Calculating self-energy with dyson ... " << std::flush;
+            mpi::cout << "Calculating self-energy with dyson ... " << std::flush;
             
             std::vector<io::cmat> selfDyson = func::get_self_dyson<Value>(jParams, green, hyb);
             
-            std::cout << "OK" << std::endl;
+            mpi::cout << "OK" << std::endl;
             
             
             
@@ -95,7 +93,7 @@ namespace evalsim {
             
             if(jPartition.is("green bulla") ? jPartition("green bulla").boolean() : true) {
                 
-                std::cout << "Calculating self-energy with bulla ... " << std::flush;
+                mpi::cout << "Calculating self-energy with bulla ... " << std::flush;
                 
                 selfenergy.resize(green.size(), io::cmat(jParams("hybridisation")("matrix").size(), jParams("hybridisation")("matrix").size()));
                 
@@ -108,30 +106,30 @@ namespace evalsim {
                     linalg::mult<ut::complex>('n', 'n', .5, bulla.second[n], green_inv, 1., selfenergy[n]);
                 }
                 
-                std::cout << "Ok" << std::endl;
+                mpi::cout << "Ok" << std::endl;
 
             } else
                 selfenergy = std::move(selfDyson);
             
             
             
-            std::cout << "Calculating green moments ... " << std::flush;
+            mpi::cout << "Calculating green moments ... " << std::flush;
             
             std::vector<io::Matrix<Value>> greenMoments = get_green_moments(jParams, hybMoments, jMeasurements, jObservables("scalar"));
             
-            std::cout << "OK" << std::endl;
+            mpi::cout << "OK" << std::endl;
             
             
             
-            std::cout << "Calculating self-energy moments ... " << std::flush;
+            mpi::cout << "Calculating self-energy moments ... " << std::flush;
             
             std::vector<io::Matrix<Value>> selfMoments = get_self_moments(jParams, hybMoments, greenMoments);
             
-            std::cout << "OK" << std::endl;
+            mpi::cout << "OK" << std::endl;
             
             
             
-            std::cout << "Adding self-energy high frequency tail ... "  << std::flush;
+            mpi::cout << "Adding self-energy high frequency tail ... "  << std::flush;
             
             func::add_self_tail(jParams, selfenergy, selfMoments, hyb.size());   //scheisse Value !! Allgemein scheiss moments ...
                 
@@ -139,17 +137,17 @@ namespace evalsim {
                 
             if(selfDyson.size()) jObservables["self-energy-dyson"] = func::write_functions(jParams, selfDyson, selfMoments);
 
-            std::cout << "Ok" << std::endl;
+            mpi::cout << "Ok" << std::endl;
             
             
             
-            std::cout << "Adding green function high frequency tail ... " << std::flush;
+            mpi::cout << "Adding green function high frequency tail ... " << std::flush;
             
             func::add_green_tail<Value>(jParams, hyb, selfenergy, green);
             
             jObservables["green"] = func::write_functions(jParams, green, greenMoments);
             
-            std::cout << "Ok" << std::endl;
+            mpi::cout << "Ok" << std::endl;
             
 
             
@@ -162,31 +160,31 @@ namespace evalsim {
             if((jPartition.is("occupation susceptibility bulla")  ? jPartition("occupation susceptibility bulla").boolean()  : false) ||
                (jPartition.is("occupation susceptibility direct") ? jPartition("occupation susceptibility direct").boolean() : false)) {
                 
-                std::cout << "Calculating occupation susceptibility moments ... " << std::flush;
+                mpi::cout << "Calculating occupation susceptibility moments ... " << std::flush;
                 
                 io::rmat moments = get_occupation_susc_moments<Value>(jParams, jPartition, jMeasurements, jObservables);
                 
-                std::cout << "Ok" << std::endl;
+                mpi::cout << "Ok" << std::endl;
                 
                 
                 if(jPartition.is("occupation susceptibility bulla")  ? jPartition("occupation susceptibility bulla").boolean()  : false) {
                     
-                    std::cout << "Reading bulla occupation susceptibility ... " << std::flush;
+                    mpi::cout << "Reading bulla occupation susceptibility ... " << std::flush;
                     
                     jObservables["occupation-susceptibility-bulla"] = get_occupation_susc_bulla(jParams, jPartition, jMeasurements, moments, occupation, correlation, jObservables);
                 
-                    std::cout << "Ok" << std::endl;
+                    mpi::cout << "Ok" << std::endl;
                     
                 }
                 
                 
                 if(jPartition.is("occupation susceptibility direct") ? jPartition("occupation susceptibility direct").boolean() : false) {
                     
-                    std::cout << "Reading direct occupation susceptibility ... " << std::flush;
+                    mpi::cout << "Reading direct occupation susceptibility ... " << std::flush;
                     
                     jObservables["occupation-susceptibility-direct"] = get_occupation_susc_direct(jParams, jPartition, jMeasurements, moments, occupation, correlation, jObservables);
                     
-                    std::cout << "Ok" << std::endl;
+                    mpi::cout << "Ok" << std::endl;
                     
                 }
     
