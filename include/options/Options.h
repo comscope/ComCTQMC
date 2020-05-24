@@ -47,6 +47,18 @@ namespace opt {
         
         return two_body;
     };
+
+    template<typename Value>
+    jsx::value truncate(io::Vector<Value> const& interaction, double const truncate) {
+        io::Vector<Value> two_body(interaction.size());
+        
+        for (int i=0; i<interaction.size(); i++)
+            two_body[i] = std::abs(interaction[i]) > truncate ? interaction[i] : 0;
+        
+        
+        return two_body;
+    };
+
     
     
     // hack !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -54,7 +66,11 @@ namespace opt {
     inline void complete_hloc(jsx::value& jParams) {
         if(jParams("hloc")("two body").is<jsx::object_t>() && !(jParams("hloc")("two body").is("real") && jParams("hloc")("two body").is("imag") && jParams("hloc")("two body").size() == 2))
             jParams("hloc")("two body") = transform(get_basis<Value>(jParams("basis")), get_interaction(jParams("basis"), jParams("hloc")("two body")));
-    };
+      
+        if (jParams.is("interaction truncation"))
+            jParams("hloc")("two body") = truncate( jsx::at<io::Vector<Value>>(jParams("hloc")("two body")), jParams("interaction truncation").real64() );
+        
+        };
     
     
     template<typename Value>
