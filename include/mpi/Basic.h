@@ -228,6 +228,7 @@ namespace mpi {
 template<typename T, typename std::enable_if<data_compatible_if< T, fundamental >::value, int>::type = 0>
     void gather(std::basic_string<T>& arg, int root) {
 #ifdef HAVE_MPI
+        //should we check that strings are of the same size?
         std::basic_string<T> result( rank() == root ? arg.size()*mpi::number_of_workers() : 0, ' ');
         MPI_Gather(&arg.front(), arg.size(), get_data_type(T()), &result.front(), arg.size(), get_data_type(T()), root, MPI_COMM_WORLD);
         if(rank() == root) arg = std::move(result);

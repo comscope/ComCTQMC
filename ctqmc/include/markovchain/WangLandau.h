@@ -130,18 +130,23 @@ namespace mch {
                     
                     //Check that this list is the same as the original list (i.e., each worker has at least had one step in each space all other workers have  sampled)
                     for (auto  const& entry : unique_list_of_entries){
+                        if (entry != "" or entry != " "){
                             auto const check = std::find(list_of_entries.begin(),list_of_entries.end(),entry);
                             if (check == list_of_entries.end()){
                                 std::cout << "WangLandau:: Warning from worker " << mpi::rank()
                                     << "! Add more thermalisation time;  Wang Landau algorithm has not converged\n";
                                 safe_emplace(active, entry);
                             }
+                        }
                         
                     }
                         
                     //Then reduce eta's
                     for (auto const& entry : unique_list_of_entries){
+                        if (entry != "" or entry != " "){
                             auto & eta = eta_[active].at(entry);
+                        
+                            std::cout << mpi::rank() << " " << entry << "\n";
                             
                             mpi::reduce<mpi::op::sum>(eta, mpi::master);
                         
@@ -149,6 +154,7 @@ namespace mch {
                                 eta /= mpi::number_of_workers();
                             
                             mpi::bcast(eta, mpi::master);
+                        }
                     }
                     
                     mpi::barrier();
