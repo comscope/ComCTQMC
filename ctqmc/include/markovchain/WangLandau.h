@@ -8,7 +8,20 @@
 #include "../../../include/JsonX.h"
 
 namespace mch {
-    
+ 
+    std::vector<std::string> split_by_char(std::string const& string, char const c){
+        std::stringstream temp(string);
+        std::string segment;
+        std::vector<std::string> seglist;
+
+        while(std::getline(temp, segment, c))
+        {
+           seglist.push_back(segment);
+        }
+        
+        return seglist;
+    }
+
     
     template<typename Value>
     struct WangLandau {
@@ -60,21 +73,86 @@ namespace mch {
             
             //Guard against calling this multiple times -- which happens when there are GPU
             if (!thermalised_){
-                    
+                
                 if(!restart_){
                     normalise_eta();  fill<std::int64_t>(steps_,0); totalSteps_ = 0;
                 }
                 
-                //All mp images should have the same eta
-                for(auto active : active_)
-                    for (auto & eta : eta_[active]){
-                        mpi::reduce<mpi::op::sum>(eta.second, mpi::master);
+                //All mp images should have the same set of  eta
+                for(auto active : active_){
+
+                    //Not all ranks will have sampled the same spaces -- need to initialize those missing from the map
+                    //Also, warn the user that the  WangLandau algorithm will be questionable when this happens
                     
-                        if(mpi::rank() == mpi::master)
-                            eta.second /= mpi::number_of_workers();
-                        
-                        mpi::bcast(eta.second, mpi::master);
+                    //First, create a string which is the concatenated list of worm spaces i_j_k_l
+                    std::string concat_of_entries="";
+                    std::vector<std::string> list_of_entries; //to check  against later
+                    for (auto const& eta : eta_[active]){
+                        concat_of_entries+=eta.first+" ";
+                        list_of_entries.push_back(eta.first);
                     }
+                    
+                    //Pad the strings so that this list is the same length across all workers
+                    auto length_of_entries = concat_of_entries.size();
+                    mpi::all_reduce<mpi::op::max>(length_of_entries);
+                    concat_of_entries.resize(length_of_entries, ' ');
+                    
+                    //Concatenate list of entries  from all workers (on master rank)
+                    mpi::gather(concat_of_entries, mpi::master);
+                    
+                    //Gather only the unique elements from this list
+                    std::string unique_concat_of_entries="";
+                    if (mpi::rank() == mpi::master){
+                        concat_of_entries.pop_back();
+                        
+                        auto unique_list_of_entries = split_by_char(concat_of_entries,' ');
+                        
+                        std::vector<std::string>::iterator it;
+                        it = std::unique(unique_list_of_entries.begin(), unique_list_of_entries.end());
+                        
+                        auto const number_of_unique_entries = std::distance(unique_list_of_entries.begin(),it);
+                        unique_list_of_entries.resize(number_of_unique_entries);
+                        
+                        for (auto const& entry : unique_list_of_entries){
+                            unique_concat_of_entries += entry + " ";
+                        }
+                        unique_concat_of_entries.pop_back();
+                    }
+                    
+                    
+                    //Broadcast this list back to all workers
+                    auto size = unique_concat_of_entries.size();
+                    mpi::bcast(size,mpi::master);
+                    unique_concat_of_entries.resize(size);
+                    mpi::bcast(unique_concat_of_entries, mpi::master);
+
+                    auto const unique_list_of_entries = split_by_char(unique_concat_of_entries,' ');
+                    
+                    //Check that this list is the same as the original list (i.e., each worker has at least had one step in each space all other workers have  sampled)
+                    for (auto  const& entry : unique_list_of_entries){
+                            auto const check = std::find(list_of_entries.begin(),list_of_entries.end(),entry);
+                            if (check == list_of_entries.end()){
+                                std::cout << "WangLandau:: Warning from worker " << mpi::rank()
+                                    << "! Add more thermalisation time;  Wang Landau algorithm has not converged\n";
+                                safe_emplace(active, entry);
+                            }
+                        
+                    }
+                        
+                    //Then reduce eta's
+                    for (auto const& entry : unique_list_of_entries){
+                            auto & eta = eta_[active].at(entry);
+                            
+                            mpi::reduce<mpi::op::sum>(eta, mpi::master);
+                        
+                            if(mpi::rank() == mpi::master)
+                                eta /= mpi::number_of_workers();
+                            
+                            mpi::bcast(eta, mpi::master);
+                    }
+                    
+                    mpi::barrier();
+                }
                 
                 
                 // let user decide how much time should be spent in partition space (default 50%)
@@ -129,6 +207,8 @@ namespace mch {
             safe_emplace(get_index<W>::value,string_index);
             
             if (!restart_ or thermalised_){ ++steps_[get_index<W>::value].at(string_index); ++totalSteps_; }
+            
+//           std::cout  << steps_[get_index<W>::value].at(string_index) << " " << string_index << "\n";
             
             if (!thermalised_ and !restart_) {
                 
