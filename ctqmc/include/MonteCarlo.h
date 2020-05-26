@@ -178,6 +178,12 @@ namespace mc {
 
             if(jParams("error").string() == "parallel") {
                 
+                //measuring error accross workers means that each worker must calculate its own error
+                //By default, we will not compute error of observables which are computed in parallel
+                //i.e., those observables which might take a long time to compute serially
+                jParams["serial evalsim"] = true;
+                jParams["limited post-processing"] = jParams.is("all errors") ? !jParams("all errors").boolean() : true;
+                
                 meas::reduce(jMeasurements, jMeasurements, jSimulation("Wang Landau"), meas::Jackknife(), false);
                 jSimulation["error"] = evalsim::evalsim<Value>(jParams, jMeasurements);
                 meas::error(jSimulation("error"), meas::Jackknife());

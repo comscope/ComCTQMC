@@ -40,8 +40,15 @@ namespace evalsim {
             
             std::size_t const N = jHybMatrix.size();
             std::size_t const size = N*N;
-            std::size_t const rank = mpi::rank();
-            std::size_t const chunk = (size + mpi::number_of_workers() - 1)/mpi::number_of_workers();
+            std::size_t rank = 0;
+            std::size_t chunk = 0;
+            if (jParams.is("serial evalsim") and jParams("serial evalsim").boolean()){
+                rank = 0;
+                chunk = size;
+            } else {
+                rank = mpi::rank();
+                chunk = (size + mpi::number_of_workers() - 1)/mpi::number_of_workers();
+            }
             std::vector<Value> tmp1(size,0);
             std::vector<Value> tmp2(size,0);
             
@@ -66,8 +73,10 @@ namespace evalsim {
                 }
             }
             
-            mpi::reduce<mpi::op::sum>(tmp1, mpi::master);
-            mpi::reduce<mpi::op::sum>(tmp2, mpi::master);
+            if (chunk != size){
+                mpi::reduce<mpi::op::sum>(tmp1, mpi::master);
+                mpi::reduce<mpi::op::sum>(tmp2, mpi::master);
+            }
             
             for (std::size_t i=0; i<N; i++)
                 for (std::size_t j=0; j<N; j++){
