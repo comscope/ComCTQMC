@@ -29,6 +29,7 @@ namespace mc {
     {
         params::complete_impurity<Value>(jParams);
         
+        
         data::Data<Value> data(jParams, Mode());
         data::setup_data<Mode>(jParams, data);
         
@@ -36,6 +37,7 @@ namespace mc {
         obs::setup_obs<Mode>(jParams, data, observables);
         
         mch::WangLandau<Value> wangLandau(jParams, data);
+        
         
         std::vector<std::tuple<
         std::unique_ptr<imp::itf::Batcher<Value>>, //0
@@ -60,10 +62,6 @@ namespace mc {
         
         
         std::int64_t thermSteps = 0, measSteps = 0, stream = 0;
-        if(jParams.is("restart") and jParams("restart").boolean()){
-            meas::restart(jParams, jParams("measurements"), jSimulation["measurements"]); jParams["measurements"] = jsx::empty_t();
-        }
-            //I kind of want to free the memory from jParams[measurements] earlier. However, code complains because of jSimulation
         
         while(simulations.size()) {
             auto* batcher = std::get<0>(simulations[stream]).get();
@@ -149,8 +147,12 @@ namespace mc {
             if(observables[space] != nullptr)
                 observables[space]->finalize(data, jSimulation["measurements"]);
         
-        jSimulation["Wang Landau"] = wangLandau.json();
+        wangLandau.finalize(jSimulation["measurements"]);
+
         
+        jSimulation["etas"] = wangLandau.etas();
+        
+
         std::int64_t numberOfMarkovChains = jSimulation["configs"].size();
         
         mpi::reduce<mpi::op::sum>(numberOfMarkovChains, mpi::master);
@@ -174,7 +176,7 @@ namespace mc {
         if(mpi::number_of_workers() > 1 && jParams.is("error") && jParams("error").string() != "none") {
             jsx::value jMeasurements = std::move(jSimulation("measurements"));
             
-            meas::reduce(jSimulation("measurements"), jMeasurements, jSimulation("Wang Landau"), meas::All(), true);
+            meas::reduce(jSimulation("measurements"), jMeasurements, jSimulation("etas"), meas::All(), true);
 
             if(jParams("error").string() == "parallel") {
                 
@@ -184,13 +186,13 @@ namespace mc {
                 jParams["serial evalsim"] = true;
                 jParams["limited post-processing"] = jParams.is("all errors") ? !jParams("all errors").boolean() : true;
                 
-                meas::reduce(jMeasurements, jMeasurements, jSimulation("Wang Landau"), meas::Jackknife(), false);
+                meas::reduce(jMeasurements, jMeasurements, jSimulation("etas"), meas::Jackknife(), false);
                 jSimulation["error"] = evalsim::evalsim<Value>(jParams, jMeasurements);
                 meas::error(jSimulation("error"), meas::Jackknife());
                 
             } else if(jParams("error").string() == "serial") {
                 
-                meas::reduce(jMeasurements, jMeasurements, jSimulation("Wang Landau"), meas::Jackknife(), true);
+                meas::reduce(jMeasurements, jMeasurements, jSimulation("etas"), meas::Jackknife(), true);
                 jSimulation["resample"] = std::move(jMeasurements);
                 io::to_tagged_json(jSimulation("resample"));
                 
@@ -198,7 +200,7 @@ namespace mc {
                 throw std::runtime_error("mc::statistics: invalid error option " + jParams("error").string());
             
         } else
-            meas::reduce(jSimulation("measurements"), jSimulation("measurements"), jSimulation("Wang Landau"), meas::All(), true);
+            meas::reduce(jSimulation("measurements"), jSimulation("measurements"), jSimulation("etas"), meas::All(), true);
         
         io::to_tagged_json(jSimulation("measurements"));
     }

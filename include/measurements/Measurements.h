@@ -12,7 +12,6 @@
 #include "../mpi/Utilities.h"
 #include "../io/Vector.h"
 #include "../../ctqmc/include/config/Worms.h"
-#include "../../ctqmc/include/config/worm/Index.h"
 
 //Achtung: es kann sein dass gewisse observabeln nicht gespeichert wurden, c.f. MonteCarlo.h
 
@@ -28,16 +27,6 @@ namespace meas {
         inline static std::string name() { return name(T(), M());};
         
         Vector() = default;
-        
-        /*
-        Vector(io::Vector<T> && data, std::int64_t const samples) : data_(0), samples_(0) {
-            if(mpi::rank() == mpi::master){
-                data_ = std::move(data);
-                samples_ = samples;
-            }
-        }
-        */
-        
         Vector(Vector const&) = default;
         Vector(Vector&&) = default;
         Vector& operator=(Vector const&) = default;
@@ -163,85 +152,69 @@ namespace meas {
     
     
     template<typename E>
-    inline void reduce(jsx::value& jOut, jsx::value const& jIn, jsx::value const& jWL, E, bool b64) {
+    inline void reduce(jsx::value& jOut, jsx::value const& jIn, jsx::value const& jEtas, E, bool b64) {
         auto const pName = cfg::partition::Worm::name();
-        auto const pSpec = cfg::worm::Index<cfg::partition::Worm>::string();
         
         jsx::value const jSign = jIn(pName)("sign").at<rvecfix>().reduce(1., E(), b64);
-        auto const pSteps = reduce_steps(jWL(pName)(pSpec)("steps").int64(), E());
-        auto const pEta = jWL(pName)(pSpec)("eta").real64();
-        auto const signxZp = (jSign.is<jsx::null_t>() ? 1. : jsx::at<io::rvec>(jSign).at(0))*pSteps/pEta;
+        auto const pSteps = reduce_steps(jIn(pName)("steps").int64(), E());
+        auto const signxZp = (jSign.is<jsx::null_t>() ? 1. : jsx::at<io::rvec>(jSign).at(0))*pSteps/jEtas(pName).real64();
         
         if(!jOut.is<jsx::object_t>()) jOut = jsx::object_t();
         
         for(auto& jWorm : jIn.object()) {
-            if (jWorm.first==pName){
-                reduce(jOut[jWorm.first], pSteps/pEta/signxZp, jWorm.second, E(), b64);
-                jOut["WL"][jWorm.first][pSpec]["steps"] = pSteps;
-                jOut["WL"][jWorm.first][pSpec]["eta"] = pEta;
-            } else {
-                for (auto& type : jWorm.second.object())
-                    for (auto& func : type.second.object()){
-                        auto const wSteps = reduce_steps(jWL(jWorm.first)(func.first)("steps").int64(), E());
-                        auto const wEta = jWL(jWorm.first)(func.first)("eta").real64();
-                        auto const Zw = wSteps/wEta;
-                            
-                        reduce(jOut[jWorm.first][type.first][func.first], Zw/signxZp, func.second, E(), b64);
-                        jOut["WL"][jWorm.first][func.first]["steps"] = wSteps;
-                        jOut["WL"][jWorm.first][func.first]["eta"] = wEta;
-                    }
-            }
+            auto const wSteps = reduce_steps(jWorm.second("steps").int64(), E());
+            auto const Zw = wSteps/jEtas(jWorm.first).real64();
+            
+            reduce(jOut[jWorm.first], Zw/signxZp, jWorm.second, E(), b64);
+            
+            jOut[jWorm.first]["steps"] = wSteps;
         }
         
         jOut[pName]["sign"] = jSign;
     }
 
+
     void restart(jsx::value const& jParams, jsx::value & jInput, jsx::value & jMeasurements){
-        if(mpi::rank() == mpi::master){
+        if(1){
+            
             mpi::cout << "Initializing measurements from previous run" << std::endl;
             auto const names = cfg::Worm::get_names();
-            auto const pName = cfg::partition::Worm::name();
-            auto const pSpec = cfg::worm::Index<cfg::partition::Worm>::string();
             
             for (auto & meas : jInput.object()){
                 
-                //Only handle the actual measurements in this way.
-                //Other information handled separately, e.g., WangLandau steps and etas
+                auto samples = jInput[meas.first]["steps"].int64() / mpi::number_of_workers();
+                if (mpi::rank() == mpi::master) samples += jInput[meas.first]["steps"].int64() % mpi::number_of_workers();
+                
+                //TODO: test
+                //TODO: Add partition space restart
                 auto it = std::find(names.begin(), names.end(), meas.first);
-                if(it != names.end()){
+                if(it != names.end() and meas.first == cfg::partition::Worm::name()){
                     
-                    
-                    if (meas.first != pName){ // let's just deal with worms for now
-                        for (auto & type : meas.second.object()){ //static vs dynamic
-                            for (auto & func : type.second.object()){ //ij or ijkl of space
+                    for (auto & type : meas.second.object()){ //static vs dynamic
+                        for (auto & func : type.second.object()){ //ij or ijkl of space
                                 
-                                auto const samples = type.first == "static" ?
-                                    jInput["WL"][meas.first][func.first]["steps"].int64() :
-                                    jInput["WL"][pName][pSpec]["steps"].int64();
+                            //need to do this for the other types
+                            if (func.second.is<io::cvec>()){
+                                std::vector<ut::complex> data = jsx::at<io::cvec>(func.second);
+                                for (auto& x : data) x*=samples;
+                                jMeasurements(meas.first)(type.first)(func.first) << meas::fix(data, samples);
                                 
-                                //need to do this ffor the other types
-                                if (func.second.is<io::cvec>()){
-                                    std::vector<ut::complex> data = jsx::at<io::cvec>(func.second);
-                                    for (auto& x : data) x*=samples;
-                                    jMeasurements(meas.first)(type.first)(func.first) << meas::fix(data, samples);
-                                } else if (func.second.is<io::rvec>()) {
-                                    std::vector<double> data =jsx::at<io::rvec>(func.second);
-                                    for (auto& x : data) x*=samples;
-                                    jMeasurements(meas.first)(type.first)(func.first) << meas::fix(data, samples);
-                                }
-                        
+                            } else if (func.second.is<io::rvec>()) {
+                                std::vector<double> data =jsx::at<io::rvec>(func.second);
+                                for (auto& x : data) x*=samples;
+                                jMeasurements(meas.first)(type.first)(func.first) << meas::fix(data, samples);
                             }
+                        
                         }
                     }
-                        
                 }
+                
             }
          
             mpi::cout << "Done initializing measurements from previous run" << std::endl;
         }
     }
- 
-    
+
 }
 
 
