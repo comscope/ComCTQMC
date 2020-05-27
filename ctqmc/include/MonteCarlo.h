@@ -184,7 +184,7 @@ namespace mc {
                 //By default, we will not compute error of observables which are computed in parallel
                 //i.e., those observables which might take a long time to compute serially
                 jParams["serial evalsim"] = true;
-                jParams["limited post-processing"] = jParams.is("all errors") ? !jParams("all errors").boolean() : true;
+                jParams["limited post-processing"] = jParams.is("all errors") ? !jParams("all errors").boolean() : false;
                 
                 meas::reduce(jMeasurements, jMeasurements, jSimulation("etas"), meas::Jackknife(), false);
                 jSimulation["error"] = evalsim::evalsim<Value>(jParams, jMeasurements);
