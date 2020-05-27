@@ -19,7 +19,7 @@ int main(int argc, char** argv)
         
         mpi::cout << "Start task at " << std::ctime(&(time = std::time(nullptr))) << std::endl;
         
-        jsx::value jParams = mpi::read(std::string(argv[1]) + ".json");
+        jsx::value jParams = mpi::read(std::string(argv[1]) + ".json");  params::complete_worms(jParams);
         std::size_t const streamsPerProcess  = jParams("sim per device").int64();
         std::size_t const processesPerDevice = 1;
         
