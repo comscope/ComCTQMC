@@ -85,11 +85,11 @@ namespace evalsim {
         template<typename W>
         void operator()(ut::wrap<W> w, jsx::value const& jParams, jsx::value const& jMeasurements, jsx::value& jObservables) const {
             if( W::name() != cfg::partition::Worm::name() && jParams.is(W::name()) ) {
-                std::cout << std::endl << "Begin evaluating " + W::name() + " worm measurements" << std::endl;
+                mpi::cout << std::endl << "Begin evaluating " + W::name() + " worm measurements" << std::endl;
                 
                 jObservables[W::name()] = worm::evalsim<Value>(w, jParams, jMeasurements(W::name()), jMeasurements(cfg::partition::Worm::name()), jObservables);
                 
-                std::cout << "End evaluating " + W::name() + " worm measurements" << std::endl;
+                mpi::cout << "End evaluating " + W::name() + " worm measurements" << std::endl;
             }
         }
         void operator()(ut::wrap<cfg::partition::Worm> w, jsx::value const& jParams, jsx::value const& jMeasurements, jsx::value const& jObservables) const {
