@@ -180,6 +180,9 @@ namespace mc {
 
             if(jParams("error").string() == "parallel") {
                 
+                //This very very slighly biases results towards 0 if it finds missing tensor elements -- ok for error only
+                meas::check_missing_tensor_elements(jParams, jMeasurements);
+                
                 //measuring error accross workers means that each worker must calculate its own error
                 //By default, we will not compute error of observables which are computed in parallel
                 //i.e., those observables which might take a long time to compute serially

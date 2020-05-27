@@ -108,27 +108,34 @@ namespace evalsim {
         
         mpi::cout << "End evaluating partition measurements" << std::endl;
         
-        add_dynamics(jParams, jMeasurements, cfg::green::name, " impr");
-        add_dynamics(jParams, jMeasurements, cfg::green::name, " imprsum");
+        // This option is set in CTQMC if `all errors' is set. The intent is to enable fast error computation.
+        // While not all worms are slow to evaluate, they require (in some cases) the occupations.
+        // The occupation can be a difficult observable to compute in problems with large invariant subspaces.
+        bool const lpp = jParams.is("limited post-processing") ? jParams("limited post-processing").boolean() : false;
+        if (!lpp){
             
-        add_dynamics(jParams, jMeasurements, cfg::vertex::name, " impr");
-        add_dynamics(jParams, jMeasurements, cfg::vertex::name, " imprsum");
+            add_dynamics(jParams, jMeasurements, cfg::green::name, " impr");
+            add_dynamics(jParams, jMeasurements, cfg::green::name, " imprsum");
+                
+            add_dynamics(jParams, jMeasurements, cfg::vertex::name, " impr");
+            add_dynamics(jParams, jMeasurements, cfg::vertex::name, " imprsum");
+                
+            add_dynamics(jParams, jMeasurements, cfg::hedin_ph::name, " impr");
+            add_dynamics(jParams, jMeasurements, cfg::hedin_ph::name, " imprsum");
+                
+            add_dynamics(jParams, jMeasurements, cfg::hedin_pp::name, " impr");
+            add_dynamics(jParams, jMeasurements, cfg::hedin_pp::name, " imprsum");
+                
+            cfg::for_each_type<cfg::Worm>::apply(worm_clean_functor<Value>(), jParams, jMeasurements);
+                
+            cfg::for_each_type<cfg::Worm>::apply(worm_evalsim_functor<Value>(), jParams, jMeasurements, jObservables);
+                
+            if (jParams.is("kernels")){
+                jObservables["kernels"] = worm::evaluateKernels<Value>(jParams,jObservables);
+                jObservables["Asymptotic Full Vertex"] = worm::evaluateFullVertexFromKernels<Value>(jParams,jObservables);
+            }
             
-        add_dynamics(jParams, jMeasurements, cfg::hedin_ph::name, " impr");
-        add_dynamics(jParams, jMeasurements, cfg::hedin_ph::name, " imprsum");
-            
-        add_dynamics(jParams, jMeasurements, cfg::hedin_pp::name, " impr");
-        add_dynamics(jParams, jMeasurements, cfg::hedin_pp::name, " imprsum");
-            
-        cfg::for_each_type<cfg::Worm>::apply(worm_clean_functor<Value>(), jParams, jMeasurements);
-            
-        cfg::for_each_type<cfg::Worm>::apply(worm_evalsim_functor<Value>(), jParams, jMeasurements, jObservables);
-            
-        if (jParams.is("kernels")){
-            jObservables["kernels"] = worm::evaluateKernels<Value>(jParams,jObservables);
-            jObservables["Asymptotic Full Vertex"] = worm::evaluateFullVertexFromKernels<Value>(jParams,jObservables);
         }
-        
         
         return jObservables;
         

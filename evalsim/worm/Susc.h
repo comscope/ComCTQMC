@@ -25,35 +25,35 @@ namespace evalsim {
             
             ////Hybridization function
             
-            std::cout << "Reading hybridisation function ... " << std::flush;
+            mpi::cout << "Reading hybridisation function ... " << std::flush;
             
             jsx::value const jHybMatrix = jParams("hybridisation")("matrix");
             std::vector<io::cmat> hyb; std::vector<io::Matrix<Value>> hybMoments;
             
             std::tie(hyb, hybMoments) = partition::func::get_hybridisation<Value>(jParams);
             
-            std::cout << "Ok" << std::endl;
+            mpi::cout << "Ok" << std::endl;
                                   
                                   
-            std::cout << "Reading " << name << " function ... " << std::flush;
+            mpi::cout << "Reading " << name << " function ... " << std::flush;
             
             std::vector<io::ctens> susc = meas::read_tensor_functions<Value,Boson>(jMeasurements, jParams, jWorm, jHybMatrix, hyb.size());
             
-            std::cout << "Ok" << std::endl;
+            mpi::cout << "Ok" << std::endl;
                                   
             
-            std::cout << "Computing susceptibility ... " << std::flush;
+            mpi::cout << "Computing susceptibility ... " << std::flush;
             
             func::susc::ph::compute_and_subtract_disconnected<Value>(jParams,jObservables("partition")("occupation"), frequencies, susc);
             
-            std::cout << "Ok" << std::endl;
+            mpi::cout << "Ok" << std::endl;
             
-            std::cout << "Enforcing symmetries ... " << std::flush;
+            mpi::cout << "Enforcing symmetries ... " << std::flush;
             
             std::vector<io::ctens> susc_symm(susc.size(), io::ctens(jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size()));
             func::susc::ph::enforce_symmetries<Value>(jParams,jWorm,susc,susc_symm);
             
-            std::cout << "Ok" << std::endl;
+            mpi::cout << "Ok" << std::endl;
             
             jsx::value jObservablesOut;
             
@@ -71,29 +71,29 @@ namespace evalsim {
             
             ////Hybridization function
             
-            std::cout << "Reading hybridisation function ... " << std::flush;
+            mpi::cout << "Reading hybridisation function ... " << std::flush;
             
             jsx::value const jHybMatrix = jParams("hybridisation")("matrix");
             std::vector<io::cmat> hyb; std::vector<io::Matrix<Value>> hybMoments;
             
             std::tie(hyb, hybMoments) = partition::func::get_hybridisation<Value>(jParams);
             
-            std::cout << "Ok" << std::endl;
+            mpi::cout << "Ok" << std::endl;
             
             
-            std::cout << "Reading " << name << " function ... " << std::flush;
+            mpi::cout << "Reading " << name << " function ... " << std::flush;
             
             std::vector<io::ctens> susc = meas::read_tensor_functions<Value,Boson>(jMeasurements, jParams, jWorm, jHybMatrix, hyb.size());
             
-            std::cout << "Ok" << std::endl;
+            mpi::cout << "Ok" << std::endl;
             
             // Particle particle susceptibility is equal to the two-particle green function
-            std::cout << "Enforcing symmetries ... " << std::flush;
+            mpi::cout << "Enforcing symmetries ... " << std::flush;
             
             std::vector<io::ctens> susc_symm(susc.size(), io::ctens(jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size()));
             func::susc::pp::enforce_symmetries<Value>(jParams,susc,susc_symm);
         
-            std::cout << "Ok" << std::endl;
+            mpi::cout << "Ok" << std::endl;
             
             jsx::value jObservablesOut;
             
