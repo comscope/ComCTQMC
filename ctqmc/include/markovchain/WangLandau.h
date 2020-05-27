@@ -17,6 +17,7 @@ namespace mch {
         flatCriterion_(0.4), lambda_(2.),
         thermalised_(false), totalSteps_(0) {
             steps_.fill(0); eta_.fill(1.);
+            //TODO: restart -- get old eta's back and guard against updating them
 
             int index = 0;
             for(auto name : names_) {
