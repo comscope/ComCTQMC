@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <array>
+#include <ctime>
 
 #include "Update.h"
 #include "../Utilities.h"
@@ -12,6 +13,23 @@
 
 namespace mch {
     
+
+    std::int64_t select_seed(jsx::value const& jParams, std::int64_t const ID){
+        
+        auto inc = (jParams.is("seed increment") ? jParams("seed increment").int64() : 857)*ID;
+        std::int64_t seed = 0;
+        
+        if (jParams.is("restart") and jParams("restart").boolean()){
+            seed = static_cast<int64_t>(time(0));
+            
+        } else {
+            seed = jParams.is("seed") ? jParams("seed").int64() : 41085;
+            
+        }
+        
+        return seed + inc;
+    }
+
     template<typename Value>
     struct MarkovChain {
         MarkovChain() = delete;
@@ -19,7 +37,7 @@ namespace mch {
         MarkovChain(jsx::value const& jParams, std::int64_t ID, Mode) :
         clean_(jParams.is("clean") ? jParams("clean").int64() : 10000), steps_(0),
         init_(new state::Init<Mode, Value>()),
-        urng_(ut::Engine((jParams.is("seed") ? jParams("seed").int64() : 41085) + (jParams.is("seed increment") ? jParams("seed increment").int64() : 857)*ID), ut::UniformDistribution(.0, 1.)),
+        urng_(ut::Engine(select_seed(jParams,ID)), ut::UniformDistribution(.0, 1.)),
         update_(nullptr) {
         };
         MarkovChain(MarkovChain const&) = delete;

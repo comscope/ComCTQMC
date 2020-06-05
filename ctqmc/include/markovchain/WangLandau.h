@@ -14,14 +14,27 @@ namespace mch {
         WangLandau() = delete;
         WangLandau(jsx::value const& jParams, data::Data<Value> const& data) :
         names_(cfg::Worm::get_names()),
+        restart_(jParams.is("restart") and jParams("restart").boolean()),
         flatCriterion_(0.4), lambda_(2.),
         thermalised_(false), totalSteps_(0) {
             steps_.fill(0); eta_.fill(1.);
-            //TODO: restart -- get old eta's back and guard against updating them
-
+            
             int index = 0;
             for(auto name : names_) {
-                if(jParams.is(name))  active_.push_back(index);
+                
+                if(jParams.is(name)){
+                    active_.push_back(index);
+
+                    if (restart_){
+                        if(jParams("measurements").is(name) and jParams("measurements")(name).is("eta")){
+                            eta_[index] = jParams("measurements")(name)("eta").real64();
+                            steps_[index] = jParams("measurements")(name)("steps").int64();
+                            
+                        } else {
+                            throw std::runtime_error("WangLandau:: restart:: measurement of space " + name + " does not report previous eta.\n No worm space can be added for a `restart' run.");
+                        }
+                    }
+                }
                 ++index;
             }
             
@@ -36,8 +49,10 @@ namespace mch {
         
         void thermalised() {
             if(!thermalised_) {
-                normalise_eta();  steps_.fill(0);
-            
+                if (!restart_){
+                    normalise_eta();  steps_.fill(0);
+                }
+                
                 //All mp images should have the same eta
                 for(auto active : active_) {
                     mpi::reduce<mpi::op::sum>(eta_[active], mpi::master);
@@ -67,9 +82,11 @@ namespace mch {
         
         template<typename W>
         void inc(W const& w) {
-            ++steps_[get_index<W>::value]; ++totalSteps_;
-
-            if(!thermalised_) {
+            if (!restart_ or thermalised_){
+                ++steps_[get_index<W>::value]; ++totalSteps_;
+            }
+            
+            if(!thermalised_ and !restart_) {
                 //Update eta, avoid underflows ...
                 if(eta_[get_index<W>::value] > 1.e-25)
                     eta_[get_index<W>::value] /= lambda_;
@@ -118,6 +135,7 @@ namespace mch {
         template<typename W> using get_index = cfg::get_index<W, cfg::Worm>;
         
         std::vector<std::string> const names_;
+        bool const restart_; //is the job a "restart" job -- in which case we don't recompute eta's
         double const flatCriterion_;  // Standard deviation at which point lambda is updated
         
         double lambda_;               //Update the volume as  V -> V*lambda

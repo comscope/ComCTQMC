@@ -29,7 +29,6 @@ namespace mc {
     {
         params::complete_impurity<Value>(jParams);
         
-        
         data::Data<Value> data(jParams, Mode());
         data::setup_data<Mode>(jParams, data);
         
@@ -37,7 +36,6 @@ namespace mc {
         obs::setup_obs<Mode>(jParams, data, observables);
         
         mch::WangLandau<Value> wangLandau(jParams, data);
-        
         
         std::vector<std::tuple<
         std::unique_ptr<imp::itf::Batcher<Value>>, //0
@@ -60,6 +58,7 @@ namespace mc {
 
         jSimulation["configs"] = jsx::array_t();
         
+        meas::restart(jParams,jSimulation["measurements"]);
         
         std::int64_t thermSteps = 0, measSteps = 0, stream = 0;
         
