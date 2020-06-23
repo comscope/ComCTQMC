@@ -12,6 +12,7 @@
 #include "Scalar.h"
 #include "Occupation.h"
 #include "Probabilities.h"
+#include "Overlap.h"
 #include "QuantumNumberSusc.h"
 #include "OccupationSusc.h"
 
@@ -202,6 +203,17 @@ namespace evalsim {
             if(jPartition.is("probabilities"))
                 
                 jObservables["probabilities"] = get_probabilities<Value>(jParams, jPartition, jMeasurements);
+            
+            
+            if(jPartition.is("print eigenstates") and jPartition("print eigenstates").boolean())
+                
+                jObservables["eigenstates"] = get_eigenstates<Value>(jParams, jPartition, jMeasurements);
+            
+            
+            
+            if(jPartition.is("print density matrix") and jPartition("print density matrix").boolean())
+                
+                jObservables["density matrix"] = meas::read_density_matrix<Value>(jParams, jMeasurements("density matrix"));
             
             
             
