@@ -12,7 +12,6 @@
 #include "Scalar.h"
 #include "Occupation.h"
 #include "Probabilities.h"
-#include "Overlap.h"
 #include "QuantumNumberSusc.h"
 #include "OccupationSusc.h"
 

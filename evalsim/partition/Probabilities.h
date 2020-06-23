@@ -181,13 +181,28 @@ namespace evalsim {
                 io::Matrix<Value> results(n_orb,N);
                 auto occupation_representations_ptr = occupation_representations.data();
                 
+                //std::vector<std::string> basis(N,"");
                 for(int i = 0; i < N ; ++i) {
-                    auto const occupation_representation = jsx::at<io::rvec>(jOccupationStates(index));
-                    for (auto const& x : occupation_representation)
+                    auto const occupation_representation = jsx::at<io::rvec>(jOccupationStates(index++));
+                    for (auto const& x : occupation_representation){
                         *occupation_representations_ptr++ = x;
+                        //basis[i]+=std::to_string(static_cast<int>(x));
+                    }
                 }
                 
-                linalg::mult<Value>('n', 'n', 1., occupation_representations, eigenvectors, .0, results);
+                /* testing
+                if (sector==100){
+                    std::cout << "\n";
+                    for (auto& x : basis) std::cout << x << "\n";
+                    for (int i = 0; i < eigenvectors.I(); i++){
+                        for (int j = 0; j < eigenvectors.J(); j++)
+                            std::cout << ut::real(eigenvectors(i,j)) << " ";
+                        std::cout << "\n";
+                    }
+                }
+                */
+                
+                linalg::mult<Value>('n', 't', 1., occupation_representations, eigenvectors, .0, results);
                 
                 jsx::array_t temp;
                 for (int i = 0; i < results.I(); i++){
@@ -198,11 +213,10 @@ namespace evalsim {
                 
                 
                 data[std::to_string(sector)]["occupation representation"] = std::move(results);
-                data[std::to_string(sector)]["quantum numbers"] = qn[index];
+                data[std::to_string(sector)]["quantum numbers"] = qn[index-1]; // should be identical for all index in a sector
                 data[std::to_string(sector)]["probabilities"] = prob[sector];
                 data[std::to_string(sector)]["energies"] = energies[sector];
                 
-                index++;
             }
             
             jOverlap = std::move(data);
