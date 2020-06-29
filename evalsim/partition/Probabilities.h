@@ -177,15 +177,18 @@ namespace evalsim {
                 auto const eigenvectors = jsx::at<io::Matrix<Value>>(jTransformation(sector)("matrix"));
                 int const N = jsx::at<io::rvec>(jParams("hloc")("eigen values")(sector)).size();
                 
+                io::Matrix<int> occupation_basis(n_orb,N);
                 io::Matrix<Value> occupation_representations(n_orb,N);
                 io::Matrix<Value> results(n_orb,N);
                 auto occupation_representations_ptr = occupation_representations.data();
+                auto occupation_basis_ptr = occupation_basis.data();
                 
                 //std::vector<std::string> basis(N,"");
                 for(int i = 0; i < N ; ++i) {
                     auto const occupation_representation = jsx::at<io::rvec>(jOccupationStates(index++));
                     for (auto const& x : occupation_representation){
                         *occupation_representations_ptr++ = x;
+                        *occupation_basis_ptr++ = x;
                         //basis[i]+=std::to_string(static_cast<int>(x));
                     }
                 }
@@ -204,14 +207,13 @@ namespace evalsim {
                 
                 linalg::mult<Value>('n', 't', 1., occupation_representations, eigenvectors, .0, results);
                 
-                jsx::array_t temp;
-                for (int i = 0; i < results.I(); i++){
-                    temp.push_back(jsx::array_t(results.J()+1));
+                for (int i = 0; i < results.I(); i++)
                     for (int j = 0; j < results.J(); j++)
                         results(i,j) = truncate(results(i,j),8);
-                }
                 
                 
+                data[std::to_string(sector)]["occupation representation basis"] = std::move(occupation_basis);
+                data[std::to_string(sector)]["eigenvectors"] = std::move(eigenvectors);
                 data[std::to_string(sector)]["occupation representation"] = std::move(results);
                 data[std::to_string(sector)]["quantum numbers"] = qn[index-1]; // should be identical for all index in a sector
                 data[std::to_string(sector)]["probabilities"] = prob[sector];
@@ -230,7 +232,7 @@ namespace evalsim {
         template<typename Value>
         jsx::value get_probabilities(jsx::value const& jParams, jsx::value const& jPartition, jsx::value const& jMeasurements)
         {
-            jsx::value jProbabilities;  
+            jsx::value jProbabilities;
             
             mpi::cout << "Reading impurity probabilities ... " << std::flush;
             
