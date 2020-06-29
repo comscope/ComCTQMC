@@ -31,7 +31,7 @@ namespace opt {
         Interaction(Interaction const& ) = delete;
         Interaction(Interaction&& ) = default;
         Interaction& operator=(Interaction const& ) = delete;
-        Interaction& operator=(Interaction&& ) = default;
+        Interaction& operator=(Interaction&& ) = delete;
         ~Interaction() = default;
         
         double operator()(int m1, int m2, int m3, int m4) const {
