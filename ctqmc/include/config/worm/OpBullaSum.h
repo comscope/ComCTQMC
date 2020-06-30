@@ -51,7 +51,7 @@ namespace cfg {
     template<typename Mode, std::size_t type, typename Value>
     void init_worm_operator_data(ut::wrap<OpBullaSum<type>>, jsx::value const& jParams, data::Data<Value>& data) {
         auto& bullaOps = data.template opt<imp::itf::BullaOperators<Value>>();
-        if(bullaOps.get() == nullptr) bullaOps.reset(new imp::BullaOperators<Mode, Value>(jParams("hloc")("interaction"), jParams("operators"), data.eig()));
+        if(bullaOps.get() == nullptr) bullaOps.reset(new imp::BullaOperators<Mode, Value>(jParams("mpi structure"), jParams("hloc")("interaction"), jParams("operators"), data.eig()));
     };
     
     

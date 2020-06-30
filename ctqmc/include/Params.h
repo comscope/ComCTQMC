@@ -23,6 +23,8 @@ namespace params {
         
         if(jParams.is("dyn"))
             jParams("dyn")("functions") = mpi::read(jParams("dyn")("functions").string());
+        
+        jParams["mpi structure"] = mpi::mpi_structure();
     };
     
     

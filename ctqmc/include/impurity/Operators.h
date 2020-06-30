@@ -12,6 +12,7 @@
 #include "Algebra.h"
 #include "BitSet.h"
 #include "Diagonal.h"
+#include "Utilities.h"
 #include "../Utilities.h"
 #include "../../../include/linalg/LinAlg.h"
 #include "../../../include/linalg/Operators.h"
@@ -57,13 +58,14 @@ namespace imp {
             } else
                 throw std::runtime_error("Tr: option in operator constructor not defined");
         };
-        Operator(jsx::value const& jOperator, itf::EigenValues const& eigItf) : Operator(eigItf) {
+        Operator(jsx::value const& jOperator, itf::EigenValues const& eigItf, io::rvec const& norms = {}) : Operator(eigItf) {
             if(static_cast<int>(jOperator.size()) != eig_.sectorNumber())
                 throw(std::runtime_error("Tr: wrong number of sectors."));
             
             std::vector<int> temp(eig_.sectorNumber() + 1, 0); int start_sector = 1;
             for(auto& jBloc : jOperator.array()) {
                 if(!jBloc("target").is<jsx::null_t>()) {
+                    
                     int target_sector = jBloc("target").int64() + 1;
                     
                     if(target_sector < 1 || eig_.sectorNumber() < target_sector)
@@ -76,7 +78,9 @@ namespace imp {
                     if(matrix.I() != eig_.at(target_sector).dim0() || matrix.J() != eig_.at(start_sector).dim0())
                         throw std::runtime_error("Tr: invalid matrix dimensions");
                     
-                    double const norm = linalg::spectral_norm(matrix);
+                    double norm;
+                    if (norms.size()){ norm = norms[start_sector-1]; }
+                    else norm = linalg::spectral_norm(matrix);
                     
                     if(norm != .0) {
                         set_map(start_sector) = { target_sector, std::log(norm) };
@@ -179,12 +183,14 @@ namespace imp {
         ops_(static_cast<Operator<Mode, Value>*>(::operator new(flavors_*sizeof(Operator<Mode, Value>)))) {
             mpi::cout << "Reading operators ... " << std::flush;
             
+            auto norms = gatherNorms<Value>(jParams("mpi structure"), jOperators);
+            
             int i = 0;
             for(auto& jOp : jOperators.array()) {
                 jsx::value jOpDagg = linalg::conj<Value>(jOp);
                 
-                new(ops_ + 2*i    ) Operator<Mode, Value>(jOp, eigItf);
-                new(ops_ + 2*i + 1) Operator<Mode, Value>(jOpDagg, eigItf);
+                new(ops_ + 2*i    ) Operator<Mode, Value>(jOp, eigItf, norms.norms()[i]);
+                new(ops_ + 2*i + 1) Operator<Mode, Value>(jOpDagg, eigItf, norms.normsDagg()[i]);
                 
                 ++i;
             }

@@ -94,7 +94,7 @@ namespace obs {
         
         if(jPartition.is("green bulla") ? jPartition("green bulla").boolean() : true) {
             auto& bullaOps = data.template opt<imp::itf::BullaOperators<Value>>();
-            if(bullaOps.get() == nullptr) bullaOps.reset(new imp::BullaOperators<Mode, Value>(jParams("hloc")("interaction"), jParams("operators"), data.eig()));
+            if(bullaOps.get() == nullptr) bullaOps.reset(new imp::BullaOperators<Mode, Value>(jParams("mpi structure"), jParams("hloc")("interaction"), jParams("operators"), data.eig()));
         }
         
         if(jPartition.is("occupation susceptibility direct") ? jPartition("occupation susceptibility direct").boolean() : false) {
