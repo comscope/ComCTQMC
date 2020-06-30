@@ -1,0 +1,87 @@
+{
+    "print" : true,
+
+    "basis" : {
+        "orbitals" : "d",
+        "type" : "product real"
+    },
+
+    "hloc" : {
+        "one body" : [
+            [0.02, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, -0.55, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, -0.6, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0.02, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, -0.55, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, -0.6]],
+
+        "two body" : {
+            "parametrisation" : "slater-condon",
+            "F0": 15.0,
+            "F2": 5.169230769230769,
+            "F4": 3.230769230769231,
+            "approximation": "none"
+        }
+    },
+
+    "dyn" : {
+        "quantum numbers" : [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1]],
+        "functions" : "dyn.json",
+        "matrix" : [["F0"]]
+    },
+
+    "hybridisation" : {
+        "matrix" : [
+            [ "xy", "", "", "", "", "", "", "", "", ""],
+            [ "", "yz", "", "", "", "", "", "", "", ""],
+            [ "", "", "3z2r2", "", "", "", "", "", "", ""],
+            [ "", "", "", "zx", "", "", "", "", "", ""],
+            [ "", "", "", "", "x2y2", "", "", "", "", ""], 
+            [ "", "", "", "", "", "xy", "", "", "", ""],
+            [ "", "", "", "", "", "", "yz", "", "", ""],
+            [ "", "", "", "", "", "", "", "3z2r2", "", ""],
+            [ "", "", "", "", "", "", "", "", "zx", ""],
+            [ "", "", "", "", "", "", "", "", "", "x2y2"]], 
+
+        "functions" : "hyb.json"
+    },
+
+    "beta" : 50,
+    "mu" : 31.65110125913311,
+
+    "complex" : false,
+   
+    "thermalisation steps" : 10000,
+    "measurement steps" : 100000,
+
+    "streams per device" : 1,
+
+    "partition" : {
+        "quantum numbers" : {
+            "Sz" : {},
+            "N" : {}
+        },
+        
+        "green basis" : "matsubara", 
+        "green matsubara cutoff" : 50,
+        "green bulla" : true,
+
+        "quantum number susceptibility" : true,
+
+        "occupation susceptibility direct" : false,
+        "occupation susceptibility bulla" : false,
+    
+        "susceptibility cutoff" : 50,
+        "susceptibility tail" : 200,
+
+        "density matrix precise" : false,
+
+        "probabilities" : ["N", "energy", "S2", "Sz"],
+        "print eigenstates" : true
+    }
+
+}
