@@ -49,6 +49,7 @@ namespace imp {
         map_(new SectorNorm[eig_.sectorNumber() + 1]),
         mat_(static_cast<Matrix<Mode, Value>*>(::operator new(sizeof(Matrix<Mode, Value>)*(eig_.sectorNumber() + 1)))) {
         };
+        
         Operator(char const option, itf::EigenValues const& eigItf) : Operator(eigItf) {
             if(option == '1') {
                 for(int s = eig_.sectorNumber(); s; --s) {
@@ -58,6 +59,9 @@ namespace imp {
             } else
                 throw std::runtime_error("Tr: option in operator constructor not defined");
         };
+        
+        //Supports parallelization by pre-computing norms
+        //otherwise, if no norms are passed, each rank computes all norms
         Operator(jsx::value const& jOperator, itf::EigenValues const& eigItf, io::rvec const& norms = {}) : Operator(eigItf) {
             if(static_cast<int>(jOperator.size()) != eig_.sectorNumber())
                 throw(std::runtime_error("Tr: wrong number of sectors."));
@@ -88,7 +92,7 @@ namespace imp {
                     } else
                         set_map(start_sector) = { 0, .0 };
                     
-                    //jBloc("matrix") = jsx::empty_t();
+                    //jBloc("matrix") = jsx::empty_t(); //TODO: Freeing jOperator matrices helps with memory noticeably? should maybe be a clean(jParams) func
                 } else
                     set_map(start_sector) = { 0, .0 };
                 ++start_sector;
