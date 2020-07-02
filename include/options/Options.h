@@ -59,6 +59,44 @@ namespace opt {
         return two_body;
     };
 
+    template<typename Value>
+    jsx::value cluster(io::Vector<Value> const& two_body, jsx::value const& jCluster) {
+        
+        auto const n = jCluster("number of sites").int64();
+        auto const N = jCluster("number of orbitals").int64();
+        
+        io::Vector<Value> two_body_cluster(n*n*n*n*two_body.size());
+        
+        for(int f1Dagg = 0; f1Dagg < N; ++f1Dagg)
+        for (int n1 = 0; n1 < n; ++n1)
+            for(int f2Dagg = 0; f2Dagg < N; ++f2Dagg)
+            for (int n2 = 0; n2 < n; ++n2)
+                if (n1==n2)
+                for(int f1 = 0; f1 < N; ++f1)
+                for (int n3 = 0; n3 < n; ++n3)
+                    if (n2==n3)
+                    for(int f2 = 0; f2 < N; ++f2)
+                    for (int n4 = 0; n4 < n; ++n4)
+                        if (n3==n4){
+                            
+                            std::size_t const indx_cluster = (
+                                                n*n*n*N*N*N*f1Dagg +
+                                                n*n*N*N*f2Dagg +
+                                                n*N*f1 +
+                                                f2);
+                            
+                            std::size_t const indx = (
+                                        N*N*N*f1Dagg +
+                                        N*N*f2Dagg +
+                                        N*f1 +
+                                        f2);
+                            
+                            two_body_cluster[indx_cluster] = two_body[indx];
+                        }
+        
+        
+        return two_body_cluster;
+    };
     
     
     // hack !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -70,8 +108,14 @@ namespace opt {
         if (jParams.is("interaction truncation"))
             jParams("hloc")("two body") = truncate( jsx::at<io::Vector<Value>>(jParams("hloc")("two body")), jParams("interaction truncation").real64() );
         
-        };
+        if (jParams.is("cluster")){
+            jParams("hloc")("two body") = cluster( jsx::at<io::Vector<Value>>(jParams("hloc")("two body")), jParams("cluster"));
+        }
+        
+    };
     
+
+
     
     template<typename Value>
     inline void complete_qn(jsx::value const& jParams, jsx::value& jqn) {
