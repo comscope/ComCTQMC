@@ -118,7 +118,7 @@ namespace mpi {
                 if(!rank_on_node.count(nodeName)) rank_on_node[nodeName] = 0;
                 else rank_on_node[nodeName]++;
                 
-                if(!rank_of_node.count(nodeName)) rank_of_node[nodeName] = ++nNodes;
+                if(!rank_of_node.count(nodeName)) rank_of_node[nodeName] = nNodes++;
                 
                 rankOnNode[rank] = rank_on_node.at(nodeName);
                 rankOfNode[rank] = rank_of_node.at(nodeName);
