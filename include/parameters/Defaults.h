@@ -89,7 +89,7 @@ struct MainDefaults : Defaults{
         defaults_["measurement time"] = 20;
         defaults_["thermalisation time"] = 5;
         defaults_["error"] = "parallel";
-        defaults_["all error"] = false;
+        defaults_["all errors"] = false;
         defaults_["quad insert"] = false;
         defaults_["seed"] = 41085;
         defaults_["seed inc"] = 857;
