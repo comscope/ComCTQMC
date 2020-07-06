@@ -58,12 +58,12 @@ void check_type_against_default(std::string const& entry, jsx::value const& val,
     if (default_val.is<jsx::boolean_t>() and !val.is<jsx::boolean_t>())
         throw std::runtime_error("Expected boolean for parameter named: " + entry);
     
-    //allow promotion of integers to reals
-    if (default_val.is<jsx::real64_t>() and (!val.is<jsx::real64_t>() and !default_val.is<jsx::int64_t>()))
+    //allow promotion of integers to real
+    if (default_val.is<jsx::real64_t>() and (!val.is<jsx::real64_t>() and !val.is<jsx::int64_t>()))
         throw std::runtime_error("Expected real number for parameter named: " + entry);
     
     //allow demotion of reals to integers -- can occasionally cause issues although jsonx tries to cast int to real
-    if (default_val.is<jsx::int64_t>() and (!val.is<jsx::real64_t>() and !default_val.is<jsx::int64_t>()))
+    if (default_val.is<jsx::int64_t>() and (!val.is<jsx::real64_t>() and !val.is<jsx::int64_t>()))
         throw std::runtime_error("Expected integer for parameter named: " + entry);
     
     if (default_val.is<jsx::string_t>() and !val.is<jsx::string_t>())

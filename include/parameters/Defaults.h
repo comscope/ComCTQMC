@@ -55,7 +55,7 @@ struct PartitionSpaceDefaults : Defaults {
         
         defaults_["green basis"] = "matsubara";
         defaults_["green bulla"] = true;
-        defaults_["green matsubara cutoff"] = 10.001;
+        defaults_["green matsubara cutoff"] = 10;
         defaults_["green legendre cutoff"] = 100;
         
         defaults_["density matrix precise"] = false;
