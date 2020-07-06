@@ -2,7 +2,7 @@
 #include "../../host/Algebra.h"
 
 #include "../../include/MonteCarlo.h"
-#include "../../../include/parameters/initialize.h"
+#include "../../../include/parameters/Initialize.h"
 
 ut::Beta ut::beta;
 
