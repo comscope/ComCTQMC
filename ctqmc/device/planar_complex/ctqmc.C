@@ -65,7 +65,7 @@ int main(int argc, char** argv)
             std::cout << "Rank " << mpi::rank() << " gets simulations [" << mcIds.front() << ", " << mcIds.back() << ") and uses device " << deviceId[mpi::rank()] <<  std::endl;
             
             imp::init_device(deviceId[mpi::rank()], processesPerDevice);
-            if(jParams("complex").boolean() : false) {
+            if(jParams("complex").boolean()) {
                 mc::montecarlo<imp::Device, ut::complex>(jParams, jSimulation);
                 mc::statistics<ut::complex>(jParams, jSimulation);
             } else {
@@ -78,7 +78,7 @@ int main(int argc, char** argv)
         } else {
             std::cout << "Rank " << mpi::rank() << " gets simulations [" << mcIds.front() << ", " << mcIds.back() << ") and uses host" << std::endl;
             
-            if(jParams("complex").boolean() : false) {
+            if(jParams("complex").boolean()) {
                 mc::montecarlo<imp::Host, ut::complex>(jParams, jSimulation);
                 mc::statistics<ut::complex>(jParams, jSimulation);
             } else {
