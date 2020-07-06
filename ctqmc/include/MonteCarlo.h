@@ -172,7 +172,7 @@ namespace mc {
     
     template<typename Value>
     void statistics(jsx::value jParams, jsx::value& jSimulation) {
-        if(mpi::number_of_workers() > 1 && jParams.is("error") && jParams("error").string() != "none") {
+        if(mpi::number_of_workers() > 1 && jParams("error").string() != "none") {
             jsx::value jMeasurements = std::move(jSimulation("measurements"));
             
             meas::reduce(jSimulation("measurements"), jMeasurements, jSimulation("etas"), meas::All(), true);
@@ -186,7 +186,7 @@ namespace mc {
                 //By default, we will not compute error of observables which are computed in parallel
                 //i.e., those observables which might take a long time to compute serially
                 jParams["serial evalsim"] = true;
-                jParams["limited post-processing"] = jParams.is("all errors") ? !jParams("all errors").boolean() : true;
+                jParams["limited post-processing"] = !jParams("all errors").boolean();
                 
                 meas::reduce(jMeasurements, jMeasurements, jSimulation("etas"), meas::Jackknife(), false);
                 jSimulation["error"] = evalsim::evalsim<Value>(jParams, jMeasurements);
