@@ -55,12 +55,13 @@ struct PartitionSpaceDefaults : Defaults {
         
         defaults_["green basis"] = "matsubara";
         defaults_["green bulla"] = true;
-        defaults_["green matsubara cutoff"] = 10;
+        defaults_["green matsubara cutoff"] = 10.001;
         defaults_["green legendre cutoff"] = 100;
         
         defaults_["density matrix precise"] = false;
         
         defaults_["occupation susceptibility"] = false;
+        defaults_["occupation susceptibility direct"] = false;
         defaults_["occupation susceptibility bulla"] = false;
         defaults_["quantum number susceptibility"] = false;
         defaults_["susceptibility cutoff"] = 10;
