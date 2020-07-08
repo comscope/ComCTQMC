@@ -41,7 +41,7 @@ namespace imp {
     template<typename Mode, typename Value>
     struct BullaOperators : itf::BullaOperators<Value> {
         BullaOperators() = delete;
-        BullaOperators(jsx::value const& jInteraction, jsx::value const& jOperators, itf::EigenValues const& eig) :
+        BullaOperators(jsx::value const& jMPI, jsx::value const& jInteraction, jsx::value const& jOperators, itf::EigenValues const& eig) :
         flavors_(2*jOperators.size()),
         ops_(static_cast<Operator<Mode, Value>*>(::operator new(flavors_*sizeof(Operator<Mode, Value>)))) {
             mpi::cout << "Reading bulla operators ... " << std::flush;
@@ -49,19 +49,27 @@ namespace imp {
             if(static_cast<int>(jInteraction.size()) != eig.sectorNumber())
                 throw(std::runtime_error("imp: wrong number of sectors in interaction."));
             
+
+            jsx::array_t jBullas(jOperators.size());
+            
             int i = 0;
             for(auto& jOp : jOperators.array()) {
-                jsx::value jBulla;
                 
+                jsx::value jBulla;
                 linalg::mult<Value>('n', 'n',  1., jOp, jInteraction, .0, jBulla);
                 linalg::mult<Value>('n', 'n', -1., jInteraction, jOp, 1., jBulla);
                 
-                jsx::value jBullaDagg = linalg::conj<Value>(jBulla);
-                
-                new(ops_ + 2*i    ) Operator<Mode, Value>(jBulla, eig);
-                new(ops_ + 2*i + 1) Operator<Mode, Value>(jBullaDagg, eig);
-                
+                jBullas[i] = std::move(jBulla);
                 ++i;
+            }
+
+            auto norms = gatherNorms<Value>(jMPI, jBullas);
+                
+            for (i = 0; i < jOperators.size(); ++i){
+                jsx::value jBullaDagg = linalg::conj<Value>(jBullas[i]);
+                
+                new(ops_ + 2*i    ) Operator<Mode, Value>(jBullas[i], eig, norms.norms()[i]);
+                new(ops_ + 2*i + 1) Operator<Mode, Value>(jBullaDagg, eig, norms.normsDagg()[i]);
             }
             
             mpi::cout << "Ok" << std::endl;

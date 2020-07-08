@@ -1,7 +1,7 @@
 #ifndef CTQMC_INCLUDE_OBSERVABLES_WORM_OBSERVABLE_H
 #define CTQMC_INCLUDE_OBSERVABLES_WORM_OBSERVABLE_H
 
-#include "../../config/worm/Index.h"
+#include "Index.h"
 #include "Measurement.h"
 
 #include "../../Data.h"
@@ -19,10 +19,10 @@ namespace obs {
             Observable(std::int64_t store, jsx::value const& jWorm, data::Data<Value> const& data) :
             store_(store),
             jWorm_(jWorm),
-            index_(data.ops().flavors()),
+            samples_(0),
             samples0_(0),
-            samples_(index_.size(),0),
-            ptrs_(index_.size(), nullptr) {                                               
+            index_(data.ops().flavors()),
+            ptrs_(index_.size(), nullptr) {
             };
             Observable(Observable const&) = delete;
             Observable(Observable&&) = delete;
@@ -34,15 +34,14 @@ namespace obs {
                 auto const integer_index = index_.integer(cfg::get<Worm>(state.worm()));
                 
                 if(ptrs_[integer_index] == nullptr) {
-                    auto const string_index = cfg::worm::Index<Worm>::string(cfg::get<Worm>(state.worm()));
+                    auto const string_index = Index<Worm>::string(cfg::get<Worm>(state.worm()));
                     meas_.emplace(string_index, Meas<Mode, Value, funcType, measType, Worm>(jWorm_, data));
                     ptrs_[integer_index] = &meas_.at(string_index);
-                    samplesMap_.emplace(string_index,&samples_[integer_index]);
                 }
                 
                 ptrs_[integer_index]->add(sign, data, state);
                 
-                ++samples_[integer_index]; if(samples_[integer_index]%store_ == 0) store(data, measurements);
+                ++samples_; if(samples_%store_ == 0) store(data, measurements);
                 
                 return true;
             };
@@ -80,26 +79,26 @@ namespace obs {
         private:
             std::int64_t const store_;
             jsx::value const jWorm_;
-            
-            cfg::worm::Index<Worm> index_;
 
-            std::size_t samples0_;
-            std::vector<std::int64_t> samples_;
-            std::map<std::string,std::int64_t*> samplesMap_;
+            std::size_t samples_, samples0_;
             
+            Index<Worm> index_;
             std::vector<Meas<Mode, Value, funcType, measType, Worm>*> ptrs_;
             std::map<std::string, Meas<Mode, Value, funcType, measType, Worm>> meas_;
             
             
             void store(data::Data<Value> const& data, jsx::value& measurements) {
+                samples0_ += samples_;
                 
                 for(auto& basis : meas_) {
                     auto& entry = measurements[measType == MeasType::Static ? "static" : "dynamic"][basis.first];
-                    basis.second.store(entry, *samplesMap_.at(basis.first));
-                    
-                    *samplesMap_.at(basis.first)=0;
+                    if(entry.template is<jsx::empty_t>())
+                        basis.second.store(entry, samples0_);
+                    else
+                        basis.second.store(entry, samples_);
                 }
                 
+                samples_ = 0;
             };
         };
         

@@ -47,6 +47,55 @@ namespace opt {
         
         return two_body;
     };
+
+    template<typename Value>
+    jsx::value truncate(io::Vector<Value> const& interaction, double const truncate) {
+        io::Vector<Value> two_body(interaction.size());
+        
+        for (int i=0; i<interaction.size(); i++)
+            two_body[i] = std::abs(interaction[i]) > truncate ? interaction[i] : 0;
+        
+        
+        return two_body;
+    };
+
+    template<typename Value>
+    jsx::value cluster(io::Vector<Value> const& two_body, jsx::value const& jCluster) {
+        
+        auto const n = jCluster("number of sites").int64();
+        auto const N = jCluster("number of orbitals").int64();
+        
+        io::Vector<Value> two_body_cluster(n*n*n*n*two_body.size());
+        
+        int N3 = N*N*N, N2 = N*N, Nn3 = N3*n*n*n, Nn2 = N2*n*n;
+        
+        for(int f1Dagg = 0; f1Dagg < N; ++f1Dagg)
+            for(int f2Dagg = 0; f2Dagg < N; ++f2Dagg)
+                for(int f1 = 0; f1 < N; ++f1)
+                    for(int f2 = 0; f2 < N; ++f2){
+
+                        std::size_t const indx = (
+                                    N3*f1Dagg +
+                                    N2*f2Dagg +
+                                    N*f1 +
+                                    f2);
+                    
+                        for (int i = 0; i < n; ++i){
+                            
+                            std::size_t const indx_cluster = (
+                                                Nn3*(f1Dagg + i*N) +
+                                                Nn2*(f2Dagg + i*N) +
+                                                N*n*(f1 + i*N) +
+                                                (f2 + i*N));
+                            
+                            two_body_cluster[indx_cluster] = two_body[indx];
+                        }
+                    }
+    
+        
+        
+        return two_body_cluster;
+    };
     
     
     // hack !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -54,8 +103,18 @@ namespace opt {
     inline void complete_hloc(jsx::value& jParams) {
         if(jParams("hloc")("two body").is<jsx::object_t>() && !(jParams("hloc")("two body").is("real") && jParams("hloc")("two body").is("imag") && jParams("hloc")("two body").size() == 2))
             jParams("hloc")("two body") = transform(get_basis<Value>(jParams("basis")), get_interaction(jParams("basis"), jParams("hloc")("two body")));
+      
+        if (jParams.is("interaction truncation"))
+            jParams("hloc")("two body") = truncate( jsx::at<io::Vector<Value>>(jParams("hloc")("two body")), jParams("interaction truncation").real64() );
+        
+        if (jParams.is("cluster")){
+            jParams("hloc")("two body") = cluster( jsx::at<io::Vector<Value>>(jParams("hloc")("two body")), jParams("cluster"));
+        }
+        
     };
     
+
+
     
     template<typename Value>
     inline void complete_qn(jsx::value const& jParams, jsx::value& jqn) {

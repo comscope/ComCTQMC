@@ -11,12 +11,12 @@ namespace obs {
     template<typename Mode, typename Worm, worm::MeasType measType, typename Value>
     void add_obs(jsx::value const& jWorm, data::Data<Value>& data, WormObservables<Value>& observables)
     {
-        std::int64_t const sweep = jWorm.is("sweep") ? jWorm("sweep").int64() : 50;
-        std::int64_t const store = jWorm.is("store") ? jWorm("store").int64() : 100;
+        std::int64_t const sweep = jWorm("sweep").int64();
+        std::int64_t const store = jWorm("store").int64();
         
-        if(jWorm.is("basis") ? jWorm("basis").string() == "matsubara" : true)
+        if(jWorm("basis").string() == "matsubara")
             observables.template add<worm::Observable<Mode, Value, worm::FuncType::Matsubara, measType, Worm>>(sweep, store, jWorm, data);
-        else if(jWorm.is("basis") ? jWorm("basis").string() == "legendre" : true)
+        else if(jWorm("basis").string() == "legendre")
             observables.template add<worm::Observable<Mode, Value, worm::FuncType::Legendre, measType, Worm>>(sweep, store, jWorm, data);
         else
             throw std::runtime_error("Unknown basis option");

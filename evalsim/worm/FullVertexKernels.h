@@ -44,7 +44,8 @@ namespace evalsim {
             
         };
         
-        
+        //We must swap operator orders to get everything into the same order as the full vertex
+        //The following options do exactly that
         std::vector<io::ctens> rearrange_susc_ph(std::vector<io::ctens> const& susc_ph){
             std::vector<io::ctens> r(susc_ph.size(),io::ctens(susc_ph[0].I(),susc_ph[0].I(),susc_ph[0].I(),susc_ph[0].I()));
             for (auto const& ijkl : susc_ph[0].ijkl()){
@@ -320,6 +321,7 @@ namespace evalsim {
                 int const n = nu + om*nMatGF;
                 int const wf = greenOM.pos(omega_f_kernel(nu));
                 int const wb = greenOM.pos(omega_f_kernel(nu)-omega_b_kernel(om));
+                int const wc = greenOM.pos(omega_b_kernel(om)-omega_f_kernel(nu));
                 
                 int const n_susc_test = omega_b.pos(omega_b_kernel(om));
                 bool const do_conj = n_susc_test < 0 ? true : false;
@@ -345,13 +347,13 @@ namespace evalsim {
                     for(std::size_t j = 0; j < jHybMatrix.size(); ++j){
                         
                         if (do_conj){
-                            kernel_2_ph[n](a,b,c,d)  -= 2.*std::conj(hedin_ph[n_susc].at(a,b,j,i))*U(i,c,j,d)/(green[wf](a,a)*green[wb](b,b));
+                            kernel_2_ph[n](a,b,c,d)  -= 2.* std::conj(hedin_ph[n_susc].at(a,b,j,i))*U(i,c,j,d)/(green[wf](a,a)*green[wb](b,b));
                             kernel_2_tph[n](a,b,c,d) -= 2.*std::conj(hedin_tph[n_susc].at(a,i,j,d))*U(i,c,b,j)/(green[wf](a,a)*green[wb](d,d));
-                            kernel_2_pp[n](a,b,c,d)  -=    std::conj(hedin_pp[n_susc].at(a,i,c,j))*U(j,i,b,d)/(green[wf](a,a)*green[wb](c,c));
+                            kernel_2_pp[n](a,b,c,d)  +=     std::conj(hedin_pp[n_susc].at(a,i,c,j))*U(j,i,b,d)/(green[wf](a,a)*green[wc](c,c));
                         } else {
                             kernel_2_ph[n](a,b,c,d)  -= 2.* (hedin_ph[n_susc].at(a,b,j,i))*U(i,c,j,d)/(green[wf](a,a)*green[wb](b,b));
-                            kernel_2_tph[n](a,b,c,d) -= 2.* (hedin_tph[n_susc].at(a,i,j,d))*U(i,c,b,j)/(green[wf](a,a)*green[wb](d,d));
-                            kernel_2_pp[n](a,b,c,d)  -=     (hedin_pp[n_susc].at(a,i,c,j))*U(j,i,b,d)/(green[wf](a,a)*green[wb](c,c));
+                            kernel_2_tph[n](a,b,c,d) -= 2.*(hedin_tph[n_susc].at(a,i,j,d))*U(i,c,b,j)/(green[wf](a,a)*green[wb](d,d));
+                            kernel_2_pp[n](a,b,c,d)  +=     (hedin_pp[n_susc].at(a,i,c,j))*U(j,i,b,d)/(green[wf](a,a)*green[wc](c,c));
                         }
                      
                     }
@@ -441,8 +443,6 @@ namespace evalsim {
             
             std::vector<io::ctens> asymptotic_vertex(nMatGB*nMatGF*nMatGF, io::ctens(jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size()));
             
-            std::cout << "\n";
-            
             for (int om=0; om<nMatGB; om++)
             for (int nu1=0; nu1<nMatGF; nu1++)
             for (int nu2=0; nu2<nMatGF; nu2++){
@@ -522,9 +522,8 @@ namespace evalsim {
                     if (om_pp>=0){
                         asymptotic_vertex[n](a,b,c,d) += kernel_1_pp[om_pp].at(a,b,c,d);
                         if (nu1_pp>=0 and nu2_pp>=0 and 1){
-                            //1;
-                            asymptotic_vertex[n](a,b,c,d) += kernel_2_pp[n1_pp].at(a,b,c,d) + kernel_2_pp[n2_pp].at(a,b,c,d);// + kernel_1_pp[om_pp].at(a,b,c,d);
                             
+                            asymptotic_vertex[n](a,b,c,d) += kernel_2_pp[n1_pp].at(a,b,c,d) + kernel_2_pp[n2_pp].at(a,b,c,d);// + kernel_1_pp[om_pp].at(a,b,c,d);
                             
                         } else if (0){
                             if (nu1_pp>=0)

@@ -263,6 +263,20 @@ namespace evalsim {
 
                 return jFunction;
             }
+        
+            template<typename Value>
+            jsx::value write_functions(jsx::value const& jParams, std::vector<io::cmat> const& functionsMatrix)
+            {
+                jsx::value jFunction;
+                
+                jsx::value const& jHybMatrix = jParams("hybridisation")("matrix");
+                
+                std::map<std::string, io::cvec> functions = get_function_entries(functionsMatrix, jHybMatrix);
+                for(auto& function : functions)
+                    jFunction[function.first]["function"] = std::move(function.second);
+                
+                return jFunction;
+            }
             
         }
         

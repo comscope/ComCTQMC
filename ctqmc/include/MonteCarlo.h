@@ -58,12 +58,9 @@ namespace mc {
 
         jSimulation["configs"] = jsx::array_t();
         
+        meas::restart(jParams,jSimulation["measurements"]);
         
         std::int64_t thermSteps = 0, measSteps = 0, stream = 0;
-        if(jParams.is("restart") and jParams("restart").boolean()){
-            meas::restart(jParams, jParams("measurements"), jSimulation["measurements"]); jParams["measurements"] = jsx::empty_t();
-        }
-            //I kind of want to free the memory from jParams[measurements] earlier. However, code complains because of jSimulation
         
         while(simulations.size()) {
             auto* batcher = std::get<0>(simulations[stream]).get();
@@ -149,8 +146,12 @@ namespace mc {
             if(observables[space] != nullptr)
                 observables[space]->finalize(data, jSimulation["measurements"]);
         
-        jSimulation["Wang Landau"] = wangLandau.json();
+        wangLandau.finalize(jSimulation["measurements"]);
+
         
+        jSimulation["etas"] = wangLandau.etas();
+        
+
         std::int64_t numberOfMarkovChains = jSimulation["configs"].size();
         
         mpi::reduce<mpi::op::sum>(numberOfMarkovChains, mpi::master);
@@ -171,20 +172,29 @@ namespace mc {
     
     template<typename Value>
     void statistics(jsx::value jParams, jsx::value& jSimulation) {
-        if(mpi::number_of_workers() > 1 && jParams.is("error") && jParams("error").string() != "none") {
+        if(mpi::number_of_workers() > 1 && jParams("error").string() != "none") {
             jsx::value jMeasurements = std::move(jSimulation("measurements"));
             
-            meas::reduce(jSimulation("measurements"), jMeasurements, jSimulation("Wang Landau"), meas::All(), true);
+            meas::reduce(jSimulation("measurements"), jMeasurements, jSimulation("etas"), meas::All(), true);
 
             if(jParams("error").string() == "parallel") {
                 
-                meas::reduce(jMeasurements, jMeasurements, jSimulation("Wang Landau"), meas::Jackknife(), false);
+                //This very very slighly biases results towards 0 if it finds missing tensor elements -- ok for error only
+                meas::check_missing_tensor_elements(jParams, jMeasurements);
+                
+                //measuring error accross workers means that each worker must calculate its own error
+                //By default, we will not compute error of observables which are computed in parallel
+                //i.e., those observables which might take a long time to compute serially
+                jParams["serial evalsim"] = true;
+                jParams["limited post-processing"] = !jParams("all errors").boolean();
+                
+                meas::reduce(jMeasurements, jMeasurements, jSimulation("etas"), meas::Jackknife(), false);
                 jSimulation["error"] = evalsim::evalsim<Value>(jParams, jMeasurements);
                 meas::error(jSimulation("error"), meas::Jackknife());
                 
             } else if(jParams("error").string() == "serial") {
                 
-                meas::reduce(jMeasurements, jMeasurements, jSimulation("Wang Landau"), meas::Jackknife(), true);
+                meas::reduce(jMeasurements, jMeasurements, jSimulation("etas"), meas::Jackknife(), true);
                 jSimulation["resample"] = std::move(jMeasurements);
                 io::to_tagged_json(jSimulation("resample"));
                 
@@ -192,7 +202,7 @@ namespace mc {
                 throw std::runtime_error("mc::statistics: invalid error option " + jParams("error").string());
             
         } else
-            meas::reduce(jSimulation("measurements"), jSimulation("measurements"), jSimulation("Wang Landau"), meas::All(), true);
+            meas::reduce(jSimulation("measurements"), jSimulation("measurements"), jSimulation("etas"), meas::All(), true);
         
         io::to_tagged_json(jSimulation("measurements"));
     }

@@ -28,6 +28,10 @@ namespace evalsim {
         template<typename Value>
         jsx::value evalsim(jsx::value jParams, jsx::value const& jMeasurements) {
 
+            //This options allows one to not compute those objects which can take a while to compute
+            bool const lpp = jParams.is("limited post-processing") ? jParams("limited post-processing").boolean() : false;
+            
+            //TODO: Move this?
             bool const ising = (jParams("hloc")("two body").is<jsx::object_t>() && jParams("hloc")("two body").is("approximation")) ? (jParams("hloc")("two body")("approximation").string() == "ising") : false;
             
             jParams["hloc"] = ga::read_hloc<Value>("hloc.json");
@@ -36,7 +40,6 @@ namespace evalsim {
             
             if(jParams.is("dyn"))
                 jParams("dyn")("functions") = mpi::read(jParams("dyn")("functions").string());
-            
             
             
             jsx::value jPartition = jParams(cfg::partition::Worm::name());
@@ -55,11 +58,11 @@ namespace evalsim {
             
             jObservables["scalar"] = get_scalar<Value>(jParams, jPartition, jMeasurements);
             
-            
+
             jsx::value const& jHybMatrix = jParams("hybridisation")("matrix");
             io::Matrix<Value> occupation(jHybMatrix.size(), jHybMatrix.size()), correlation(jHybMatrix.size(), jHybMatrix.size());
-            
-            jObservables["occupation"] = get_occupation<Value>(jParams, jMeasurements, occupation, correlation);
+            if (!lpp)
+                jObservables["occupation"] = get_occupation<Value>(jParams, jMeasurements, occupation, correlation);
             
             
             
@@ -112,42 +115,49 @@ namespace evalsim {
                 selfenergy = std::move(selfDyson);
             
             
-            
-            mpi::cout << "Calculating green moments ... " << std::flush;
-            
-            std::vector<io::Matrix<Value>> greenMoments = get_green_moments(jParams, hybMoments, jMeasurements, jObservables("scalar"));
-            
-            mpi::cout << "OK" << std::endl;
-            
-            
-            
-            mpi::cout << "Calculating self-energy moments ... " << std::flush;
-            
-            std::vector<io::Matrix<Value>> selfMoments = get_self_moments(jParams, hybMoments, greenMoments);
-            
-            mpi::cout << "OK" << std::endl;
-            
-            
-            
-            mpi::cout << "Adding self-energy high frequency tail ... "  << std::flush;
-            
-            func::add_self_tail(jParams, selfenergy, selfMoments, hyb.size());   //scheisse Value !! Allgemein scheiss moments ...
+            if (!lpp){
+                mpi::cout << "Calculating green moments ... " << std::flush;
                 
-            jObservables["self-energy"] = func::write_functions(jParams, selfenergy, selfMoments);
+                std::vector<io::Matrix<Value>> greenMoments = get_green_moments(jParams, hybMoments, jMeasurements, jObservables("scalar"));
                 
-            if(selfDyson.size()) jObservables["self-energy-dyson"] = func::write_functions(jParams, selfDyson, selfMoments);
+                mpi::cout << "OK" << std::endl;
+                
+                
+                
+                mpi::cout << "Calculating self-energy moments ... " << std::flush;
+                
+                std::vector<io::Matrix<Value>> selfMoments = get_self_moments(jParams, hybMoments, greenMoments);
+                
+                mpi::cout << "OK" << std::endl;
+            
+            
+                mpi::cout << "Adding self-energy high frequency tail ... "  << std::flush;
+                
+                func::add_self_tail(jParams, selfenergy, selfMoments, hyb.size());   //scheisse Value !! Allgemein scheiss moments ...
+                    
+                jObservables["self-energy"] = func::write_functions(jParams, selfenergy, selfMoments);
+                    
+                if(selfDyson.size()) jObservables["self-energy-dyson"] = func::write_functions(jParams, selfDyson, selfMoments);
 
-            mpi::cout << "Ok" << std::endl;
-            
-            
-            
-            mpi::cout << "Adding green function high frequency tail ... " << std::flush;
-            
-            func::add_green_tail<Value>(jParams, hyb, selfenergy, green);
-            
-            jObservables["green"] = func::write_functions(jParams, green, greenMoments);
-            
-            mpi::cout << "Ok" << std::endl;
+                mpi::cout << "Ok" << std::endl;
+                
+                
+                
+                mpi::cout << "Adding green function high frequency tail ... " << std::flush;
+                
+                func::add_green_tail<Value>(jParams, hyb, selfenergy, green);
+                
+                jObservables["green"] = func::write_functions(jParams, green, greenMoments);
+                
+                mpi::cout << "Ok" << std::endl;
+                
+            } else {
+                
+                jObservables["self-energy"] = func::write_functions<Value>(jParams, selfenergy);
+                    
+                jObservables["green"] = func::write_functions<Value>(jParams, green);
+                
+            }
             
 
             
@@ -155,8 +165,7 @@ namespace evalsim {
                 
                 jObservables["susceptibility"] = get_qn_susc(jParams, jPartition, jMeasurements, jObservables("scalar"));
             
-            
-            
+            if(!lpp)
             if((jPartition.is("occupation susceptibility bulla")  ? jPartition("occupation susceptibility bulla").boolean()  : false) ||
                (jPartition.is("occupation susceptibility direct") ? jPartition("occupation susceptibility direct").boolean() : false)) {
                 
@@ -190,10 +199,20 @@ namespace evalsim {
     
             }
 
-            
             if(jPartition.is("probabilities"))
                 
                 jObservables["probabilities"] = get_probabilities<Value>(jParams, jPartition, jMeasurements);
+            
+            
+            if(jPartition.is("print eigenstates") and jPartition("print eigenstates").boolean())
+                
+                jObservables["eigenstates"] = get_eigenstates<Value>(jParams, jPartition, jMeasurements);
+            
+            
+            
+            if(jPartition.is("print density matrix") and jPartition("print density matrix").boolean())
+                
+                jObservables["density matrix"] = meas::read_density_matrix<Value>(jParams, jMeasurements("density matrix"));
             
             
             

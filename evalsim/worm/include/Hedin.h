@@ -90,7 +90,7 @@ namespace evalsim {
                                             std::string const entry = jHybMatrix(l)(l).string();
                                             auto const& occ = jsx::at<io::Vector<Value>>(jOccupation(entry));
                                             
-                                            auto const disc = green[i_w_g](i,i)*( beta*((i==j and k==l and !omega_b(nu)) ? (occ[0]) : 0.0)
+                                            auto const disc = green[i_w_g](i,i)*( ((i==j and k==l and !omega_b(nu)) ? beta*occ[0] : 0.0)
                                                                      - ((i==k and l==j) ? green[w](l,l) : 0 ));
                                             
                                             if (disc.real() or disc.imag())
@@ -309,7 +309,7 @@ namespace evalsim {
                                 symm[n].emplace(i,j,k,l,
                                                 no_symm[n].entry(i,j,k,l),
                                                 0.);
-                                            
+                                    
                                 //Original + bilinear swap + operator swap + both swaps ()
                                 if (m >=0 ){
                                     symm[n](i,j,k,l) = 0.25*(no_symm[n](i,j,k,l) - no_symm[n](i,j,l,k) - no_symm[m](j,i,k,l) + no_symm[m](j,i,l,k));

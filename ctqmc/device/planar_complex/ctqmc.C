@@ -2,6 +2,7 @@
 #include "../../host/Algebra.h"
 
 #include "../../include/MonteCarlo.h"
+#include "../../../include/parameters/Initialize.h"
 
 ut::Beta ut::beta;
 
@@ -19,7 +20,9 @@ int main(int argc, char** argv)
         
         mpi::cout << "Start task at " << std::ctime(&(time = std::time(nullptr))) << std::endl;
         
-        jsx::value jParams = mpi::read(std::string(argv[1]) + ".json");
+        jsx::value jParams = mpi::read(std::string(argv[1]) + ".json");  params::initialize(jParams);  params::complete_worms(jParams);
+        if (jParams("restart").boolean()) jParams["measurements"] = mpi::read(std::string(argv[1])+".meas.json");
+        
         std::size_t const streamsPerProcess  = jParams("sim per device").int64();
         std::size_t const processesPerDevice = 1;
         
@@ -62,7 +65,7 @@ int main(int argc, char** argv)
             std::cout << "Rank " << mpi::rank() << " gets simulations [" << mcIds.front() << ", " << mcIds.back() << ") and uses device " << deviceId[mpi::rank()] <<  std::endl;
             
             imp::init_device(deviceId[mpi::rank()], processesPerDevice);
-            if(jParams.is("complex") ? jParams("complex").boolean() : false) {
+            if(jParams("complex").boolean()) {
                 mc::montecarlo<imp::Device, ut::complex>(jParams, jSimulation);
                 mc::statistics<ut::complex>(jParams, jSimulation);
             } else {
@@ -75,7 +78,7 @@ int main(int argc, char** argv)
         } else {
             std::cout << "Rank " << mpi::rank() << " gets simulations [" << mcIds.front() << ", " << mcIds.back() << ") and uses host" << std::endl;
             
-            if(jParams.is("complex") ? jParams("complex").boolean() : false) {
+            if(jParams("complex").boolean()) {
                 mc::montecarlo<imp::Host, ut::complex>(jParams, jSimulation);
                 mc::statistics<ut::complex>(jParams, jSimulation);
             } else {
