@@ -67,32 +67,31 @@ namespace opt {
         
         io::Vector<Value> two_body_cluster(n*n*n*n*two_body.size());
         
+        int N3 = N*N*N, N2 = N*N, Nn3 = N3*n*n*n, Nn2 = N2*n*n;
+        
         for(int f1Dagg = 0; f1Dagg < N; ++f1Dagg)
-        for (int n1 = 0; n1 < n; ++n1)
             for(int f2Dagg = 0; f2Dagg < N; ++f2Dagg)
-            for (int n2 = 0; n2 < n; ++n2)
-                if (n1==n2)
                 for(int f1 = 0; f1 < N; ++f1)
-                for (int n3 = 0; n3 < n; ++n3)
-                    if (n2==n3)
-                    for(int f2 = 0; f2 < N; ++f2)
-                    for (int n4 = 0; n4 < n; ++n4)
-                        if (n3==n4){
+                    for(int f2 = 0; f2 < N; ++f2){
+
+                        std::size_t const indx = (
+                                    N3*f1Dagg +
+                                    N2*f2Dagg +
+                                    N*f1 +
+                                    f2);
+                    
+                        for (int i = 0; i < n; ++i){
                             
                             std::size_t const indx_cluster = (
-                                                n*n*n*N*N*N*f1Dagg +
-                                                n*n*N*N*f2Dagg +
-                                                n*N*f1 +
-                                                f2);
-                            
-                            std::size_t const indx = (
-                                        N*N*N*f1Dagg +
-                                        N*N*f2Dagg +
-                                        N*f1 +
-                                        f2);
+                                                Nn3*(f1Dagg + i*N) +
+                                                Nn2*(f2Dagg + i*N) +
+                                                N*n*(f1 + i*N) +
+                                                (f2 + i*N));
                             
                             two_body_cluster[indx_cluster] = two_body[indx];
                         }
+                    }
+    
         
         
         return two_body_cluster;
