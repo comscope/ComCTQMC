@@ -182,17 +182,17 @@ namespace evalsim {
         jsx::value evaluateKernels(jsx::value jParams, jsx::value const& jObservables) {
             
             
-            std::cout << "Evaluating asymptotic vertex kernels" << std::endl;
+            mpi::cout << "Evaluating asymptotic vertex kernels" << std::endl;
             
             if (!jObservables.is(cfg::susc_ph::Worm::name()) or
                 !jObservables.is(cfg::susc_pp::Worm::name()) or
                 !jObservables.is(cfg::hedin_ph_imprsum::Worm::name()) or
                 !jObservables.is(cfg::hedin_pp_imprsum::Worm::name())){
                 
-                std::cout << jObservables.is(cfg::susc_ph::Worm::name()) << std::endl;
-                std::cout << jObservables.is(cfg::susc_pp::Worm::name()) << std::endl;
-                std::cout << jObservables.is(cfg::hedin_ph_imprsum::Worm::name()) << std::endl;
-                std::cout << jObservables.is(cfg::hedin_pp_imprsum::Worm::name()) << std::endl;
+                mpi::cout << jObservables.is(cfg::susc_ph::Worm::name()) << std::endl;
+                mpi::cout << jObservables.is(cfg::susc_pp::Worm::name()) << std::endl;
+                mpi::cout << jObservables.is(cfg::hedin_ph_imprsum::Worm::name()) << std::endl;
+                mpi::cout << jObservables.is(cfg::hedin_pp_imprsum::Worm::name()) << std::endl;
                 
                 throw std::runtime_error("Vertex kernel evaluation require ctqmc measurement of susc_ph/pp and hedin_ph/pp (imprsum versions)");
                 
@@ -221,7 +221,7 @@ namespace evalsim {
             std::tie(hyb, hybMoments) = partition::func::get_hybridisation<Value>(jParams);
             
             //Read in green functions and susc and hedin susceptibilities
-            std::cout << "Reading in Hedin and Susc Green's functions ... " << std::flush;
+            mpi::cout << "Reading in Hedin and Susc Green's functions ... " << std::flush;
             
             std::vector<io::cmat> green_pos = meas::read_matrix_functions_from_obs<ut::complex>(jObservables(cfg::partition::Worm::name())("green"), jParams, jParams(cfg::partition::Worm::name()), jHybMatrix, hyb.size());
             auto const green = func::green_function_on_full_axis(green_pos);
@@ -238,17 +238,17 @@ namespace evalsim {
             
             std::vector<io::ctens> vertex = meas::read_tensor_functions_from_obs<ut::complex>(jObservables(cfg::vertex_imprsum::Worm::name())("susceptibility"), jParams, jParams(cfg::vertex_imprsum::Worm::name()), jHybMatrix, hyb.size());
             
-            std::cout << "OK" << std::endl;
+            mpi::cout << "OK" << std::endl;
             
             //Construct interaction matrix U_ijkl
-            std::cout << "Constructing interaction matrix ... " << std::endl;
+            mpi::cout << "Constructing interaction matrix ... " << std::endl;
             
             //This matrix has a factor of 1/2 built in, so we must adjust the resulting kernel equations
             params::complete_impurity<Value>(jParams);
             imp::Tensor<Value> const U_tmp(jParams("hloc")("two body"),jHybMatrix.size());
             InteractionTensor<Value> const U(U_tmp,jHybMatrix.size());
             
-            std::cout << "OK" << std::endl;
+            mpi::cout << "OK" << std::endl;
             
             
             if (susc_ph.size() != susc_pp.size())
@@ -262,7 +262,7 @@ namespace evalsim {
             
             
             //Construct Kernel-1 Functions
-            std::cout << "Calculating Kernel-1 functions ... " << std::flush;
+            mpi::cout << "Calculating Kernel-1 functions ... " << std::flush;
             
             std::vector<io::ctens> kernel_1_ph(nMatGB_kernel, io::ctens(jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size()));
             std::vector<io::ctens> kernel_1_pp(nMatGB_kernel, io::ctens(jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size()));
@@ -306,10 +306,10 @@ namespace evalsim {
                 }
             }
             
-            std::cout << "OK" << std::endl;
+            mpi::cout << "OK" << std::endl;
             
             //Construct Kernel-2 Functions
-            std::cout << "Calculating Kernel-2 functions ... " << std::flush;
+            mpi::cout << "Calculating Kernel-2 functions ... " << std::flush;
             
             std::vector<io::ctens> kernel_2_ph(nMatGB_kernel*nMatGF_kernel, io::ctens(jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size()));
             std::vector<io::ctens> kernel_2_pp(nMatGB_kernel*nMatGF_kernel, io::ctens(jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size()));
@@ -360,10 +360,10 @@ namespace evalsim {
                 }
             }
       
-            std::cout << "OK" << std::endl;
+            mpi::cout << "OK" << std::endl;
             
             //Write results
-            std::cout << "Outputting results ... " << std::flush;
+            mpi::cout << "Outputting results ... " << std::flush;
             
             
             jsx::value jObservablesOut;
@@ -380,7 +380,7 @@ namespace evalsim {
             jObservablesOut["kernel 1"] = std::move(jKernel_1);
             jObservablesOut["kernel 2"] = std::move(jKernel_2);
             
-            std::cout << "OK" << std::endl;
+            mpi::cout << "OK" << std::endl;
             
             return jObservablesOut;
             
@@ -420,7 +420,7 @@ namespace evalsim {
             InteractionTensor<Value> const U(U_tmp,jHybMatrix.size());
             
             //Read in green functions and susc and hedin susceptibilities
-            std::cout << "Reading in kernels ... " << std::flush;
+            mpi::cout << "Reading in kernels ... " << std::flush;
             
             std::vector<io::ctens> kernel_1_ph = meas::read_tensor_functions_from_obs<ut::complex>(jObservables(worm::Kernels::name)("kernel 1")("ph"), jParams, jParams(cfg::susc_ph::Worm::name()), jHybMatrix, hyb.size());
             std::vector<io::ctens> kernel_1_tph = meas::read_tensor_functions_from_obs<ut::complex>(jObservables(worm::Kernels::name)("kernel 1")("tph"), jParams, jParams(cfg::susc_ph::Worm::name()), jHybMatrix, hyb.size());
@@ -430,16 +430,16 @@ namespace evalsim {
             std::vector<io::ctens> kernel_2_tph = meas::read_tensor_functions_from_obs<ut::complex>(jObservables(worm::Kernels::name)("kernel 2")("tph"), jParams, jParams(cfg::hedin_ph_imprsum::Worm::name()), jHybMatrix, hyb.size());
             std::vector<io::ctens> kernel_2_pp = meas::read_tensor_functions_from_obs<ut::complex>(jObservables(worm::Kernels::name)("kernel 2")("pp"), jParams, jParams(cfg::hedin_pp_imprsum::Worm::name()), jHybMatrix, hyb.size());
             
-            std::cout << "OK" << std::endl;
+            mpi::cout << "OK" << std::endl;
             
-            std::cout << "Reading in measured vertex ... " << std::flush;
+            mpi::cout << "Reading in measured vertex ... " << std::flush;
             
             std::vector<io::ctens> measured_vertex = meas::read_tensor_functions_from_obs<ut::complex>(jObservables(cfg::vertex_imprsum::Worm::name())("full vertex"), jParams, jParams(cfg::vertex_imprsum::Worm::name()), jHybMatrix, hyb.size());
             
-            std::cout << "OK" << std::endl;
+            mpi::cout << "OK" << std::endl;
             
             //Construct Kernel-2 Functions
-            std::cout << "Calculating Asymptotic Vertex from kernels ... " << std::flush;
+            mpi::cout << "Calculating Asymptotic Vertex from kernels ... " << std::flush;
             
             std::vector<io::ctens> asymptotic_vertex(nMatGB*nMatGF*nMatGF, io::ctens(jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size()));
             
@@ -539,9 +539,9 @@ namespace evalsim {
             
             }
             
-            std::cout << "OK" << std::endl;
+            mpi::cout << "OK" << std::endl;
             
-            std::cout << "Combining asymptotic and measured vertices ... " << std::flush;
+            mpi::cout << "Combining asymptotic and measured vertices ... " << std::flush;
             
             func::Frequencies<Value> frequencies_meas(jParams(cfg::vertex_imprsum::Worm::name()));
             auto const& omega_f_meas = frequencies_meas.omega_f();
@@ -585,17 +585,17 @@ namespace evalsim {
                 
             }
             
-            std::cout << "OK" << std::endl;
+            mpi::cout << "OK" << std::endl;
             
             
-            std::cout << "Outputting results ... " << std::flush;
+            mpi::cout << "Outputting results ... " << std::flush;
             
             jsx::value jObservablesOut;
             
             jObservablesOut["full vertex"] = func::write_functions<Value>(jParams, jHybMatrix, combined_vertex);
             jObservablesOut["full vertex (asymptotic)"] = func::write_functions<Value>(jParams, jHybMatrix, asymptotic_vertex);
             
-            std::cout << "OK" << std::endl;
+            mpi::cout << "OK" << std::endl;
             
             return jObservablesOut;
             
