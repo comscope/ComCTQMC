@@ -82,7 +82,6 @@ struct MainDefaults : Defaults{
     
     MainDefaults() = delete;
     MainDefaults(jsx::value const& jParams){
-        defaults_["complex"] = jParams("hloc")("one body").is<jsx::object_t>();
         defaults_["restart"] = false;
         defaults_["partition fraction"] = 0.5;
         defaults_["sim per device"] = 0;
@@ -99,13 +98,59 @@ struct MainDefaults : Defaults{
     
 };
 
+
+struct MainRequired : Defaults{
+    
+    //To make sure these things exist at all
+    MainRequired(){
+        defaults_["complex"] = jsx::empty_t();
+        defaults_["beta"] = jsx::empty_t();
+        defaults_["mu"] = jsx::empty_t();
+        defaults_[cfg::partition::Worm::name()] = jsx::empty_t();
+        defaults_["hloc"] = jsx::array_t({"one body", "two body"});
+        defaults_["hybridisation"] = jsx::array_t({"functions", "matrix"});
+    }
+    
+    //To make sure they are the right datatypes
+    void init_types(){
+        defaults_["complex"] = false;
+        defaults_["beta"] = 0.;
+        defaults_["mu"] = 0.;
+        
+        defaults_[cfg::partition::Worm::name()] = jsx::object_t();
+        
+        //leave the two body check for the hloc generation, which is both more complicated and also throws reasonable errors
+        if (defaults_["complex"].boolean()){
+            defaults_["hloc"]["one body"] = io::PrettyMatrix<ut::complex>();
+        } else {
+            defaults_["hloc"]["one body"] = io::PrettyMatrix<double>();
+        }
+        
+            
+        defaults_["hybridisation"]["functions"] = "hyb.json";
+        defaults_["hybridisation"]["matrix"] = jsx::array_t({ jsx::array_t({""}) });
+    }
+
+};
+
 struct AllDefaults{
     
     AllDefaults(jsx::value const& jParams) : mainDefaults(jParams){
         
+         listOfDefaultWorms = std::vector<std::string>({
+             cfg::susc_ph::Worm::name(),
+             cfg::susc_pp::Worm::name(),
+             cfg::hedin_ph::Worm::name(),
+             cfg::hedin_pp::Worm::name(),
+             cfg::vertex::Worm::name()
+         });
+        
     }
     
 public:
+    
+    std::vector<std::string> listOfDefaultWorms;
+    
     MainDefaults mainDefaults;
     PartitionSpaceDefaults partitionSpaceDefaults;
     MultiTimeWormDefaults multiTimeWormDefaults;
