@@ -188,7 +188,8 @@ std::vector<std::string> split_by_char(std::string const& string, char const c){
     
     return seglist;
 }
-
+    
+    template  <typename measure_type, typename Value>
     void check_missing_tensor_elements(std::string const name, jsx::value& jIn){
         
         for (auto& jMeas : jIn.object()){ //eta, steps, static, dynamic
@@ -200,12 +201,12 @@ std::vector<std::string> split_by_char(std::string const& string, char const c){
                 std::vector<std::string> list_of_entries;
                 std::size_t size=0;
                 for (auto& jEntry : jMeas.second.object()){ //i_j_k_l's or i_j's
-                    auto temp = jEntry.second.at<cvecfix>().at(0); //if an entry is 0, then it will disapear during post processing...
+                    auto temp = jEntry.second.at<measure_type>().at(0); //if an entry is 0, then it will disapear during post processing...
                     if (std::abs(temp) > 1.e-14){
                         concat_of_entries+=jEntry.first+" ";
                         list_of_entries.push_back(jEntry.first);
                     }
-                    size = jEntry.second.at<cvecfix>().size(); //TODO: This should be io::Vector<Value> if in legendre basis...
+                    size = jEntry.second.at<measure_type>().size(); //TODO: This should be io::Vector<Value> if in legendre basis...
                 }
                 
                 //Pad the strings so that this list is the same length across all workers
@@ -215,7 +216,7 @@ std::vector<std::string> split_by_char(std::string const& string, char const c){
                 
                 //Also, set a vector which represents that no measurements have been taken.
                 mpi::all_reduce<mpi::op::max>(size);
-                std::vector<ut::complex> const no_meas(size, 1.e-7); //TODO: This should be Value if in legendre basis...
+                std::vector<Value> const no_meas(size, 1.e-7); //TODO: This should be Value if in legendre basis...
                 std::int64_t const no_samples = 1; //Causes errors if it's zero...
                 
                 //Concatenate list of entries  from all workers (on master rank)
@@ -277,12 +278,17 @@ std::vector<std::string> split_by_char(std::string const& string, char const c){
     //Each worker is not guarenteed to have visited the same subspaces of the larger  worm space
     //This is not only concerning from a convergence standpoint, but it also will cause MPI to hang
     //When we try to reduce the results. So, we add a measurement of zero when there is such a miss
+    template <typename Value>
     void check_missing_tensor_elements(jsx::value const& jParams, jsx::value& jMeasurements){
 
         if (mpi::number_of_workers() > 1)
             for(auto& space : jMeasurements.object())
                 if (jParams.is(space.first) and space.first != cfg::partition::Worm::name()){
-                    check_missing_tensor_elements(space.first, space.second);
+                    if (jParams(space.first)("basis").string() == "matsubara")
+                        check_missing_tensor_elements<cvecfix,ut::complex>(space.first, space.second);
+                    else if (jParams(space.first)("basis").string() == "legendre")
+                        check_missing_tensor_elements<Vector<Value,Fix>,Value>(space.first, space.second);
+                        
                 }
         
     }
