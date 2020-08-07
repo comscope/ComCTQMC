@@ -304,7 +304,7 @@ namespace evalsim {
                                     full_vertex[n].emplace(i,j,k,l,
                                                            susceptibility[n].entry(i,j,k,l),
                                                            susceptibility[n](i,j,k,l)/
-                                                            (green[i_w_g](i,i)*green[j_w_g](j,j)*green[i_m_nu](i,i)*green[j_m_nu](j,j))
+                                                            (green[i_w_g](i,i)*green[j_w_g](l,l)*green[i_m_nu](j,j)*green[j_m_nu](k,k))
                                                            );
                                                 
                                 }
