@@ -108,14 +108,14 @@ namespace imp {
         I_(identity.dim), J_(identity.dim),
         data_(new Value[I_*J_]),
         exponent_(.0) {
-            std::memset(data_, 0, I_*J_*sizeof(Value)); //huere memset isch das allgemein für double's ?
+            std::fill(data_, data_ +  I_*J_, Value(.0)); //huere memset isch das allgemein für double's ?
             for(int i = 0; i < identity.dim; ++i) data_[i*(identity.dim + 1)] = 1.;
         };
         Matrix(Zero const& zero) :
         I_(zero.dim), J_(zero.dim),
         data_(new Value[I_*J_]),
         exponent_(.0) {
-            std::memset(data_, 0, I_*J_*sizeof(Value)); //huere memset isch das allgemein für double's ?
+            std::fill(data_, data_ +  I_*J_, Value(.0)); //huere memset isch das allgemein für double's ?
         };
         Matrix(int I, int J, io::Matrix<Value> const& matrix) :
         I_(I), J_(J),
