@@ -17,42 +17,6 @@ It would be nice to do this in a more automatic fashion...
 */
 
 
-    void check_required_input(jsx::value const& jParams){
-        
-        jsx::value required_fields;
-        
-        required_fields["beta"] = jsx::empty_t();
-        required_fields["mu"] = jsx::empty_t();
-        required_fields[cfg::partition::Worm::name()] = jsx::empty_t();
-        required_fields["hloc"] = jsx::array_t({"one body", "two body"});
-        required_fields["hybridisation"] = jsx::array_t({"functions", "matrix"});
-        
-        
-        for (auto const& entry : required_fields.object()){
-            
-            if (!jParams.is(entry.first))
-                throw std::runtime_error("Parameter file is missing the key " + entry.first);
-            
-            if (!entry.second.is<jsx::empty_t>())
-                for (auto const& sub_entry : entry.second.array())
-                    if (!jParams(entry.first).is(sub_entry.string()))
-                        throw std::runtime_error("Parameter file is missing the key " + sub_entry.string() + " in block " + entry.first);
-            
-        }
-        
-        
-        jsx::value const& jTwoBody = jParams("hloc")("two body");
-        if (jTwoBody.is<jsx::object_t>() and !jTwoBody.is("imag")){
-            
-            if (!jParams.is("basis"))
-                throw std::runtime_error("If the two body tensor is not explicity defined, you must supply the one-particle basis");
-            
-        }
-            
-        
-    }
-
-   
 void check_type_against_default(std::string const& entry, jsx::value const& val, jsx::value const& default_val){
     
     if (default_val.is<jsx::boolean_t>() and !val.is<jsx::boolean_t>())
@@ -85,6 +49,41 @@ void check_type_against_default(std::string const& entry, jsx::value const& val,
     }
 }
 
+    void check_required_input(jsx::value const& jParams){
+         
+        MainRequired required;
+        for (auto const& entry : required.get().object()){
+            
+            if (!jParams.is(entry.first))
+                throw std::runtime_error("Parameter file is missing the key " + entry.first);
+            
+            if (!entry.second.is<jsx::empty_t>())
+                for (auto const& sub_entry : entry.second.array())
+                    if (!jParams(entry.first).is(sub_entry.string()))
+                        throw std::runtime_error("Parameter file is missing the key " + sub_entry.string() + " in block " + entry.first);
+            
+        }
+        
+        //check data-types of all required imput except the two-body part which doesn't fit this paradigm
+        required.init_types();
+        for (auto const& entry : required.get().object()){
+            check_type_against_default(entry.first, jParams(entry.first), entry.second);
+        }
+        
+        //check data types of two body input -- basis gets checked in opt::basis?
+        jsx::value const& jTwoBody = jParams("hloc")("two body");
+        if (jTwoBody.is<jsx::object_t>() and !jTwoBody.is("imag")){
+            
+            if (!jParams.is("basis"))
+                throw std::runtime_error("If the two body tensor is not explicity defined, you must supply the one-particle basis");
+            
+        }
+             
+         
+     }
+
+
+
 
     struct worm_defaults_functor {
         template<typename W>
@@ -107,6 +106,36 @@ void check_type_against_default(std::string const& entry, jsx::value const& val,
                 }
             }
         }
+    };
+
+
+    void add_default_worms( jsx::value & jParams, AllDefaults const& defaults) {
+        
+        for (auto const& worm : defaults.listOfDefaultWorms){
+            jParams[worm] = jsx::object_t();
+            jParams[worm]["meas"] = jsx::array_t({"imprsum"});
+        }
+        
+    }
+
+    struct worm_cutoffs_functor {
+        template<typename W>
+           void operator()(ut::wrap<W> w, jsx::value & jParams, int const fermion_cutoff, int const boson_cutoff) const {
+                
+               if( W::name() != cfg::partition::Worm::name() && jParams.is(W::name()) ) {
+                   
+                   auto & jWorm = jParams[W::name()];
+                   
+                   if (jWorm.is("fermion cutoff") and jWorm("basis").string() == "matsubara" ) jWorm["fermion cutoff"] = fermion_cutoff;
+                   if (jWorm.is("matsubara cutoff")) jWorm["matsubara cutoff"] = fermion_cutoff;
+                   
+                   if (jWorm.is("cutoff")) jWorm["cutoff"] = boson_cutoff;
+                   if (jWorm.is("boson cutoff")) jWorm["boson cutoff"] = boson_cutoff;
+                       
+                
+               }
+               
+           }
     };
  
     void set_default_values(jsx::value & jParams){

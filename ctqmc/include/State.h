@@ -33,9 +33,10 @@ namespace state {
         State() = delete;
         template<typename Mode>
         State(jsx::value const& jParams, data::Data<Value> const& data, jsx::value& jConfig, Mode) :
+        safe_to_load_from_json_(!jConfig.is("worm") or jParams.is(jConfig("worm")("name").string()) ? true : false),
         signTimeOrder_(1),
-        expansion_(jConfig.is("expansion") ? jConfig("expansion") : jsx::null_t(), data.ops().flavors()),
-        worm_(jConfig.is("worm") ? jConfig("worm") : jsx::object_t{{"name", "partition"}, {"entry", jsx::null_t()}}),
+        expansion_( safe_to_load_from_json_ and jConfig.is("expansion") ? jConfig("expansion") : jsx::null_t(), data.ops().flavors()),
+        worm_( safe_to_load_from_json_ and jConfig.is("worm") ? jConfig("worm") : jsx::object_t{{"name", "partition"}, {"entry", jsx::null_t()}}),
         product_(new imp::Product<Mode, Value>(jParams, data.eig(), data.ide(), data.ops())),
         densityMatrix_(new imp::DensityMatrix<Mode, Value>()),
         baths_(data.hyb().blocks().size()),
@@ -156,6 +157,7 @@ namespace state {
         };
         
     private:
+        bool safe_to_load_from_json_;
         int signTimeOrder_;
         cfg::Expansion expansion_;
         cfg::Worm worm_;

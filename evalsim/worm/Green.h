@@ -38,60 +38,60 @@ namespace evalsim {
             
             
             
-            std::cout << "Reading green function ... " << std::flush;
+            mpi::cout << "Reading green function ... " << std::flush;
             
             std::vector<io::cmat> green = meas::read_matrix_functions<Value,Fermion>(jMeasurements, jParams, jWorm, jHybMatrix, hyb.size());
             
-            std::cout << "OK" << std::endl;
+            mpi::cout << "OK" << std::endl;
             
             
-            std::cout << "Calculating self-energy with dyson ... " << std::flush;
+            mpi::cout << "Calculating self-energy with dyson ... " << std::flush;
             
             std::vector<io::cmat> self = partition::func::get_self_dyson<Value>(jParams,green,hyb);
             
-            std::cout << "OK" << std::endl;
+            mpi::cout << "OK" << std::endl;
             
             /*
-            std::cout << "Calculating green moments ... " << std::flush;
+            mpi::cout << "Calculating green moments ... " << std::flush;
             
             std::vector<io::Matrix<Value>> greenMoments = func::green::compute_green_moments<Value>(jParams, hybMoments, jPartition, jObservables("partition")("scalar"));
 
-            std::cout << "OK" << std::endl;
+            mpi::cout << "OK" << std::endl;
             
             
-            std::cout << "Calculating self-energy moments ... " << std::flush;
+            mpi::cout << "Calculating self-energy moments ... " << std::flush;
             
             std::vector<io::Matrix<Value>> selfMoments = func::green::compute_self_moments<Value>(jParams, hybMoments, greenMoments);
             
-            std::cout << "OK" << std::endl;
+            mpi::cout << "OK" << std::endl;
 
             
             jsx::value jObservablesOut;
             
-            std::cout << "Adding self-energy high frequency tail ... "  << std::flush;
+            mpi::cout << "Adding self-energy high frequency tail ... "  << std::flush;
             
             func::green::add_self_tail(jHybMatrix, iomega, self, selfMoments, hyb.size());
             jObservablesOut["self-energy"] =  func::write_functions(jParams, jHybMatrix, self, selfMoments);
             
             
-            std::cout << "Ok" << std::endl;
+            mpi::cout << "Ok" << std::endl;
             
             
-            std::cout << "Adding green function high frequency tail ... " << std::flush;
+            mpi::cout << "Adding green function high frequency tail ... " << std::flush;
             
             func::green::add_green_tail<Value>(jParams, iomega, oneBody, hyb, self, green);
             
             jObservablesOut["green"] = func::write_functions(jParams, jHybMatrix, green, greenMoments);
                */
             
-            std::cout << "Writing results ... " << std::flush;
+            mpi::cout << "Writing results ... " << std::flush;
             
             
             jsx::value jObservablesOut;
             jObservablesOut["green"] = func::write_functions<Value>(jParams, jHybMatrix, green);
             jObservablesOut["self-energy"] =  func::write_functions<Value>(jParams, jHybMatrix, self);
             
-            std::cout << "Ok" << std::endl;
+            mpi::cout << "Ok" << std::endl;
             
             return jObservablesOut;
         }
