@@ -152,7 +152,7 @@ namespace imp {
     template<typename Value>
     void copyEvolveL(Matrix<Host, Value>& dest, Vector<Host> const& prop, Matrix<Host, Value> const& source, itf::Batcher<Value>& batcher) {
         dest.I() = source.I(); dest.J() = source.J(); dest.exponent() = source.exponent() + prop.exponent(); int const inc = 1; // eigentli source.exponent_ = 0 wil basis-operator, isch aber sicherer so.
-        std::memset(dest.data(), 0, dest.I()*dest.J()*sizeof(Value));
+        std::fill(dest.data(), dest.data() + dest.I()*dest.J(), Value(0));
         for(int i = 0; i < source.I(); ++i) axpy(&source.J(), prop.data() + i, source.data() + i*source.J(), &inc, dest.data() + i*dest.J(), &inc);
     };
     
