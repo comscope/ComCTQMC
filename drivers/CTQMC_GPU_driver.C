@@ -3,7 +3,7 @@
 #include <algorithm>
 
 #include "../ctqmc/host/Algebra.h"
-#include "../ctqmc/device/planar_complex/Algebra."
+#include "../ctqmc/device/planar_complex/Algebra.h"
 
 #include "../evalsim/Evalsim.h"
 
