@@ -86,7 +86,7 @@ extern "C" int CTQMCDriverStart(char* case_name)
         
         mpi::cout << "Start task at " << std::ctime(&(time = std::time(nullptr))) << std::endl;
         
-        jsx::value jParams = mpi::read(std::string(case_name) + ".json");
+        jsx::value jParams = mpi::read(std::string(case_name) + ".json"); params::initialize(jParams); params::complete_worms(jParams);
         std::size_t const streamsPerProcess  = jParams("sim per device").int64();
         std::size_t const processesPerDevice = 1;
         
