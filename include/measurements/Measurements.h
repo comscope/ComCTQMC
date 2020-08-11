@@ -38,23 +38,24 @@ namespace meas {
         };
         
         jsx::value reduce(double fact, All, bool b64) const {
-            auto samples = samples_;  mpi::reduce<mpi::op::sum>(samples, mpi::master);
-            auto data = data_;  resize_reduce(data, M());  mpi::reduce<mpi::op::sum>(data, mpi::master);
+            auto samples = samples_;  mpi::barrier(); mpi::reduce<mpi::op::sum>(samples, mpi::master);
+            auto data = data_;  resize_reduce(data, M());  mpi::barrier(); mpi::reduce<mpi::op::sum>(data, mpi::master);
             
             if(mpi::rank() == mpi::master) {
                 if(!samples) throw std::runtime_error(name() + "::write: no measurements taken !");  //Scheisse das sštt eh nie passiere.
                 for(auto& x : data) x *= fact/samples;
+                
                 data.b64() = b64;  return std::move(data);
             } else
                 return jsx::null_t();
         };
         
         jsx::value reduce(double fact, Jackknife, bool b64) const {
-            auto samples = samples_;  mpi::all_reduce<mpi::op::sum>(samples);  samples -= samples_;
+            auto samples = samples_; mpi::barrier(); mpi::all_reduce<mpi::op::sum>(samples);  samples -= samples_;
             
             if(!samples) throw std::runtime_error(name() + "::write: no measurements taken !");  //Scheisse das sštt eh nie passiere.
             
-            auto data = data_;  resize_reduce(data, M());  mpi::all_reduce<mpi::op::sum>(data);
+            auto data = data_;  resize_reduce(data, M()); mpi::barrier(); mpi::all_reduce<mpi::op::sum>(data);
             for(std::size_t i = 0; i < data_.size(); ++i) data[i] -= data_[i];
             for(auto& x : data) x *= fact/samples;
             
