@@ -137,7 +137,7 @@ namespace evalsim {
                                                  - green[w](m,i) * improved_estimator[n](i,j,k,l) )/
                                                 ( (i==m ? 1.0 : 0.0) + green[w](m,i) * self[w](m,i) )
                                                 : 0;
-                                                
+                                        
                                     }
                                 }
                             }
@@ -291,8 +291,8 @@ namespace evalsim {
                                 
                                 int i_w_g = green_OM.pos(omega_f(i_w));
                                 int j_w_g = green_OM.pos(omega_f(j_w));
-                                int i_m_nu = green_OM.pos(omega_f(i_w) - omega_b(nu));
-                                int j_m_nu = green_OM.pos(omega_f(j_w) - omega_b(nu));
+                                int i_m_nu = green_OM.pos( omega_f(i_w) - omega_b(nu));
+                                int j_m_nu = green_OM.pos( omega_f(j_w) - omega_b(nu));
                                 
                                 for(auto const ijkl : susceptibility[n].ijkl()){
                                 
@@ -304,9 +304,10 @@ namespace evalsim {
                                     full_vertex[n].emplace(i,j,k,l,
                                                            susceptibility[n].entry(i,j,k,l),
                                                            susceptibility[n](i,j,k,l)/
+                                                           // (green[i_w_g](i,i)*green[j_w_g](k,k)*green[i_m_nu](j,j)*green[j_m_nu](l,l))
                                                             (green[i_w_g](i,i)*green[j_w_g](l,l)*green[i_m_nu](j,j)*green[j_m_nu](k,k))
                                                            );
-                                                
+                                                        
                                 }
                             }
                 }
