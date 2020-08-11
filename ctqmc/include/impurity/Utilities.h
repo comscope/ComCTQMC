@@ -84,16 +84,18 @@ namespace imp {
                     normsDagg[index] = blockNorms<Value>(jOpDagg);
                 }
             
-            
+            mpi::barrier(); //extra barriers to deal with some mpi issues occasionally cropping up on systems
             mpi::all_reduce<mpi::op::sum>(sizes);
             mpi::all_reduce<mpi::op::sum>(sizesDagg);
             
             for (std::size_t i=0; i<N; i++){
                 
                 if(!norms[i].size()) norms[i].resize(sizes[i]);
+                mpi::barrier();
                 mpi::all_reduce<mpi::op::sum>(norms[i]);
                 
                 if(!normsDagg[i].size()) normsDagg[i].resize(sizesDagg[i]);
+                mpi::barrier();
                 mpi::all_reduce<mpi::op::sum>(normsDagg[i]);
                 
             }
