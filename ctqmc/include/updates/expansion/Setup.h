@@ -18,9 +18,10 @@ namespace upd {
     namespace expansion {
         
         template<typename Space, typename Mode, typename Value>
-        void setup_updates(jsx::value const& jParams, data::Data<Value> const& data, state::State<Value> const& state, mch::MarkovChain<Value>& markovChain) {
+        void setup_updates(jsx::value const& jParams, data::Data<Value> const& data, state::State<Value> const& state, mch::MarkovChain<Value>& markovChain, int const stream) {
             
-            mpi::cout << "Setting expansion updates for " + Space::name() + " space ... ";
+            if (!stream)
+                mpi::cout << "Setting expansion updates for " + Space::name() + " space ... ";
             
             markovChain.add(mch::unique_update_ptr<Value>(new upd::Generic< InsertCsc<Space>, Mode, Value >(1., jParams, data)),
                             mch::unique_update_ptr<Value>(new upd::Generic< EraseCsc<Space>, Mode, Value >(1., jParams, data)));
@@ -30,7 +31,8 @@ namespace upd {
                                         mch::unique_update_ptr<Value>(new upd::Generic< QuadEraseStd<Space>, Mode, Value >(1., jParams, data)));
             }
             
-            mpi::cout << "Ok" << std::endl;
+            if (!stream)
+                mpi::cout << "Ok" << std::endl;
             
         };
         

@@ -53,7 +53,7 @@ namespace mc {
             std::unique_ptr<mch::Scheduler          >(new mch::Scheduler(false, mch::Phase::Initialize))
             );
 
-            upd::setup_updates<Mode>(jParams, data, *std::get<1>(simulations.back()), *std::get<2>(simulations.back()));
+            upd::setup_updates<Mode>(jParams, data, *std::get<1>(simulations.back()), *std::get<2>(simulations.back()), stream);
         }
 
         jSimulation["configs"] = jsx::array_t();
