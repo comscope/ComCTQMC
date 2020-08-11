@@ -287,8 +287,8 @@ namespace upd {
        
         markovChain.finalize(state);
         
-        
-        mpi::cout << "End setting updates" << std::endl;
+        if (!stream)
+            mpi::cout << "End setting updates" << std::endl;
     };
     
 }
