@@ -283,6 +283,7 @@ namespace evalsim {
                     auto const omega_b = frequencies.omega_b();
                     auto const omega_f = frequencies.omega_f();
                     
+                    auto const mid = nMatGF/2;
                     for(std::size_t nu = 0; nu < nMatGB; ++nu)
                         for(std::size_t i_w = 0; i_w < nMatGF; ++i_w)
                             for(std::size_t j_w = 0; j_w < nMatGF; ++j_w){
@@ -305,7 +306,7 @@ namespace evalsim {
                                                            susceptibility[n].entry(i,j,k,l),
                                                            susceptibility[n](i,j,k,l)/
                                                            // (green[i_w_g](i,i)*green[j_w_g](k,k)*green[i_m_nu](j,j)*green[j_m_nu](l,l))
-                                                            (green[i_w_g](i,i)*green[j_w_g](l,l)*green[i_m_nu](j,j)*green[j_m_nu](k,k))
+                                                            (green[i_w_g](i,i)*green[i_m_nu](j,j)*green[j_m_nu](k,k)*green[j_w_g](l,l))
                                                            );
                                                         
                                 }

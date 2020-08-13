@@ -562,8 +562,9 @@ namespace evalsim {
                 int const nu1_meas = omega_f_meas.pos(omega_f(nu1));
                 int const nu2_meas = omega_f_meas.pos(omega_f(nu2));
                 
-                int const n = nu2 + nu1*nMatGF + om*nMatGF*nMatGF;
-                int const n_meas = nu2_meas + nu1_meas*frequencies_meas.nMatGF() + om_meas*frequencies_meas.nMatGF()*frequencies_meas.nMatGF();
+                int const n = nu1 + nu2*nMatGF + om*nMatGF*nMatGF;
+                
+                int const n_meas = nu1_meas + nu2_meas*frequencies_meas.nMatGF() + om_meas*frequencies_meas.nMatGF()*frequencies_meas.nMatGF();
                 
                 for(auto const& ijkl : measured_vertex[0].ijkl()){
                 
