@@ -61,6 +61,7 @@ namespace mc {
         meas::restart(jParams,jSimulation["measurements"]);
         
         std::int64_t thermSteps = 0, measSteps = 0, stream = 0;
+        bool finalized = false; //if one stream gets has measured for x minutes / steps -- finalize all of the treams
         
         while(simulations.size()) {
             auto* batcher = std::get<0>(simulations[stream]).get();
@@ -75,14 +76,15 @@ namespace mc {
                         case mch::Phase::Step:
                             if(!markovChain->cycle(wangLandau, data, *state, *batcher)) break;
                                          
-                            if(scheduler->done()) {
-                                if(scheduler->thermalised()) {
+                            if(scheduler->done() or finalized) {
+                                if(scheduler->thermalised() or finalized) {
                                     scheduler->phase() = mch::Phase::Finalize;
+                                    finalized = true;
                                 } else {
                                     if(jParams.is("measurement steps"))
                                         scheduler.reset(new mch::StepsScheduler(jParams("measurement steps").int64(), true, mch::Phase::Step));
                                     else
-                                        scheduler.reset(new mch::TimeScheduler(jParams("measurement time").int64(), true, mch::Phase::Step));
+                                        scheduler.reset(new mch::TimeScheduler(jParams("measurement time").int64(), true, mch::Phase::Step, scheduler->overtime()));
                                     wangLandau.thermalised();
                                 }
                                 break;

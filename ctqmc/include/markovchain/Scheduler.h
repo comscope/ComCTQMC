@@ -17,6 +17,7 @@ namespace mch {
         Scheduler(bool thermalised, Phase phase) : thermalised_(thermalised), phase_(phase) {};
         bool thermalised() const { return thermalised_;};
         Phase& phase() { return phase_;}
+        virtual std::int64_t overtime() const { return 0; }
         virtual bool done() { return true;};
         virtual ~Scheduler() = default;
     protected:
@@ -25,12 +26,14 @@ namespace mch {
     };
     
     struct TimeScheduler : Scheduler {
-        TimeScheduler(std::int64_t duration, bool thermalised, Phase phase) :
+        TimeScheduler(std::int64_t duration, bool thermalised, Phase phase, int64_t overtime = 0) :
         Scheduler(thermalised, phase),
-        duration_(60.*duration),
+        duration_(60.*duration - overtime),
         start_(std::chrono::steady_clock::now()) {
         };
         ~TimeScheduler() = default;
+        
+        std::int64_t overtime() const { return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start_).count() - duration_; }
         
         bool done() {
             return !(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start_).count() < duration_);
