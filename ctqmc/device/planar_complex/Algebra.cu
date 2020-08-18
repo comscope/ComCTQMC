@@ -80,8 +80,8 @@ void imp::init_device(int const deviceId, std::size_t processesPerDevice) {
     cudaErrchk(cudaSetDevice(deviceId));
     
     cudaDeviceProp deviceProperties; cudaErrchk(cudaGetDeviceProperties(&deviceProperties, deviceId));
-    if(deviceProperties.computeMode != cudaComputeModeExclusive && deviceProperties.computeMode != cudaComputeModeExclusiveProcess)
-        throw std::runtime_error("Please set GPU compute mode to \"cudaComputeModeExclusive\" or \"cudaComputeModeExclusiveProcess\"");
+    //if(deviceProperties.computeMode != cudaComputeModeExclusive && deviceProperties.computeMode != cudaComputeModeExclusiveProcess)
+      //  throw std::runtime_error("Please set GPU compute mode to \"cudaComputeModeExclusive\" or \"cudaComputeModeExclusiveProcess\"");
     if(deviceProperties.warpSize != WarpSize)
         throw std::runtime_error("Please set WarpSize in AlgebraDevice.cu to " + std::to_string(deviceProperties.warpSize));
     
