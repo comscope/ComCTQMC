@@ -283,7 +283,6 @@ namespace evalsim {
                     auto const omega_b = frequencies.omega_b();
                     auto const omega_f = frequencies.omega_f();
                     
-                    auto const mid = nMatGF/2;
                     for(std::size_t nu = 0; nu < nMatGB; ++nu)
                         for(std::size_t i_w = 0; i_w < nMatGF; ++i_w)
                             for(std::size_t j_w = 0; j_w < nMatGF; ++j_w){

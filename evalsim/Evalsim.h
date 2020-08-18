@@ -132,7 +132,9 @@ namespace evalsim {
                 
             if (jParams.is("kernels")){
                 jObservables["kernels"] = worm::evaluateKernels<Value>(jParams,jObservables);
-                jObservables["Asymptotic Full Vertex"] = worm::evaluateFullVertexFromKernels<Value>(jParams,jObservables);
+                
+                if (jParams("kernels").is("full") ? jParams("kernels")("full").boolean() : false)
+                    jObservables["Asymptotic Full Vertex"] = worm::evaluateFullVertexFromKernels<Value>(jParams,jObservables);
             }
             
         }
