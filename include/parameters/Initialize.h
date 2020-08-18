@@ -154,14 +154,117 @@ void check_type_against_default(std::string const& entry, jsx::value const& val,
         
         cfg::for_each_type<cfg::Worm>::apply(worm_defaults_functor(), jParams, defaults);
     }
+         
+    bool is_complex_in_cvec(io::cvec const& vec){
+        
+        bool check = false;
+        
+        for (auto const& x : vec)
+            check = check or std::abs(x.imag()) > 1e-14;
+        
+        return check;
+    }
+
+    bool is_complex_in_cmat(io::prettycmat const& mat){
+        
+        bool check = false;
+        
+        for (int i=0; i<mat.I(); i++)
+            for (int j=0; j<mat.J(); j++)
+                check = check or std::abs(mat(i,j).imag()) > 1e-14;
+        
+        return check;
+    }
+
+    bool validate_complex(jsx::value const& jParams){
+        
+        if (jParams("complex").boolean()){
+            
+            bool is_complex = false;
+            
+            if (jParams.is("basis") and jParams("basis").is("transformation")){
+                
+                auto jTransformation = jParams("basis")("transformation");
+                auto const cmat = jsx::at<io::prettycmat>( jTransformation );
+                is_complex = is_complex or is_complex_in_cmat( cmat );
+                
+            }
+            
+            if (jParams("hloc").is("two body") and jParams("hloc")("two body").is<io::cvec>()){
+                
+                auto jTwoBody = jParams("hloc")("two body");
+                auto const cvec = jsx::at<io::cvec>( jTwoBody );
+                is_complex = is_complex or is_complex_in_cvec( cvec );
+                
+            }
+
+            auto jOneBody = jParams("hloc")("one body");
+            auto const cmat = jsx::at<io::prettycmat>( jOneBody );
+            is_complex = is_complex or is_complex_in_cmat( cmat );
+            
+            return is_complex;
+            
+        } else {
+            return true;
+        }
+    }
+
+    io::rvec cvec_to_rvec(io::cvec const& cv){
+        io::rvec rv(cv.size());
+        
+        for (int i=0; i<cv.size(); i++) rv[i] = cv[i].real();
+        
+        return rv;
+    }
+
+    io::prettyrmat cmat_to_rmat(io::prettycmat const& cmat){
+        io::prettyrmat rmat(cmat.I(),cmat.J());
+        
+        for (int i=0; i<cmat.I(); i++)
+            for (int j=0; j<cmat.J(); j++)
+                rmat(i,j) = cmat(i,j).real();
+        
+        return rmat;
+    }
+
+    void change_fake_complex_to_real(jsx::value & jParams){
+        
+        if (!validate_complex(jParams)){
+            jParams["complex"] = false;
+            
+            if (jParams.is("basis") and jParams("basis").is("transformation")){
+                
+                auto jTransformation = jParams("basis")("transformation");
+                auto const cmat = jsx::at<io::prettycmat>( jTransformation );
+                jParams["basis"]["transformation"] = cmat_to_rmat(cmat);
+                
+            }
+            
+            if (jParams("hloc").is("two body") and jParams("hloc")("two body").is<io::cvec>()){
+                
+                auto jTwoBody = jParams("hloc")("two body");
+                auto const cvec = jsx::at<io::cvec>( jTwoBody );
+                jParams["hloc"]["two body"] = cvec_to_rvec(cvec);
+                
+            }
+            
+            auto jOneBody = jParams("hloc")("one body");
+            auto const cmat = jsx::at<io::prettycmat>( jOneBody );
+            jParams["hloc"]["one body"] = cmat_to_rmat(cmat);
+            
+        }
+        
+    }
 
     void initialize(jsx::value & jParams){
         
+        change_fake_complex_to_real(jParams);
         check_required_input(jParams);
         set_default_values(jParams);
         mpi::write(jParams, "defaults.json");
         
     }
+
 
 }
 

@@ -305,7 +305,7 @@ namespace evalsim {
                                                            susceptibility[n].entry(i,j,k,l),
                                                            susceptibility[n](i,j,k,l)/
                                                            // (green[i_w_g](i,i)*green[j_w_g](k,k)*green[i_m_nu](j,j)*green[j_m_nu](l,l))
-                                                            (green[i_w_g](i,i)*green[j_w_g](l,l)*green[i_m_nu](j,j)*green[j_m_nu](k,k))
+                                                            (green[i_w_g](i,i)*green[i_m_nu](j,j)*green[j_m_nu](k,k)*green[j_w_g](l,l))
                                                            );
                                                         
                                 }
