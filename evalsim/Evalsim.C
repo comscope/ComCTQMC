@@ -1,5 +1,5 @@
 #include "Evalsim.h"
-
+#include "../../include/parameters/Initialize.h"
 
 jsx::value get_observables(jsx::value const& jParams, std::string const name) {
     jsx::value jMeasurements = mpi::read(name);  io::from_tagged_json(jMeasurements);
