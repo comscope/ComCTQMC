@@ -75,7 +75,7 @@ int main(int argc, char** argv)
             
             imp::release_device();
         } else {
-            std::cout << "Rank " << mpi::rank() << " gets simulations [" << mcIds.front() << ", " << mcIds.back() << ") and uses host" << std::endl;
+            //std::cout << "Rank " << mpi::rank() << " gets simulations [" << mcIds.front() << ", " << mcIds.back() << ") and uses host" << std::endl;
             
             if(jParams("complex").boolean()) {
                 mc::montecarlo<imp::Host, ut::complex>(jParams, jSimulation);

@@ -144,7 +144,7 @@ extern "C" int CTQMCDriverStart(char* case_name)
             
             imp::release_device();
         } else {
-            std::cout << "Rank " << mpi::rank() << " gets simulations [" << mcIds.front() << ", " << mcIds.back() << ") and uses host" << std::endl;
+            //std::cout << "Rank " << mpi::rank() << " gets simulations [" << mcIds.front() << ", " << mcIds.back() << ") and uses host" << std::endl;
             
             if(jParams.is("complex") ? jParams("complex").boolean() : false) {
                 mc::montecarlo<imp::Host, ut::complex>(jParams, jSimulation);
