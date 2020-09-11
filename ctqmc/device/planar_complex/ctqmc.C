@@ -62,7 +62,7 @@ int main(int argc, char** argv)
         
         std::int64_t mode = (deviceId[mpi::rank()] != -1 and streamsPerProcess > 0) ? 1 : 0;
         if(mode) {
-            std::cout << "Rank " << mpi::rank() << " gets simulations [" << mcIds.front() << ", " << mcIds.back() << ") and uses device " << deviceId[mpi::rank()] <<  std::endl;
+            //std::cout << "Rank " << mpi::rank() << " gets simulations [" << mcIds.front() << ", " << mcIds.back() << ") and uses device " << deviceId[mpi::rank()] <<  std::endl;
             
             imp::init_device(deviceId[mpi::rank()], processesPerDevice);
             if(jParams("complex").boolean()) {
@@ -72,7 +72,6 @@ int main(int argc, char** argv)
                 mc::montecarlo<imp::Device, double>(jParams, jSimulation);
                 mc::statistics<double>(jParams, jSimulation);
             }
-            
             
             imp::release_device();
         } else {
