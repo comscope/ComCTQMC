@@ -1,5 +1,5 @@
 #include "Evalsim.h"
-
+#include "../include/parameters/Initialize.h"
 
 jsx::value get_observables(jsx::value const& jParams, std::string const name) {
     jsx::value jMeasurements = mpi::read(name);  io::from_tagged_json(jMeasurements);
@@ -25,7 +25,7 @@ int main(int argc, char** argv)
         mpi::cout = mpi::cout_mode::one;
         mpi::cout << "Start post-processing at " << std::ctime(&(time = std::time(nullptr))) << std::endl;
         
-        jsx::value jParams = mpi::read(std::string(argv[1]) + ".json");  params::complete_worms(jParams);
+        jsx::value jParams = mpi::read(std::string(argv[1]) + ".json"); params::initialize(jParams);  params::complete_worms(jParams);
         
         
         jsx::value jObservables0 = get_observables(jParams, std::string(argv[1]) + ".meas.json");
