@@ -15,6 +15,10 @@
 #include <thrust/complex.h>
 #include <cuComplex.h>
 
+#ifdef USE_CUDA_MIXED
+#include <cuda_fp16.h>
+#endif
+
 #include "../include/Allocator.h"
 
 #include "../../include/Utilities.h"
@@ -31,24 +35,51 @@ namespace imp {
     template <typename Value>
     struct cuda_value{};
 
+
+#if defined(USE_CUDA_SINGLE) && defined(USE_CUDA_MIXED)
+#error one must choose between double (default), single, or mixed precision cases
+#endif
+
     template <>
     struct cuda_value<double>{
+        using scalar_h = double; //type for scalar (host)
+        static constexpr std::size_t size = 1; //number of scalars in basic type (i.e., complex values require two scalars)
+#ifdef USE_CUDA_SINGLE
+        using type = float; //type for matrix (device)
+        using scalar = float; //type for scalars (device)
+        using cscalar = float; //type for C-style scalars (device)
+#elif USE_CUDA_MIXED
+        using type = __half;
+        using scalar = float;
+        using cscalar = float;
+#else
         using type = double;
         using scalar = double;
         using cscalar = double;
-        static constexpr std::size_t size = 1;
+#endif
     };
 
     template <>
     struct cuda_value<ut::complex>{
+        using scalar_h = thrust::complex<double>;
+        static constexpr std::size_t size = 2;
+#ifdef USE_CUDA_SINGLE
+        using type = float;
+        using scalar = thrust::complex<float>;
+        using cscalar = cuFloatComplex;
+#elif USE_CUDA_MIXED
+        using type = __half;
+        using scalar = thrust::complex<float>; //thrust does not support fp16 -- so I think mixed is best; kind of silly to move to double
+        using cscalar = cuFloatComplex;
+#else
         using type = double;
         using scalar = thrust::complex<double>;
-        using cscalar = cuDoubleComplex; //CUDA doesn't always play nice with C++...
-        static constexpr std::size_t size = 2;
-        //planar complex : array of real followed by array of imaginary (both of type type)
+        using cscalar = cuDoubleComplex;
+#endif
     };
 
     template <typename Value> using cuda_value_t = typename cuda_value<Value>::type; //How the matrix is stored
+    template <typename Value> using cuda_value_scalar_host = typename cuda_value<Value>::scalar_h; //How a scalar is stored on host (double precision C++type)
     template <typename Value> using cuda_value_scalar = typename cuda_value<Value>::scalar; //How a scalar is stored (C++type)
     template <typename Value> using cuda_value_cscalar = typename cuda_value<Value>::cscalar; //How a scalar is stored (Ctype)
 
