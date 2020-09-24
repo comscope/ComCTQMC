@@ -29,18 +29,10 @@ void cublasHandle(int const flag) {
 
 #include <cutlass/gemm/gemm.h>
 #include <cutlass/gemm/dgemm_traits.h>
-/*
- //TODO: Try half precision -- this won't compile on summit
- #include <cutlass/gemm/volta884_complex_gemm_traits.h>
-using cutlass_planar_complex_traits = typename cutlass::gemm::Volta884ComplexGemmTraits<
-        cutlass::MatrixLayout::kColumnMajor, cutlass::MatrixTransform::kNone,
-        cutlass::MatrixLayout::kColumnMajor, cutlass::MatrixTransform::kNone,
-        cutlass::Shape<8, 64, 128>, cutlass::Shape<4, 32, 32>, //
-        double,double,double,
-        2>;
-*/
-#endif
+#include <cutlass/gemm/sgemm_traits.h>
+#include <cutlass/gemm/hgemm_traits.h>
 
+#endif
 
 using namespace imp;
 using namespace device;
@@ -56,7 +48,6 @@ int imp::pci_id_size() {
     return 16;
 }
 
-// @#$!#$@!# cudaGetDevicePciBusId is not working properly on SummitDev ......
 void get_pci_id(char* pci_id, int deviceId) {
     std::stringstream stream;
     cudaDeviceProp deviceProperties; cudaErrchk(cudaGetDeviceProperties(&deviceProperties, deviceId));
@@ -146,18 +137,34 @@ imp::Vector<Device>::~Vector() {
 
 //-------------------------------------------------------------------------------------------------------------------------------------------------
 template <typename Value>
-imp::Matrix<Device, Value>::Matrix(int size) : data_(alloc->get<cuda_value_t<Value>>(size * cuda_value<Value>::size)) {
-}
+imp::Matrix<Device, Value>::Matrix(int size) : data_(alloc->get<cuda_value_t<Value>>(size * cuda_value<Value>::size)) {}
+
+/*
+template <typename Value>
+__global__ void kerMatrixConstructor(Value * source, cuda_value<Value>::type * dest){
+    int const i = blockIdx.x; int const j = threadIdx.x;
+    dest[j + blockDim.x*i] = __float2half(source[j + blockDim.x*i]);
+}*/
 
 template <typename Value>
 imp::Matrix<Device, Value>::Matrix(Matrix<Device, Value>::Identity const& identity) : I_(identity.dim), J_(identity.dim), data_(alloc->get<cuda_value_t<Value>>(cuda_value<Value>::size*I_*J_)), exponent_(.0) {
     
     cuda_value_t<Value>* temp = new cuda_value_t<Value>[cuda_value<Value>::size*I_*J_];
     
+    
+#ifdef USE_CUDA_MIXED
+    
+    for(int i=0; i<cuda_value<Value>::size*I_*J_; i++) temp[i] = __float2half(0.);
+    for(int i = 0; i < identity.dim; ++i) temp[i*(identity.dim + 1)] = __float2half(1.);
+    
+#else
+    
     std::memset(temp, 0, cuda_value<Value>::size*I_*J_*sizeof(cuda_value_t<Value>));
     
-    for(int i = 0; i < identity.dim; ++i) temp[i*(identity.dim + 1)] = 1.; //kack memset isch das allgemein für double's ?
+    for(int i = 0; i < identity.dim; ++i) temp[i*(identity.dim + 1)] = 1.;
     
+#endif
+
     cudaErrchk(cudaMemcpy(data_.ptr(), temp, cuda_value<Value>::size*I_*J_*sizeof(cuda_value_t<Value>), cudaMemcpyHostToDevice));
     
     delete[] temp;
@@ -168,7 +175,11 @@ imp::Matrix<Device, Value>::Matrix(Matrix<Device, Value>::Zero const& zero) : I_
     
     cuda_value_t<Value>* temp = new cuda_value_t<Value>[cuda_value<Value>::size*I_*J_];
     
+#ifdef USE_CUDA_MIXED
+    for (int i=0; i<cuda_value<Value>::size*I_*J_; i++) temp[i] = __float2half(0.);
+#else
     std::memset(temp, 0, cuda_value<Value>::size*I_*J_*sizeof(cuda_value_t<Value>));
+#endif
     
     cudaErrchk(cudaMemcpy(data_.ptr(), temp, cuda_value<Value>::size*I_*J_*sizeof(cuda_value_t<Value>), cudaMemcpyHostToDevice));
     
@@ -179,13 +190,16 @@ namespace imp{
 
     template <>
     Matrix<Device, double>::Matrix(int I, int J, io::Matrix<double> const& mat) : I_(I), J_(J), data_(alloc->get<cuda_value_t<double>>(I_*J_)), exponent_(.0) {
-        double* temp = new double[I_*J_];
+        cuda_value_t<double>* temp = new cuda_value_t<double>[I_*J_];
         
         for(int i = 0; i < I; ++i)
             for(int j = 0; j < J; ++j)
+#ifdef USE_CUDA_MIXED
+                temp[j + J*i] = __float2half(static_cast<float>(mat(i, j)));
+#else
                 temp[j + J*i] = mat(i, j);
-        
-        cudaErrchk(cudaMemcpy(data_.ptr(), temp, I_*J_*sizeof(double), cudaMemcpyHostToDevice));
+#endif
+        cudaErrchk(cudaMemcpy(data_.ptr(), temp, I_*J_*sizeof(cuda_value_t<double>), cudaMemcpyHostToDevice));
         
         delete[] temp;
     }
@@ -195,11 +209,17 @@ namespace imp{
         cuda_value_t<ut::complex>* temp = new cuda_value_t<ut::complex>[cuda_value<ut::complex>::size*I_*J_];
         
         //planar complex structure
-        for(int i = 0; i < I; ++i)
+        for(int i = 0; i < I; ++i){
             for(int j = 0; j < J; ++j){
+#ifdef USE_CUDA_MIXED
+                temp[j + J*i] = __float2half(static_cast<float>(mat(i, j).real()));
+                temp[j + J*i + I*J] = __float2half(static_cast<float>(mat(i, j).imag()));
+#else
                 temp[j + J*i] = mat(i, j).real();
                 temp[j + J*i + I*J] = mat(i, j).imag();
+#endif
             }
+        }
         
         cudaErrchk(cudaMemcpy(data_.ptr(), temp, cuda_value<ut::complex>::size*I_*J_*sizeof(cuda_value_t<ut::complex>), cudaMemcpyHostToDevice));
         
@@ -218,6 +238,30 @@ imp::Matrix<Device, Value>::~Matrix() {
 template <>
 void imp::add<double>(double* dest, double fact, Matrix<Device, double> const& source) {
     int const N = source.I()*source.J(); int const one = 1;
+    
+#if defined(USE_CUDA_SINGLE) || defined(USE_CUDA_MIXED)
+
+    cuda_value_t<double>* temp = new cuda_value_t<double>[cuda_value<double>::size*N];
+    double* double_temp = new double[N];
+    
+    cudaErrchk(cudaMemcpy(temp, source.data().ptr(), cuda_value<double>::size*N*sizeof(cuda_value_t<double>), cudaMemcpyDeviceToHost));
+                
+    for (int i=0; i<N; i++){
+#if USE_CUDA_SINGLE
+        double_temp[i] = static_cast<double>(temp[i]);
+#else
+        double_temp[i] = static_cast<double>(__half2float(temp[i]));
+#endif
+    }
+                    
+    daxpy_(&N, &fact, double_temp, &one, dest, &one);
+
+    delete[] temp;
+    delete[] double_temp;
+
+
+#else
+
     cuda_value_t<double>* temp = new cuda_value_t<double>[N];
     
     cudaErrchk(cudaMemcpy(temp, source.data().ptr(), N*sizeof(cuda_value_t<double>), cudaMemcpyDeviceToHost));
@@ -225,6 +269,8 @@ void imp::add<double>(double* dest, double fact, Matrix<Device, double> const& s
     daxpy_(&N, &fact, temp, &one, dest, &one);
     
     delete[] temp;
+
+#endif
 }
 
 //TODO: do this with cudaMemcpy2d so that the cuda planar complex -> ut::complex
@@ -238,7 +284,11 @@ void imp::add<ut::complex>(ut::complex* dest, ut::complex fact, Matrix<Device, u
     cudaErrchk(cudaMemcpy(planar_complex_temp, source.data().ptr(), cuda_value<ut::complex>::size*N*sizeof(cuda_value_t<ut::complex>), cudaMemcpyDeviceToHost));
     
     for (int i=0; i<N; i++)
+#ifdef USE_CUDA_MIXED
+        ut_complex_temp[i] = ut::complex(__half2float(planar_complex_temp[i]), __half2float(planar_complex_temp[i + N]));
+#else
         ut_complex_temp[i] = ut::complex(planar_complex_temp[i], planar_complex_temp[i + N]);
+#endif
     
     zaxpy_(&N, &fact, ut_complex_temp, &one, dest, &one);
 
@@ -271,15 +321,22 @@ struct CopyEvolveL {
 
 __global__ void kerCopyEvolveL(CopyEvolveL<double> args) {
     int const i = blockIdx.x; int const j = threadIdx.x;
-
+#ifdef USE_CUDA_MIXED
+    args.dest[j + blockDim.x*i] = __float2half(static_cast<float>(exp(args.time*args.energies[i] - args.shift)))*args.source[j + blockDim.x*i];
+#else
     args.dest[j + blockDim.x*i] = exp(args.time*args.energies[i] - args.shift)*args.source[j + blockDim.x*i];
+#endif
 };
 
 __global__ void kerCopyEvolveL(CopyEvolveL<ut::complex> args) {
     int const i = blockIdx.x; int const j = threadIdx.x;
-
+#ifdef USE_CUDA_MIXED
+    args.dest[j + blockDim.x*i] = __float2half(static_cast<float>(exp(args.time*args.energies[i] - args.shift)))*args.source[j + blockDim.x*i];
+    args.dest[j + blockDim.x*i + args.size] = __float2half(static_cast<float>(exp(args.time*args.energies[i] - args.shift)))*args.source[j + blockDim.x*i + args.size];
+#else
     args.dest[j + blockDim.x*i] = exp(args.time*args.energies[i] - args.shift)*args.source[j + blockDim.x*i];
     args.dest[j + blockDim.x*i + args.size] = exp(args.time*args.energies[i] - args.shift)*args.source[j + blockDim.x*i + args.size];
+#endif
     
 };
 
@@ -349,14 +406,35 @@ __global__ void cutlass_kernel(typename KernelClass::Params const& params)
 template<typename BlockShape, typename ThreadShape>
 __device__ void cutlass_gemm(Mult<double> const& args, Byte*& memory)
 {
+
+#ifdef USE_CUDA_SINGLE
+    typedef cutlass::gemm::SgemmTraits<
+    cutlass::MatrixLayout::kColumnMajor,   // layout of A matrix
+    cutlass::MatrixLayout::kColumnMajor,
+    BlockShape,
+    cutlass::gemm::LinearScaling<cuda_value<double>::type>,
+    ThreadShape
+    >
+    Traits;
+#elif USE_CUDA_MIXED
+    typedef cutlass::gemm::HgemmTraits<
+    cutlass::MatrixLayout::kColumnMajor,   // layout of A matrix
+    cutlass::MatrixLayout::kColumnMajor,
+    BlockShape,
+    cutlass::gemm::LinearScaling<cuda_value<double>::type>,
+    ThreadShape
+    >
+    Traits;
+#else
     typedef cutlass::gemm::DgemmTraits<
     cutlass::MatrixLayout::kColumnMajor,   // layout of A matrix
     cutlass::MatrixLayout::kColumnMajor,
     BlockShape,
-    cutlass::gemm::LinearScaling<double>,
+    cutlass::gemm::LinearScaling<cuda_value<double>::type>,
     ThreadShape
     >
     Traits;
+#endif
     
     typedef typename Traits::Params Params;
     typedef typename Traits::KernelClass KernelClass;
@@ -389,13 +467,31 @@ __device__ void cutlass_gemm(Mult<double> const& args, Byte*& memory)
 template<typename BlockShape, typename ThreadShape>
 __device__ void cutlass_gemm(Mult<ut::complex> const& args, Byte*& memory)
 {
+#ifdef USE_CUDA_SINGLE
+    typedef cutlass::gemm::SgemmTraits<
+       cutlass::MatrixLayout::kColumnMajor,   // layout of A matrix
+       cutlass::MatrixLayout::kColumnMajor,
+       BlockShape,
+       cutlass::gemm::LinearScaling<cuda_value<ut::complex>::type>,
+       ThreadShape
+       > Traits;
+#elif USE_CUDA_MIXED
+    typedef cutlass::gemm::HgemmTraits<
+       cutlass::MatrixLayout::kColumnMajor,   // layout of A matrix
+       cutlass::MatrixLayout::kColumnMajor,
+       BlockShape,
+       cutlass::gemm::LinearScaling<cuda_value<ut::complex>::type>,
+       ThreadShape
+       > Traits;
+#else
     typedef cutlass::gemm::DgemmTraits<
        cutlass::MatrixLayout::kColumnMajor,   // layout of A matrix
        cutlass::MatrixLayout::kColumnMajor,
        BlockShape,
-       cutlass::gemm::LinearScaling<double>,
+       cutlass::gemm::LinearScaling<cuda_value<ut::complex>::type>,
        ThreadShape
        > Traits;
+#endif
     typedef typename Traits::Params Params;
     typedef typename Traits::KernelClass KernelClass;
 
@@ -549,8 +645,11 @@ struct EvolveL {
 
 __global__ void kerEvolveL(EvolveL<double> args) {
     int const i = blockIdx.x; int const j = threadIdx.x;
-    
+#ifdef USE_CUDA_MIXED
+    args.arg[j + blockDim.x*i] *= __float2half(static_cast<float>(exp(args.time*args.energies[i] - args.shift)));
+#else
     args.arg[j + blockDim.x*i] *= exp(args.time*args.energies[i] - args.shift);
+#endif
 };
 
 __global__ void kerEvolveL(EvolveL<ut::complex> args) {
@@ -680,8 +779,11 @@ __global__ void kerTrace(Trace<double> args) {
     int i = threadIdx.x;
     
     while(i < args.dim) {
+#ifdef USE_CUDA_MIXED
+        cache[threadIdx.x] += __half2float(args.arg[(args.dim + 1)*i]);
+#else
         cache[threadIdx.x] += args.arg[(args.dim + 1)*i];
-        
+#endif
         i += BlockDim;
     }
     
@@ -698,10 +800,17 @@ __global__ void kerTrace(Trace<ut::complex> args) {
     
     while(i < args.dim) {
         
+#ifdef USE_CUDA_MIXED
+        cache[threadIdx.x] += cuda_value_scalar<ut::complex>(
+                                                            __half2float(args.arg[(args.dim + 1)*i]),
+                                                            __half2float(args.arg[(args.dim + 1)*i + args.size])
+                                                            );
+#else
         cache[threadIdx.x] += cuda_value_scalar<ut::complex>(
                                                             args.arg[(args.dim + 1)*i],
                                                             args.arg[(args.dim + 1)*i + args.size]
                                                             );
+#endif
 
         i += BlockDim;
     }
@@ -717,7 +826,12 @@ void imp::trace(ut::Zahl<Value>* Z, ut::Zahl<Value>* accZ, Matrix<Device, Value>
     auto& args = imp::get<Device>(batcher).template get_kernel<Trace<Value>>(); double exponent = matrix.exponent();
     
     args.arg    = matrix.data().ptr();
-    args.result = imp::get<Device>(batcher).get_callback([=](cuda_value_scalar<Value> buffer) { ut::Zahl<Value> temp(buffer, exponent); if(Z) *Z = temp; if(accZ) *accZ += temp;});
+    args.result = imp::get<Device>(batcher).get_callback([=](cuda_value_scalar<Value> buffer) {
+        ut::Zahl<Value> temp(static_cast<cuda_value_scalar_host<Value>>(buffer), exponent);
+        if(Z) *Z = temp;
+        if(accZ) *accZ += temp;
+    });
+    
     args.dim    = matrix.I();
     args.size   = matrix.I()*matrix.J();
     
@@ -741,8 +855,11 @@ __global__ void kerTraceAtB(TraceAtB<double> args) {
     int i = threadIdx.x;
     
     while(i < args.size) {
+#ifdef USE_CUDA_MIXED
+        cache[threadIdx.x] += __half2float(args.At[i]*args.B[i]);
+#else
         cache[threadIdx.x] += args.At[i]*args.B[i];
-        
+#endif
         i += BlockDim;
     }
     
@@ -759,14 +876,26 @@ __global__ void kerTraceAtB(TraceAtB<ut::complex> args) {
     
     while(i < args.size) {
         
-
+        
+#ifdef USE_CUDA_MIXED
+        cache[threadIdx.x] += cuda_value_scalar<ut::complex>(
+                                                            __half2float(
+                                                                         args.At[i            ] * args.B[i            ] //real x real
+                                                                         -args.At[i + args.size] * args.B[i + args.size] //imag x imag
+                                                            ),
+                                                             __half2float(
+                                                                          args.At[i + args.size] * args.B[i            ] //imag x real
+                                                                          +args.At[i            ] * args.B[i + args.size] //real x imag
+                                                                          )
+                                                             );
+#else
         cache[threadIdx.x] += cuda_value_scalar<ut::complex>(
                                                              args.At[i            ] * args.B[i            ] //real x real
                                                             -args.At[i + args.size] * args.B[i + args.size] //imag x imag
                                                             ,args.At[i + args.size] * args.B[i            ] //imag x real
                                                             +args.At[i            ] * args.B[i + args.size] //real x imag
                                                                  );
-            
+#endif
 
         
         i += BlockDim;
@@ -785,7 +914,12 @@ void imp::traceAtB(ut::Zahl<Value>* Z, ut::Zahl<Value>* accZ, Matrix<Device, Val
     
     args.At     = At.data().ptr();
     args.B      = B.data().ptr();
-    args.result = imp::get<Device>(batcher).get_callback([=](cuda_value_scalar<Value> buffer) { ut::Zahl<Value> temp(buffer, exponent); if(Z) *Z = temp; if(accZ) *accZ += temp;});
+    args.result = imp::get<Device>(batcher).get_callback([=](cuda_value_scalar<Value> buffer) {
+        ut::Zahl<Value> temp(static_cast<cuda_value_scalar_host<Value>>(buffer), exponent);
+        if(Z) *Z = temp;
+        if(accZ) *accZ += temp;
+        
+    });
     args.size   = At.I()*At.J();
 
 }
@@ -807,8 +941,11 @@ __global__ void kerNorm(Norm<double> args) {
     int i = threadIdx.x;
     
     while(i < args.size) {
-        cache[threadIdx.x] += args.arg[i]*args.arg[i]; 
-        
+#ifdef USE_CUDA_MIXED
+        cache[threadIdx.x] += __half2float(args.arg[i]*args.arg[i]);
+#else
+        cache[threadIdx.x] += args.arg[i]*args.arg[i];
+#endif
         i += BlockDim;
     }
     
@@ -824,9 +961,12 @@ __global__ void kerNorm(Norm<ut::complex> args) {
     int i = threadIdx.x;
     
     while(i < args.size) {
-
+        
+#ifdef USE_CUDA_MIXED
+        cache[threadIdx.x] += __half2float(args.arg[i]*args.arg[i] + args.arg[i + args.size]*args.arg[i + args.size]);
+#else
         cache[threadIdx.x] += args.arg[i]*args.arg[i] + args.arg[i + args.size]*args.arg[i + args.size];
-
+#endif
         i += BlockDim;
     }
     
@@ -882,7 +1022,12 @@ __global__ void kerAdd(Add<double> args)
 {
     int const index = blockDim.x*blockIdx.x + threadIdx.x;
     
+#ifdef USE_CUDA_MIXED
+    if(index < args.size) args.dest[index] += __float2half(args.fact)*args.source[index];
+#else
     if(index < args.size) args.dest[index] += args.fact*args.source[index];
+#endif
+    
 };
 
 __global__ void kerAdd(Add<ut::complex> args)
@@ -892,10 +1037,28 @@ __global__ void kerAdd(Add<ut::complex> args)
     //could give this to 2x or 4x threads. Probably a small part of GPU time though
     if(index < args.size){
     
+#ifdef USE_CUDA_SINGLE
+        
+        args.dest[index]            += cuCrealf(args.fact)*args.source[index];           //real x real
+        args.dest[index]            -= cuCimagf(args.fact)*args.source[index+args.size]; //imag * imag
+        args.dest[index+args.size]  += cuCimagf(args.fact)*args.source[index];           //imag * real
+        args.dest[index+args.size]  += cuCrealf(args.fact)*args.source[index+args.size]; //real * imag
+        
+#elif USE_CUDA_MIXED
+        
+        args.dest[index]            += __float2half(cuCrealf(args.fact))*args.source[index];           //real x real
+        args.dest[index]            -= __float2half(cuCimagf(args.fact))*args.source[index+args.size]; //imag * imag
+        args.dest[index+args.size]  += __float2half(cuCimagf(args.fact))*args.source[index];           //imag * real
+        args.dest[index+args.size]  += __float2half(cuCrealf(args.fact))*args.source[index+args.size]; //real * imag
+        
+#else
+        
         args.dest[index]            += cuCreal(args.fact)*args.source[index];           //real x real
         args.dest[index]            -= cuCimag(args.fact)*args.source[index+args.size]; //imag * imag
         args.dest[index+args.size]  += cuCimag(args.fact)*args.source[index];           //imag * real
         args.dest[index+args.size]  += cuCreal(args.fact)*args.source[index+args.size]; //real * imag
+        
+#endif
         
     }
     
@@ -924,7 +1087,15 @@ void add(Matrix<Device, ut::complex>& dest, ut::Zahl< ut::complex> const& fact, 
     
     args.source    = source.data().ptr();
     args.dest      = dest.data().ptr();
+    
+#ifdef USE_CUDA_SINGLE
+    args.fact      = make_cuComplex(temp.real(), temp.imag());
+#elif USE_CUDA_MIXED
+    args.fact      = make_cuComplex(__half2float(temp.real()), __half2float(temp.imag()));
+#else
     args.fact      = make_cuDoubleComplex(temp.real(), temp.imag());
+#endif
+
     args.size      = source.I()*source.J();
     
 }
@@ -962,9 +1133,24 @@ __global__ void kerLauncher(Kernel<Value>* kernel, int const N, Byte* memory)
             assert(("CUBLAS Not implemented", false)) // not implemented
 
 #else
+
+#ifdef USE_CUDA_SINGLE
+            
+            //shapes are from the cutlass defaults, which seem ideal in testing (so far tested only hardest problems)
+            cutlass_gemm<cutlass::Shape<8, 128, 128>, cutlass::Shape<8, 8, 8>>(args, memory);
+
+#elif USE_CUDA_MIXED
+            
+            cutlass_gemm<cutlass::Shape<8, 128, 128>, cutlass::Shape<8, 8, 16>>(args, memory);
+            
+#else
             
             cutlass_gemm<cutlass::Shape<8, 64, 128>, cutlass::Shape<8, 8, 8>>(args, memory);
             
+//use_cuda_single
+#endif
+
+//have_cublas
 #endif
             
         } else if(ker.id == device::index<Norm<Value>, KerArgs<Value>>::value) {
@@ -1014,11 +1200,30 @@ deviceKernelBuffer_(alloc->get<Kernel<Value>>(size_)),
 deviceCallBackBuffer_(alloc->get<cuda_value_scalar<Value>>(size_)),
 memory_(alloc->get<Byte>(
 #ifndef HAVE_CUBLAS
+
+#ifdef USE_CUDA_SINGLE
+                         sizeof(typename cutlass::gemm::SgemmTraits<
+                                cutlass::MatrixLayout::kColumnMajor,
+                                cutlass::MatrixLayout::kColumnMajor>::Params) // size of the dgemm instructions
+                         *size_*cuda_value<Value>::size // size of the matrices being multiplied -- why -- x2 right??
+                         *cuda_value<Value>::size*cuda_value<Value>::size // have to store 4 params for planar complex dgemm
+                         
+#elif USE_CUDA_MIXED
+                         
+                         sizeof(typename cutlass::gemm::HgemmTraits<
+                                cutlass::MatrixLayout::kColumnMajor,
+                                cutlass::MatrixLayout::kColumnMajor>::Params) // size of the dgemm instructions
+                         *size_*cuda_value<Value>::size // size of the matrices being multiplied -- why -- x2 right??
+                         *cuda_value<Value>::size*cuda_value<Value>::size // have to store 4 params for planar complex dgemm
+                         
+#else
                          sizeof(typename cutlass::gemm::DgemmTraits<
                                 cutlass::MatrixLayout::kColumnMajor,
                                 cutlass::MatrixLayout::kColumnMajor>::Params) // size of the dgemm instructions
                          *size_*cuda_value<Value>::size // size of the matrices being multiplied -- why -- x2 right??
                          *cuda_value<Value>::size*cuda_value<Value>::size // have to store 4 params for planar complex dgemm
+#endif
+
 #else
                          8
 #endif
