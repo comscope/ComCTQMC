@@ -229,6 +229,10 @@ namespace evalsim {
         }
         
         
+        int serial_number(int sector, int i, int N){
+            return sector*N + i;
+        }
+        
         template<typename Value>
         jsx::value get_probabilities(jsx::value const& jParams, jsx::value const& jPartition, jsx::value const& jMeasurements)
         {
@@ -244,7 +248,7 @@ namespace evalsim {
             std::vector<std::string> surviving;
             for(int qn = 0; qn < jPartition("probabilities").size(); ++qn) {
                 std::string const name = jPartition("probabilities")(qn).string();
-                if(name == "energy" || jPartition("quantum numbers").is(name) || jPartition("observables").is(name))
+                if(name == "label" || name == "energy" || jPartition("quantum numbers").is(name) || jPartition("observables").is(name))
                     surviving.push_back(name);
             }
             
@@ -287,6 +291,12 @@ namespace evalsim {
                         for(int i = 0; i < jsx::at<io::rvec>(jParams("hloc")("eigen values")(sector)).size(); ++i)
                             data[index++][qn] = truncate(ut::real(jsx::at<io::Matrix<Value>>(jHamiltonianEff(sector)("matrix"))(i, i)), 8);
                     
+                } else if(name == "label") {
+                    int index = 0;
+                    for(int sector = 0; sector < jParams("hloc")("eigen values").size(); ++sector)
+                        for(int i = 0; i < jsx::at<io::rvec>(jParams("hloc")("eigen values")(sector)).size(); ++i)
+                            data[index++][qn] = serial_number(sector, i, jParams("hloc")("eigen values").size());
+                    
                 }
             }
             
@@ -316,13 +326,14 @@ namespace evalsim {
             for(int sector = 0; sector < jParams("hloc")("eigen values").size(); ++sector)
                 for(int i = 0; i < jsx::at<io::rvec>(jParams("hloc")("eigen values")(sector)).size(); ++i) {
                     io::rvec temp = jsx::at<io::rvec>(jOccupationStates(index++));
+                    temp.push_back(serial_number(sector, i, jParams("hloc")("eigen values").size()));
                     temp.push_back(std::abs(jsx::at<io::Matrix<Value>>(jDensityMatrix(sector)("matrix"))(i, i)));       // take abs(real) value ?
                     data.push_back(temp);
                 }
             
             jsx::value const& jHybMatrix = jParams("hybridisation")("matrix");
             
-            std::sort(data.begin(), data.end(), VecLess(jHybMatrix.size() + 1, jHybMatrix.size(), jHybMatrix.size() + 1));
+            std::sort(data.begin(), data.end(), VecLess(jHybMatrix.size() + 2, jHybMatrix.size() + 1, jHybMatrix.size() + 2));
             
             temp.clear();
             for(auto& entry : data) {
