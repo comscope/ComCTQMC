@@ -229,8 +229,8 @@ namespace evalsim {
         }
         
         
-        int serial_number(int sector, int i, int N){
-            return sector*N + i;
+        double serial_number(int sector, int i){
+            return std::stod(std::to_string(sector) + "." + std::to_string(i));
         }
         
         template<typename Value>
@@ -295,7 +295,7 @@ namespace evalsim {
                     int index = 0;
                     for(int sector = 0; sector < jParams("hloc")("eigen values").size(); ++sector)
                         for(int i = 0; i < jsx::at<io::rvec>(jParams("hloc")("eigen values")(sector)).size(); ++i)
-                            data[index++][qn] = serial_number(sector, i, jParams("hloc")("eigen values").size());
+                            data[index++][qn] = serial_number(sector, i);
                     
                 }
             }
@@ -326,7 +326,7 @@ namespace evalsim {
             for(int sector = 0; sector < jParams("hloc")("eigen values").size(); ++sector)
                 for(int i = 0; i < jsx::at<io::rvec>(jParams("hloc")("eigen values")(sector)).size(); ++i) {
                     io::rvec temp = jsx::at<io::rvec>(jOccupationStates(index++));
-                    temp.push_back(serial_number(sector, i, jParams("hloc")("eigen values").size()));
+                    temp.push_back(serial_number(sector, i));
                     temp.push_back(std::abs(jsx::at<io::Matrix<Value>>(jDensityMatrix(sector)("matrix"))(i, i)));       // take abs(real) value ?
                     data.push_back(temp);
                 }
