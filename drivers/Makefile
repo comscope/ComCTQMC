@@ -1,5 +1,8 @@
 all: cpu
 
+gpu:
+	$(MAKE) -f Makefile.gpu
+
 cpu: 
 	$(MAKE) -f Makefile.cpu
 
