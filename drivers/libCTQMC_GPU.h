@@ -52,8 +52,6 @@ void CTQMC(char * case_name){
     }
     mpi::bcast(deviceId, mpi::master);  mpi::scatter(mcIds, 2, mpi::master);
     
-    mpi::cout << mpi::rank() << " " << deviceId[mpi::rank()] << "\n";
-    
     jsx::value jSimulation = jsx::array_t(mcIds.back() - mcIds.front());
     for(auto mcId = mcIds.front(); mcId < mcIds.back(); ++mcId)
         jSimulation(mcId - mcIds.front()) = jsx::object_t{
