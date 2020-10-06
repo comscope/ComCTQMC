@@ -4,9 +4,9 @@ SRCS_ccd1 = \
 CTQMC_driver.C 
 
 OBJS_ccd1 = \
-CTQMC_driver.o 
+CTQMC_driver.o
 
-SRC_DIR_ccd1 = 
+SRC_DIR_ccd1 =
 
 EXE_DIR = lib/
 OBJS_DIR = obj/
@@ -22,12 +22,13 @@ all : $(EXE)
 
 $(EXE) : $(OBJS_ccd1)
 	@mkdir -p $(EXE_DIR)
-	$(LD) -shared $(OBJS) -o $(EXE_DIR)$(EXE) $(LFLAGS) $(LIBS) -install_name $(PWD)/lib/$(EXE)
+	$(LD) -shared $(OBJS) -o $(EXE_DIR)libCTQMC.so $(LFLAGS) $(LIBS) -install_name $(PWD)/lib/libCTQMC.so
 
 
 $(OBJS_ccd1):
 	@mkdir -p $(OBJS_DIR)
-	$(FC) -fPIC -c $(SRC_DIR_ccd1)$(@:.o=.C) -o $(OBJS_DIR)$@ 
+	$(FC) -fPIC -c $(SRC_DIR_ccd1)$(@:.o=.C) -o $(OBJS_DIR)$@
+ 
 
 clean :
 	rm -f $(OBJS_DIR)*.*
