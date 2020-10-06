@@ -40,7 +40,7 @@ extern "C" int EvalSim_Main(const char* case_name)
         mpi::cout = mpi::cout_mode::one;
         mpi::cout << "Start post-processing at " << std::ctime(&(time = std::time(nullptr))) << std::endl;
         
-        jsx::value jParams = mpi::read(std::string(case_name) + ".json");  params::complete_worms(jParams);
+        jsx::value jParams = mpi::read(std::string(case_name) + ".json"); params::initialize(jParams); params::complete_worms(jParams);
            
         jsx::value jObservables0 = get_observables(jParams, std::string(case_name) + ".meas.json");
            
