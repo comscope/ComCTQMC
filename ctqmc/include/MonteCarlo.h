@@ -22,7 +22,9 @@
 #include "../../evalsim/Evalsim.h"
 
 namespace mc {
-
+    
+    void dhMonteCarlo(jsx::value const& jParams, jsx::value& jSimulation);
+    void zhMonteCarlo(jsx::value const& jParams, jsx::value& jSimulation);
 
     template<typename Mode, typename Value>
     void montecarlo(jsx::value jParams, jsx::value& jSimulation)

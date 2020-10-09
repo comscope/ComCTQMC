@@ -57,28 +57,7 @@ namespace opt {
     
     
     
-    Interaction get_interaction(jsx::value jBasis, jsx::value jTwoBody) {
-        if(jBasis("orbitals").is<jsx::string_t>()) {
-            
-            sphericalharmonics::Basis basis(jBasis);
-            
-            if(jTwoBody("parametrisation").string() == "slater-condon")
-                return Interaction(sphericalharmonics::SlaterCondon(basis, jTwoBody));
-            else
-                throw std::runtime_error("opt: parametrisation" + jTwoBody("parametrisation").string() + " not defined for spherical harmonics basis");
-            
-        } else if(jBasis("orbitals").is<jsx::int64_t>()) {
-            
-            model::Basis basis(jBasis);
-            
-            if(jTwoBody("parametrisation").string() == "kanamori")
-                return Interaction(model::Kanamori(basis, jTwoBody));
-            else
-                throw std::runtime_error("opt: parametrisation" + jTwoBody("parametrisation").string() + " not defined for model basis");
-            
-        } else
-            throw std::runtime_error("opt: orbitals not defined");
-    }
+    Interaction get_interaction(jsx::value jBasis, jsx::value jTwoBody);
     
 };
 

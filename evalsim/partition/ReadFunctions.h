@@ -136,19 +136,9 @@ namespace evalsim {
                 };
                 
                 
-                std::vector<io::cmat> symmetrize_functions(std::vector<io::cmat> const& functions, std::vector<io::cmat> const& functionsConj, jsx::value const& jParams, jsx::value const& jPartition, jsx::value const& jHybMatrix, int hybSize)
-                {
-                    std::vector<io::cmat> symmetrized(functions.size(), io::cmat(jHybMatrix.size(), jHybMatrix.size()));
+                std::vector<io::cmat> symmetrize_functions(std::vector<io::cmat> const& functions, std::vector<io::cmat> const& functionsConj, jsx::value const& jParams, jsx::value const& jPartition, jsx::value const& jHybMatrix, int hybSize);
                     
-                    for(std::size_t n = 0; n < symmetrized.size(); ++n)
-                        for(std::size_t i = 0; i < jHybMatrix.size(); ++i)
-                            for(std::size_t j = 0; j < jHybMatrix.size(); ++j)
-                                symmetrized[n](i, j) = (functions[n](i, j) + std::conj(functionsConj[n](j, i)))/2.;
-
-                    return symmetrized;
-                };
-                
-            }
+                }
             
             
             template<typename Value>

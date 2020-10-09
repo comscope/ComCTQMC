@@ -38,22 +38,9 @@ namespace evalsim {
         };
         
         
-        double truncate(double val, int prec) {
-            if(std::abs(val) < 1.e-8) return .0;
-            
-            std::stringstream temp;
-            temp << std::setprecision(prec) << val;
-            temp >> val; return val;
-        }
-    
-        ut::complex truncate(ut::complex val, int prec) {
-            if(std::abs(val.real()) < 1.e-8) val.real(0.);
-            if(std::abs(val.imag()) < 1.e-8) val.imag(0.);
-            
-            std::stringstream temp;
-            temp << std::setprecision(prec) << val;
-            temp >> val; return val;
-        }
+        double truncate(double val, int prec);
+        
+        ut::complex truncate(ut::complex val, int prec);
 
         template<typename Value>
         std::vector<std::string> get_surviving_qn(jsx::value const& jPartition){
@@ -229,9 +216,7 @@ namespace evalsim {
         }
         
         
-        double serial_number(int sector, int i){
-            return std::stod(std::to_string(sector) + "." + std::to_string(i));
-        }
+    double serial_number(int sector, int i);
         
         template<typename Value>
         jsx::value get_probabilities(jsx::value const& jParams, jsx::value const& jPartition, jsx::value const& jMeasurements)

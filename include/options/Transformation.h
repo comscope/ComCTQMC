@@ -15,6 +15,7 @@
 #include <string>
 
 #include "../JsonX.h"
+#include "../io/Matrix.h"
 
 
 namespace opt {

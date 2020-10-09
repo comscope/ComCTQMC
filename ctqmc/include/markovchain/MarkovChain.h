@@ -13,22 +13,7 @@
 
 namespace mch {
     
-
-    std::int64_t select_seed(jsx::value const& jParams, std::int64_t const ID){
-        
-        auto inc = (jParams.is("seed increment") ? jParams("seed increment").int64() : 857)*ID;
-        std::int64_t seed = 0;
-        
-        if (jParams.is("restart") and jParams("restart").boolean()){
-            seed = static_cast<int64_t>(time(0));
-            
-        } else {
-            seed = jParams.is("seed") ? jParams("seed").int64() : 41085;
-            
-        }
-        
-        return seed + inc;
-    }
+    std::int64_t select_seed(jsx::value const& jParams, std::int64_t const ID);
 
     template<typename Value>
     struct MarkovChain {

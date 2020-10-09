@@ -44,27 +44,7 @@ namespace evalsim {
         return false;
     }
 
-    void add_dynamics(jsx::value const& jParams, jsx::value& jMeasurements, std::string const worm, std::string const meas)
-    {
-        if(jParams.is("dyn") && jParams.is(worm + meas)) {
-            auto& jDynamic = jMeasurements(worm)("dynamic");
-            auto& jStatic = jMeasurements(worm + meas)("static");
-
-            std::set<std::string> entries;
-        
-            for(auto entry : jDynamic.object()) entries.insert(entry.first);
-            for(auto entry : jStatic.object())  entries.insert(entry.first);
-        
-            for(auto entry : entries) {
-                if(jDynamic.is(entry) && !jStatic.is(entry))
-                    jStatic[entry] = jDynamic(entry);
-                else if (jDynamic.is(entry) && jStatic.is(entry)) {
-                    if(!add_dynamic<double>(jStatic(entry), jDynamic(entry)) && !add_dynamic<ut::complex>(jStatic(entry), jDynamic(entry)))
-                        throw std::runtime_error("evalsim::add_dynamics: missmatch for " + worm + meas);
-                }
-            }
-        }
-    }
+    void add_dynamics(jsx::value const& jParams, jsx::value& jMeasurements, std::string const worm, std::string const meas);
 
     
     template<typename Value>

@@ -27,72 +27,35 @@ namespace ga {
     struct FlavorState : public std::bitset<8*sizeof(unsigned long long)> {
         typedef unsigned long long State;
         
-        FlavorState() : sign_(1) {};
+        FlavorState();
         explicit FlavorState(State const& state) : std::bitset<8*sizeof(State)>(state), sign_(1) {};
-        FlavorState(FlavorState const& state) : std::bitset<8*sizeof(State)>(state), sign_(state.sign()) {};
+        FlavorState(FlavorState const& state);
         
-        State state() const { return this->to_ullong();};
-        int sign() const { return sign_;};
-        int& sign() { return sign_;};
+        State state() const;
+        int sign() const;
+        int& sign();
     private:
         int sign_;
     };
     
     
-    FlavorState psi(int flavor, FlavorState const& state) {
-        FlavorState temp = state;
-        if(state.test(flavor)) {
-            temp[flavor] = 0; if((state >> (flavor + 1)).count()%2) temp.sign() *= -1;
-        } else
-            temp.sign() = 0;
-        return temp;
-    };
-    
-    FlavorState psiDagg(int flavor, FlavorState const& state) {
-        FlavorState temp = state;
-        if(state.test(flavor))
-            temp.sign() = 0;
-        else {
-            temp[flavor] = 1; if((state >> (flavor + 1)).count()%2) temp.sign() *= -1;
-        }
-        return temp;
-    };
+    FlavorState psi(int flavor, FlavorState const& state);
+        
+    FlavorState psiDagg(int flavor, FlavorState const& state);
     
     typedef FlavorState::State State;
     typedef std::vector<State> States;
     typedef std::vector<States> BlockStates;
     
     struct Join {
-        Join(std::size_t size) : labels_(size) {
-            std::iota(labels_.begin(), labels_.end(), 0);
-        };
-        void join(State state1, State state2) {
-            state1 = find_representative(state1);
-            state2 = find_representative(state2);
-            state1 < state2 ? labels_[state2] = state1 : labels_[state1] = state2;
-        };
-        std::size_t clean() {
-            for(auto & label : labels_) label = find_representative(label);
-            std::map<State, State> new_label;
-            for(auto & label : labels_) {
-                if(!new_label.count(label)) {
-                   State temp = new_label.size();
-                   new_label[label] = temp;
-                }
-                label = new_label[label];
-            }
-            return new_label.size();
-        };
-        State label(State state) {
-            return labels_[state];
-        };
+        Join(std::size_t size);
+        void join(State state1, State state2);
+        std::size_t clean();
+        State label(State state);
     private:
         std::vector<State> labels_;
         
-        State find_representative(State label) {
-            while(label != labels_[label]) label = labels_[label];
-            return label;
-        };
+        State find_representative(State label);
     };
     
     //-----------------------------------------------------------------------------------------------------
@@ -292,35 +255,7 @@ namespace ga {
 
     io::rvec get_sector_qn(BlockStates const& blockStates,
                              std::vector<double> const& qn,
-                           bool const throw_error = true)
-    {
-        io::rvec Qn;
-        double const eps = 1E-4;
-        
-        for(auto const& states : blockStates) {
-            double value = .0;
-            
-            for(std::size_t f = 0; f < qn.size(); ++f)
-                if(FlavorState(states.front()).test(f)) value += qn[f];
-            
-            for(auto const state : states) {
-                double temp = .0;
-                
-                for(std::size_t f = 0; f < qn.size(); ++f)
-                    if(FlavorState(state).test(f)) temp += qn[f];
-                
-                if(std::abs(value  - temp) > eps){
-                    if (throw_error) throw std::runtime_error("Problem with quantum numbers.");
-                    else {mpi::cout << " not a good qn; removing from list " ; return io::rvec();}
-                }
-                    
-            }
-            
-            Qn.push_back(value);
-        }
-        
-        return Qn;
-    };
+                           bool const throw_error = true);
     
     //-----------------------------------------------------------------------------------------------------
     //-----------------------------------------------------------------------------------------------------
@@ -411,27 +346,12 @@ namespace ga {
     };
     
     
-    BlockStates get_block_states(jsx::value const& jHloc)
-    {
-        BlockStates blockStates;
-        
-        for(auto const& jStates : jHloc("block states").array()) {
-            States states;
-            for(auto const& jState : jStates.array())
-                states.push_back(jState.int64());
-            blockStates.push_back(std::move(states));
-        }
-        
-        return blockStates;
-    };
+    BlockStates get_block_states(jsx::value const& jHloc);
     
     
     //-----------------------------------------------------------------------------------------------------
     
-    io::rvec construct_sector_qn(jsx::value const& jHloc, jsx::value jqn, bool throw_error = true)
-    {
-        return get_sector_qn(get_block_states(jHloc), jsx::at<io::rvec>(jqn), throw_error);
-    };
+io::rvec construct_sector_qn(jsx::value const& jHloc, jsx::value jqn, bool throw_error = true);
     
     template<typename Value>
     jsx::value construct_annihilation_operators(jsx::value const& jHloc)

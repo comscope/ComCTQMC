@@ -76,34 +76,34 @@ namespace mpi {
     
     
 #ifdef HAVE_MPI
-    MPI_Op get_op(op::min const&)   { return MPI_MIN; };
-    MPI_Op get_op(op::max const&)   { return MPI_MAX; };
-    MPI_Op get_op(op::sum const&)   { return MPI_SUM; };
-    MPI_Op get_op(op::prod const&)  { return MPI_PROD; };
-    MPI_Op get_op(op::land const&)  { return MPI_LAND; };
-    MPI_Op get_op(op::lor const&)   { return MPI_LOR; };
-    MPI_Op get_op(op::lxor const&)  { return MPI_LXOR; };
-    MPI_Op get_op(op::band const&)  { return MPI_BAND; };
-    MPI_Op get_op(op::bor const&)   { return MPI_BOR; };
-    MPI_Op get_op(op::bxor const&)  { return MPI_BXOR; };
+    inline MPI_Op get_op(op::min const&)   { return MPI_MIN; };
+    inline MPI_Op get_op(op::max const&)   { return MPI_MAX; };
+    inline MPI_Op get_op(op::sum const&)   { return MPI_SUM; };
+    inline MPI_Op get_op(op::prod const&)  { return MPI_PROD; };
+    inline MPI_Op get_op(op::land const&)  { return MPI_LAND; };
+    inline MPI_Op get_op(op::lor const&)   { return MPI_LOR; };
+    inline MPI_Op get_op(op::lxor const&)  { return MPI_LXOR; };
+    inline MPI_Op get_op(op::band const&)  { return MPI_BAND; };
+    inline MPI_Op get_op(op::bor const&)   { return MPI_BOR; };
+    inline MPI_Op get_op(op::bxor const&)  { return MPI_BXOR; };
     
     template<typename T> MPI_Datatype get_data_type(T const&); // redundant because of sfinae, however, sometimes redundancy is good ...
     
-    MPI_Datatype get_data_type(char const&)                 { return MPI_CHAR; };
-    MPI_Datatype get_data_type(signed char const&)          { return MPI_SIGNED_CHAR; };
-    MPI_Datatype get_data_type(unsigned char const&)        { return MPI_UNSIGNED_CHAR; };
-    MPI_Datatype get_data_type(short const&)                { return MPI_SHORT; };
-    MPI_Datatype get_data_type(unsigned short const&)       { return MPI_UNSIGNED_SHORT; };
-    MPI_Datatype get_data_type(int const&)                  { return MPI_INT; };
-    MPI_Datatype get_data_type(unsigned const&)             { return MPI_UNSIGNED; };
-    MPI_Datatype get_data_type(long const&)                 { return MPI_LONG; };
-    MPI_Datatype get_data_type(unsigned long const&)        { return MPI_UNSIGNED_LONG; };
-    MPI_Datatype get_data_type(long long const&)            { return MPI_LONG_LONG; };
-    MPI_Datatype get_data_type(unsigned long long const&)   { return MPI_UNSIGNED_LONG_LONG; };
-    MPI_Datatype get_data_type(float const&)                { return MPI_FLOAT; };
-    MPI_Datatype get_data_type(double const&)               { return MPI_DOUBLE; };
-    MPI_Datatype get_data_type(std::complex<float> const&)  { return MPI_C_FLOAT_COMPLEX; };
-    MPI_Datatype get_data_type(std::complex<double> const&) { return MPI_C_DOUBLE_COMPLEX; };
+    inline MPI_Datatype get_data_type(char const&)                 { return MPI_CHAR; };
+    inline MPI_Datatype get_data_type(signed char const&)          { return MPI_SIGNED_CHAR; };
+    inline MPI_Datatype get_data_type(unsigned char const&)        { return MPI_UNSIGNED_CHAR; };
+    inline MPI_Datatype get_data_type(short const&)                { return MPI_SHORT; };
+    inline MPI_Datatype get_data_type(unsigned short const&)       { return MPI_UNSIGNED_SHORT; };
+    inline MPI_Datatype get_data_type(int const&)                  { return MPI_INT; };
+    inline MPI_Datatype get_data_type(unsigned const&)             { return MPI_UNSIGNED; };
+    inline MPI_Datatype get_data_type(long const&)                 { return MPI_LONG; };
+    inline MPI_Datatype get_data_type(unsigned long const&)        { return MPI_UNSIGNED_LONG; };
+    inline MPI_Datatype get_data_type(long long const&)            { return MPI_LONG_LONG; };
+    inline MPI_Datatype get_data_type(unsigned long long const&)   { return MPI_UNSIGNED_LONG_LONG; };
+    inline MPI_Datatype get_data_type(float const&)                { return MPI_FLOAT; };
+    inline MPI_Datatype get_data_type(double const&)               { return MPI_DOUBLE; };
+    inline MPI_Datatype get_data_type(std::complex<float> const&)  { return MPI_C_FLOAT_COMPLEX; };
+    inline MPI_Datatype get_data_type(std::complex<double> const&) { return MPI_C_DOUBLE_COMPLEX; };
 #endif
     
     

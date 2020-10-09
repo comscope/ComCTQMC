@@ -6,9 +6,12 @@
 #include "../../ctqmc/include/Params.h"
 #include "../../ctqmc/include/impurity/Tensor.h"
 
+#include "include/Common.h"
 #include "include/functions/Functions.h"
 #include "include/functions/Measurements.h"
 #include "include/functions/Utilities.h"
+
+#include "../partition/Evalsim.h"
 
 namespace evalsim {
     
@@ -17,7 +20,6 @@ namespace evalsim {
         struct Kernels{
            static std::string const name;
         };
-        std::string const Kernels::name = "kernels";
         
         template<typename Value>
         struct InteractionTensor {
@@ -46,137 +48,17 @@ namespace evalsim {
         
         //We must swap operator orders to get everything into the same order as the full vertex
         //The following options do exactly that
-        std::vector<io::ctens> rearrange_susc_ph(std::vector<io::ctens> const& susc_ph){
-            std::vector<io::ctens> r(susc_ph.size(),io::ctens(susc_ph[0].I(),susc_ph[0].I(),susc_ph[0].I(),susc_ph[0].I()));
-            for (auto const& ijkl : susc_ph[0].ijkl()){
-
-                auto const i=ijkl[1];
-                auto const j=ijkl[2];
-                auto const k=ijkl[3];
-                auto const l=ijkl[4];
-                
-                //j and i are swapped
-                //k and l are swapped
-                std::string const entry = std::to_string(2*j)+"_"+std::to_string(2*i+1)+"_"+std::to_string(2*l)+"_"+std::to_string(2*k+1);
-                
-                for (int n=0; n<susc_ph.size(); n++)
-                    r[n].emplace(j,i,l,k, entry, -susc_ph[n].at(i,j,k,l));
-                
-            }
-
-            return r;
-        }
+    std::vector<io::ctens> rearrange_susc_ph(std::vector<io::ctens> const& susc_ph);
     
-        std::vector<io::ctens> rearrange_susc_tph(std::vector<io::ctens> const& susc_ph){
-            std::vector<io::ctens> r(susc_ph.size(),io::ctens(susc_ph[0].I(),susc_ph[0].I(),susc_ph[0].I(),susc_ph[0].I()));
-            
-            for (auto const& ijkl : susc_ph[0].ijkl()){
-
-                auto const i=ijkl[1];
-                auto const j=ijkl[2];
-                auto const k=ijkl[3];
-                auto const l=ijkl[4];
-                
-                //j and l are swapped
-                std::string const entry = std::to_string(2*i)+"_"+std::to_string(2*l+1)+"_"+std::to_string(2*k)+"_"+std::to_string(2*j+1);
-                
-                for (int n=0; n<susc_ph.size(); n++)
-                    r[n].emplace(i,l,k,j, entry, -susc_ph[n].at(i,j,k,l));
-                
-            }
-
-            return r;
-            
-        }
+    std::vector<io::ctens> rearrange_susc_tph(std::vector<io::ctens> const& susc_ph);
     
-        std::vector<io::ctens> rearrange_susc_pp(std::vector<io::ctens> const& susc_pp){
-            std::vector<io::ctens> r(susc_pp.size(),io::ctens(susc_pp[0].I(),susc_pp[0].I(),susc_pp[0].I(),susc_pp[0].I()));
-        
-            for (auto const& ijkl : susc_pp[0].ijkl()){
-
-                auto const i=ijkl[1];
-                auto const j=ijkl[2];
-                auto const k=ijkl[3];
-                auto const l=ijkl[4];
-                
-                //j and k are swapped
-                std::string const entry = std::to_string(2*i)+"_"+std::to_string(2*k+1)+"_"+std::to_string(2*j)+"_"+std::to_string(2*l+1);
-                
-                for (int n=0; n<susc_pp.size(); n++)
-                    r[n].emplace(i,k,j,l, entry, -susc_pp[n].at(i,j,k,l));
-                
-            }
-
-            return r;
-
-        }
+    std::vector<io::ctens> rearrange_susc_pp(std::vector<io::ctens> const& susc_pp);
     
+    std::vector<io::ctens> rearrange_hedin_ph(std::vector<io::ctens> const& hedin_ph);
     
-        std::vector<io::ctens> rearrange_hedin_ph(std::vector<io::ctens> const& hedin_ph){
-            std::vector<io::ctens> r(hedin_ph.size(),io::ctens(hedin_ph[0].I(),hedin_ph[0].I(),hedin_ph[0].I(),hedin_ph[0].I()));
-            
-            for (auto const& ijkl : hedin_ph[0].ijkl()){
-
-                auto const i=ijkl[1];
-                auto const j=ijkl[2];
-                auto const k=ijkl[3];
-                auto const l=ijkl[4];
-                
-                //k and l are swapped
-                std::string const entry = std::to_string(2*i)+"_"+std::to_string(2*j+1)+"_"+std::to_string(2*l)+"_"+std::to_string(2*k+1);
-
-                for (int n=0; n<hedin_ph.size(); n++){
-                    r[n].emplace(i,j,l,k, entry, hedin_ph[n].at(i,j,k,l));
-                }
-                
-            }
-
-            return r;
-
-        }
+    std::vector<io::ctens> rearrange_hedin_tph(std::vector<io::ctens> const& hedin_ph);
     
-        std::vector<io::ctens> rearrange_hedin_tph(std::vector<io::ctens> const& hedin_ph){
-            std::vector<io::ctens> r(hedin_ph.size(),io::ctens(hedin_ph[0].I(),hedin_ph[0].I(),hedin_ph[0].I(),hedin_ph[0].I()));
-        
-            for (auto const& ijkl : hedin_ph[0].ijkl()){
-
-                auto const i=ijkl[1];
-                auto const j=ijkl[2];
-                auto const k=ijkl[3];
-                auto const l=ijkl[4];
-                
-                //l and j are swapped
-                std::string const entry = std::to_string(2*i)+"_"+std::to_string(2*l+1)+"_"+std::to_string(2*k)+"_"+std::to_string(2*j+1);
-                
-                for (int n=0; n<hedin_ph.size(); n++)
-                    r[n].emplace(i,l,k,j, entry, hedin_ph[n].at(i,j,k,l));
-                
-            }
-
-            return r;
-        }
-    
-        std::vector<io::ctens> rearrange_hedin_pp(std::vector<io::ctens> const& hedin_pp){
-            std::vector<io::ctens> r(hedin_pp.size(),io::ctens(hedin_pp[0].I(),hedin_pp[0].I(),hedin_pp[0].I(),hedin_pp[0].I()));
-
-            for (auto const& ijkl : hedin_pp[0].ijkl()){
-
-                auto const i=ijkl[1];
-                auto const j=ijkl[2];
-                auto const k=ijkl[3];
-                auto const l=ijkl[4];
-                
-                //k and j are swapped
-                std::string const entry = std::to_string(2*i)+"_"+std::to_string(2*k+1)+"_"+std::to_string(2*j)+"_"+std::to_string(2*l+1);
-                                   
-                for (int n=0; n<hedin_pp.size(); n++)
-                    r[n].emplace(i,k,j,l, entry, -hedin_pp[n].at(i,j,k,l));
-                
-                
-            }
-
-            return r;
-        }
+    std::vector<io::ctens> rearrange_hedin_pp(std::vector<io::ctens> const& hedin_pp);
     
         template<typename Value>
         jsx::value evaluateKernels(jsx::value jParams, jsx::value const& jObservables) {

@@ -60,18 +60,7 @@ namespace evalsim {
                 
             };
         
-            std::vector<io::cmat> green_function_on_full_axis(std::vector<io::cmat>const& green){
-                std::vector<io::cmat> r(2*green.size(),io::cmat(green[0].I(),green[0].J()));
-                
-                auto it_forward = r.begin() + green.size();
-                auto it_backward = r.begin() + green.size()-1;
-                for(auto const& x : green){
-                    *it_forward++ = x;
-                    *it_backward-- = x.conj();
-                }
-                    
-                return r;
-            }
+        std::vector<io::cmat> green_function_on_full_axis(std::vector<io::cmat>const& green);
             
         }
         

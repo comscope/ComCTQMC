@@ -7,6 +7,9 @@
 
 #include "../JsonX.h"
 #include "../io/Vector.h"
+#include "../io/Matrix.h"
+#include "../mpi/Utilities.h"
+#include "../atomic/Generate.h"
 #include "../../ctqmc/include/Utilities.h"
 
 #include <ctime>
