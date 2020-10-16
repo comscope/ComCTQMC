@@ -43,7 +43,6 @@ namespace evalsim {
             io::cvec collapse_antisymmetric_function(io::cvec const& function);
                 
                 
-                
                 template <typename T, typename ...> struct Read_legendre_function;
                 
                 template<typename T>

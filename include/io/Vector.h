@@ -11,46 +11,15 @@
 
 namespace io {
     
-    template<typename T, typename std::enable_if<!std::is_same<std::complex<double>, T>::value, int>::type = 0>   // sfinae so that it is taken for ivec and rvec. However, not sure anymore why function overload below is not sufficient
-    inline jsx::value encode(std::vector<T> const& source, bool b64) {
-        if(b64) return base64::encode(source);
-        
-        return jsx::array_t(source.begin(), source.end());
-    };
-    
-    template<typename T, typename std::enable_if<!std::is_same<std::complex<double>, T>::value, int>::type = 0>
-    inline void decode(jsx::value const& source, std::vector<T>& dest) {
-        if(source.is<jsx::array_t>()) {
-            for(auto const& x : source.array()) dest.push_back(x.real64());
-        } else if(source.is<jsx::string_t>()) {
-            base64::decode(source.string(), dest);
-        } else
-            throw std::runtime_error("io::decode: invalid format");
-    };
-    
-    inline jsx::value encode(std::vector<std::complex<double>> const& source, bool b64) {
-        jsx::value jDest;
-        std::vector<double> real, imag;
-        
-        for(auto const& z : source) {
-            real.push_back(z.real()); imag.push_back(z.imag());
-        };
-        
-        jDest["real"] = encode(real, b64); jDest["imag"] = encode(imag, b64);
-        
-        return jDest;
-    };
+template<typename T, typename std::enable_if<!std::is_same<std::complex<double>, T>::value, int>::type = 0>   // sfinae so that it is taken for ivec and rvec. However, not sure anymore why function overload below is not sufficient
+jsx::value encode(std::vector<T> const& source, bool b64);
 
-    
-    inline void decode(jsx::value const& source, std::vector<std::complex<double>>& dest) {
-        std::vector<double> real; decode(source("real"), real);
-        std::vector<double> imag; decode(source("imag"), imag);
-        
-        if(real.size() != imag.size()) throw std::runtime_error("io::decode: invalid format");
-        
-        for(std::size_t n = 0; n < real.size(); ++n)
-            dest.push_back({real[n], imag[n]});
-    };
+template<typename T, typename std::enable_if<!std::is_same<std::complex<double>, T>::value, int>::type = 0>
+void decode(jsx::value const& source, std::vector<T>& dest);
+
+
+jsx::value encode(std::vector<std::complex<double>> const& source, bool b64);
+void decode(jsx::value const& source, std::vector<std::complex<double>>& dest);
 
     
     template<typename T> struct Vector : std::vector<T> {
@@ -89,5 +58,7 @@ namespace io {
     typedef Vector<std::complex<double>> cvec;
 
 };
+
+#include "Vector.impl.h"
 
 #endif

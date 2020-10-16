@@ -8,8 +8,6 @@
 #include "Basic.h"
 #include "../JsonX.h"
 
-//--------------------------------------------------schö tö tiä tü mö tiä par la barbischätöööötötötötö-------------------------------------------------------
-
 namespace mpi {		
 		
 inline jsx::value read(std::string name) {
@@ -80,11 +78,7 @@ inline jsx::value read(std::string name, jsx::value dvalue) {
     };
     
     template<typename T>
-    std::ostream& operator<<(Cout const& c, T t) {
-        if(c.mode_ == cout_mode::every) return std::cout << t;
-        if(c.mode_ == cout_mode::one) return rank() == master ? std::cout << t : Cout::null_;
-        return Cout::null_;
-    };
+    std::ostream& operator<<(Cout const& c, T t);
 
     extern Cout cout;
 
@@ -92,5 +86,6 @@ inline jsx::value read(std::string name, jsx::value dvalue) {
 
 }
 
+#include "Utilities.impl.h"
 
 #endif

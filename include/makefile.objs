@@ -1,0 +1,21 @@
+
+BASE_OBJS = \
+parameters/Defaults.o \
+parameters/Initialize.o \
+options/Basis.o \
+options/Interaction.o \
+options/Observable.o \
+options/Options.o \
+options/Transformation.o \
+mpi/Basic.o \
+mpi/Utilities.o \
+measurements/Error.o \
+measurements/Measurements.o \
+linalg/Operators.o \
+linalg/LinAlg.o \
+io/Matrix.o \
+io/Tensor.o \
+io/Vector.o \
+atomic/Tensor.o \
+atomic/Generate.o
+

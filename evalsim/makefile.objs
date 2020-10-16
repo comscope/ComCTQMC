@@ -1,0 +1,27 @@
+EVALSIM_OBJS = \
+Evalsim.o \
+worm/FullVertexKernels.o \
+worm/Green.o \
+worm/GreenImpr.o \
+worm/GreenImprSum.o \
+worm/Hedin.o \
+worm/HedinImpr.o \
+worm/HedinImprSum.o \
+worm/Vertex.o \
+worm/VertexImpr.o \
+worm/VertexImprSum.o \
+worm/Susc.o \
+worm/include/functions/Utilities.o \
+worm/include/functions/Measurements.o \
+partition/Bessel.o \
+partition/OccupationSusc.o \
+partition/ReadDensityMatrix.o \
+partition/ReadHamiltonian.o \
+partition/Scalar.o \
+partition/ReadFunctions.o \
+partition/QuantumNumberSusc.o \
+partition/Probabilities.o \
+partition/Occupation.o \
+partition/Moments.o \
+partition/Functions.o \
+partition/Evalsim.o

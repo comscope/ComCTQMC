@@ -1,0 +1,4 @@
+
+GPU_OBJS = \
+ctqmc.o 
+

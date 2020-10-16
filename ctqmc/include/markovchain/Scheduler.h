@@ -14,7 +14,7 @@ namespace mch {
     
     struct Scheduler {
         Scheduler() = delete;
-        Scheduler(bool thermalised, Phase phase) : thermalised_(thermalised), phase_(phase) {};
+        Scheduler(bool thermalised, Phase phase);
         bool thermalised() const { return thermalised_;};
         Phase& phase() { return phase_;}
         virtual std::int64_t overtime() const { return 0; }
@@ -26,40 +26,32 @@ namespace mch {
     };
     
     struct TimeScheduler : Scheduler {
-        TimeScheduler(std::int64_t duration, bool thermalised, Phase phase, int64_t overtime = 0) :
-        Scheduler(thermalised, phase),
-        duration_(60.*duration - overtime),
-        start_(std::chrono::steady_clock::now()) {
-        };
+        TimeScheduler(std::int64_t duration, bool thermalised, Phase phase, int64_t overtime = 0);
         ~TimeScheduler() = default;
         
-        std::int64_t overtime() const { return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start_).count() - duration_; }
+        std::int64_t overtime() const;
         
-        bool done() {
-            return !(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start_).count() < duration_);
-        };
+        bool done();
+        
     private:
         double const duration_;
         std::chrono::steady_clock::time_point const start_;
     };
     
     struct StepsScheduler : Scheduler {
-        StepsScheduler(std::int64_t stop, bool thermalised, Phase phase) :
-        Scheduler(thermalised, phase),
-        stop_(stop),
-        steps_(0) {
-        };
+        StepsScheduler(std::int64_t stop, bool thermalised, Phase phase);
         ~StepsScheduler() = default;
         
-        bool done() {
-            return ++steps_ >= stop_;
-        };
+        bool done();
+        
     private:
         std::int64_t const stop_;
         std::int64_t steps_;
     };
     
 }
+
+#include "Scheduler.impl.h"
 
 
 #endif

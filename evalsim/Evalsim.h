@@ -13,10 +13,17 @@
 #include "../include/io/Vector.h"
 #include "../include/io/Tag.h"
 #include "../include/mpi/Utilities.h"
-
+#include "../include/parameters/Initialize.h"
 
 namespace evalsim {
     
+//Main interfaces
+    void evalsim_driver(const char* case_name);
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    jsx::value get_observables(jsx::value const& jParams, std::string const name);
+
     namespace worm {
         
         // catch worm-evalsims that are not yet implemented
@@ -27,26 +34,11 @@ namespace evalsim {
         
     }
     
-    
     template<typename Value>
-    bool add_dynamic(jsx::value& jStatic, jsx::value const& jDynamic)
-    {
-        if(jStatic.is<io::Vector<Value>>() && jDynamic.is<io::Vector<Value>>()) {
-            auto& dyn = jsx::at<io::Vector<Value>>(jDynamic);
-            auto& stc = jsx::at<io::Vector<Value>>(jStatic);
-            
-            if(stc.size() != dyn.size()) return false;
-            
-            for(std::size_t i = 0; i < dyn.size(); ++i) stc[i] += dyn[i];
-            
-            return true;
-        }
-        return false;
-    }
+    bool add_dynamic(jsx::value& jStatic, jsx::value const& jDynamic);
 
     void add_dynamics(jsx::value const& jParams, jsx::value& jMeasurements, std::string const worm, std::string const meas);
 
-    
     template<typename Value>
     struct worm_clean_functor {
         template<typename W>
@@ -58,7 +50,6 @@ namespace evalsim {
             }
         }
     };
-    
     
     template<typename Value>
     struct worm_evalsim_functor {
@@ -78,50 +69,8 @@ namespace evalsim {
     
     
     template<typename Value>
-    jsx::value evalsim(jsx::value const& jParams, jsx::value& jMeasurements) {
-        jsx::value jObservables;
+    jsx::value evalsim(jsx::value const& jParams, jsx::value& jMeasurements);
         
-        
-        mpi::cout << "Begin evaluating partition measurements" << std::endl;
-        
-        jObservables[cfg::partition::Worm::name()] = partition::evalsim<Value>(jParams, jMeasurements(cfg::partition::Worm::name()));
-        
-        mpi::cout << "End evaluating partition measurements" << std::endl;
-        
-        // This option is set in CTQMC if `all errors' is set. The intent is to enable fast error computation.
-        // While not all worms are slow to evaluate, they require (in some cases) the occupations.
-        // The occupation can be a difficult observable to compute in problems with large invariant subspaces.
-        bool const lpp = jParams.is("limited post-processing") ? jParams("limited post-processing").boolean() : false;
-        if (!lpp){
-            
-            add_dynamics(jParams, jMeasurements, cfg::green::name, " impr");
-            add_dynamics(jParams, jMeasurements, cfg::green::name, " imprsum");
-                
-            add_dynamics(jParams, jMeasurements, cfg::vertex::name, " impr");
-            add_dynamics(jParams, jMeasurements, cfg::vertex::name, " imprsum");
-                
-            add_dynamics(jParams, jMeasurements, cfg::hedin_ph::name, " impr");
-            add_dynamics(jParams, jMeasurements, cfg::hedin_ph::name, " imprsum");
-                
-            add_dynamics(jParams, jMeasurements, cfg::hedin_pp::name, " impr");
-            add_dynamics(jParams, jMeasurements, cfg::hedin_pp::name, " imprsum");
-                
-            cfg::for_each_type<cfg::Worm>::apply(worm_clean_functor<Value>(), jParams, jMeasurements);
-                
-            cfg::for_each_type<cfg::Worm>::apply(worm_evalsim_functor<Value>(), jParams, jMeasurements, jObservables);
-                
-            if (jParams.is("kernels")){
-                jObservables["kernels"] = worm::evaluateKernels<Value>(jParams,jObservables);
-                
-                if (jParams("kernels").is("full") ? jParams("kernels")("full").boolean() : false)
-                    jObservables["Asymptotic Full Vertex"] = worm::evaluateFullVertexFromKernels<Value>(jParams,jObservables);
-            }
-            
-        }
-        
-        return jObservables;
-        
-    }
     
 }
 

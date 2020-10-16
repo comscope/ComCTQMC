@@ -18,29 +18,17 @@ namespace imp {
         Fact& operator=(Fact const&) = delete;
         ~Fact() = default;
 
-        void operator*=(Value arg) {
-            factTry_ *= arg;
-        };
+        void operator*=(Value arg);
         
-        void operator/=(Value arg) {
-            factTry_ /= arg;
-        };
+        void operator/=(Value arg);
         
-        double ratio() const {
-            return std::abs(factTry_/fact_);
-        };
+        double ratio() const;
         
-        void accept() {
-            fact_ = factTry_;
-        };
+        void accept();
         
-        void reject() {
-            factTry_ = fact_;
-        };
+        void reject();
         
-        Value sign() const {
-            return fact_/std::abs(fact_);
-        };
+        Value sign() const;
         
     private:
         Value fact_{1.};
@@ -50,5 +38,6 @@ namespace imp {
     
 }
 
+#include "Fact.impl.h"
 
 #endif

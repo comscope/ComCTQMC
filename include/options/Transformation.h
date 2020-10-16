@@ -22,18 +22,12 @@ namespace opt {
     
     template<typename Value>
     struct Transformation {
-        Transformation(int const N, jsx::value jTransformation) :
-        t_(jTransformation.is<jsx::empty_t>() ? io::PrettyMatrix<Value>(N, N) : jsx::at<io::PrettyMatrix<Value>>(jTransformation)) {
-            if(jTransformation.is<jsx::empty_t>())
-                for(int f = 0; f < N; ++f) t_(f, f) = 1.;
-        }
+        Transformation(int const N, jsx::value jTransformation);
         
-        Value operator()(int i, int j) const {
-            return t_(i, j);
-        };
+        Value operator()(int i, int j) const;
         
-        int I() const { return t_.I();};
-        int J() const { return t_.J();};
+        int I() const;
+        int J() const;
         
     private:
         io::PrettyMatrix<Value> t_;
@@ -41,6 +35,8 @@ namespace opt {
     
 };
 
+#include "Transformation.impl.h"
+        
 #endif
 
 
