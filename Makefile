@@ -1,7 +1,7 @@
+#if we haven't already set the necessary options, try loading them from Makefile.in
+ifndef CXX_MPI
 include Makefile.in
-
-OBJ_DIR=./obj/
-EXE_DIR=./bin/
+endif
 
 EVALSIM_DIR=./evalsim/
 HOST_DIR=./ctqmc/host/
@@ -37,11 +37,12 @@ lib : libCTQMC.so
 ADD_FLAG :
 	CXXFLAGS = $(CXXFLAGS) -DMAKE_GPU_ENABLED
 
-%.o : %.C
+%.o : %.c
 	$(CXX_MPI) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 
 libCTQMC.so : $(BASE_OBJS) $(MAIN_OBJS) $(EVALSIM_OBJS) $(HOST_OBJS)
-	$(CXX_MPI) $(CPPFLAGS) $(CXXFLAGS) -shared $(BASE_OBJS) $(MAIN_OBJS) $(EVALSIM_OBJS) $(HOST_OBJS) -o ./lib/$@ ./lib/libCTQMC.C $(LFLAGS) $(LIBS)
+	@mkdir -p $(LIB_DIR)
+	$(CXX_MPI) $(CPPFLAGS) $(CXXFLAGS) -shared $(BASE_OBJS) $(MAIN_OBJS) $(EVALSIM_OBJS) $(HOST_OBJS) -o $(LIB_DIR)/$@ ./lib/libCTQMC.C $(LFLAGS) $(LIBS)
 
 EVALSIM_x : $(BASE_OBJS) $(MAIN_OBJS) $(EVALSIM_OBJS)
 	@mkdir -p $(EXE_DIR)
@@ -60,7 +61,7 @@ $(GPU_CUDA OBJS) :
 	$(NVCC) $(GPU_ARCH) -dlink $@bj.o -o $@ 
 	
 clean : 
-	rm -f $(EXE_DIR)/EVALSIM $(EXE_DIR)/CTQMC $(EXE_DIR)/GPU_CTQMC
+	rm -f $(EXE_DIR)/EVALSIM_x $(EXE_DIR)/CTQMC_x $(EXE_DIR)/CTQMC_gx $(LIB-DIR)/*.so
 	find . -type f -name '*.o' -exec rm {} +
 
 
