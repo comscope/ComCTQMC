@@ -6,6 +6,7 @@
 namespace ctqmc{
     //specialized gpu/cpu
     void ctqmc_driver(const char* case_name){
+        
         std::time_t time;  mpi::cout = mpi::cout_mode::one;
         
         mpi::cout << "Start task at " << std::asctime(std::localtime(&(time = std::time(nullptr)))) << std::endl << std::endl;
