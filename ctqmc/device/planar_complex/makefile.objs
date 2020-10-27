@@ -1,4 +1,5 @@
-
 GPU_OBJS = \
 ctqmc.o 
 
+GPU_CUDA_OBJS = \
+Algebra.obj 
