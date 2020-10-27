@@ -83,7 +83,7 @@ namespace state {
     
 #ifdef MAKE_GPU_ENABLED
     template State<double>::State(jsx::value const& jParams, data::Data<double> const& data, jsx::value& jConfig, imp::Device);
-    template State<ut::complex>::State(jsx::value const& jParams, data::Data<double> const& data, jsx::value& jConfig, imp::Device);
+    template State<ut::complex>::State(jsx::value const& jParams, data::Data<ut::complex> const& data, jsx::value& jConfig, imp::Device);
 #endif
     
     template<typename Mode, typename Value>

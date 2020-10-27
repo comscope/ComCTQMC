@@ -35,6 +35,9 @@ namespace data {
 #ifdef MAKE_GPU_ENABLED
     template Data<double>::Data(jsx::value const& jParams, imp::Device);
     template Data<ut::complex>::Data(jsx::value const& jParams, imp::Device);
+
+    template void setup_data<imp::Device,double>(jsx::value const& jParams, data::Data<double>& data);
+    template void setup_data<imp::Device,ut::complex>(jsx::value const& jParams, data::Data<ut::complex>& data);
 #endif
     
     

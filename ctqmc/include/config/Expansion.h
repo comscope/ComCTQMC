@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <iostream>
 #include <vector>
+#include <algorithm>
 
 #include "../Utilities.h"
 #include "../../../include/mpi/Utilities.h"

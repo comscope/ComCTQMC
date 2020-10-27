@@ -210,8 +210,8 @@ namespace imp {
     template struct Product<imp::Host, ut::complex>;
     
 #ifdef MAKE_GPU_ENABLED
-    template struct Product<imp::Host, double>;
-    template struct Product<imp::Host, ut::complex>;
+    template struct Product<imp::Device, double>;
+    template struct Product<imp::Device, ut::complex>;
 #endif
     
 }

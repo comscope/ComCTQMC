@@ -1,18 +1,29 @@
-BASE_CPPFLAGS = -DNDEBUG
+BASE_CPPFLAGS = -DNDEBUG -DUSE_CUDA_SINGLE
 BASE_LDFLAGS =
 BASE_LIBS = -lm
 
-LAPACK_CPPFLAGS = 
-LAPACK_LDFLAGS = 
-LAPACK_LIBS = -llapack -lblas 
+LAPACK_CPPFLAGS =
+LAPACK_LDFLAGS =
+LAPACK_LIBS = -llapack -lblas
 
-CXX = clang++
+CUDA_CPPFLAGS = 
+CUDA_LDFLAGS = -L/sw/summit/cuda/10.1.168/lib64 
+
+CUTLASS_CPPFLAGS = -Ictqmc/device/include
+GPU_ARCH = sm_70
+
+CXX = g++
 CXX_MPI = mpic++ -DHAVE_MPI
-CXXFLAGS = -Wall -O3 -fexceptions -std=c++11 -m64
+CXXFLAGS = -std=c++11 -fsigned-char -fno-common -O3 -fexceptions -Wall -Wno-sign-compare
 
-CPPFLAGS = $(BASE_CPPFLAGS) $(LAPACK_CPPFLAGS) 
-LDFLAGS = $(BASE_LDFLAGS) $(LAPACK_LDFLAGS)
-LIBS = $(BASE_LIBS) $(LAPACK_LIBS) 
+NVCC = nvcc
+NVCCFLAGS = -ccbin=$(CXX) -std=c++11 -O3 -Xcompiler -fsigned-char -Xcompiler -fno-common -Xcompiler -fexceptions -Xcompiler -Wall -Xcompiler -Wno-sign-compare -arch=$(GPU_ARCH)
 
-EXE_DIR=./bin/
-OBJ_DIR=./obj/
+CPPFLAGS = $(CUTLASS_CPPFLAGS) $(BASE_CPPFLAGS) $(LAPACK_CPPFLAGS) $(CUDA_CPPFLAGS)
+LDFLAGS = $(BASE_LDFLAGS) $(LAPACK_LDFLAGS) $(CUDA_LDFLAGS)
+LIBS = $(BASE_LIBS) $(LAPACK_LIBS)
+
+EXE_DIR = ./bin/
+LIB_DIR = ./lib/
+
+
