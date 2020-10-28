@@ -12,7 +12,7 @@
 #include "../../../include/parameters/Initialize.h"
 
 namespace ctqmc{
-    void ctqmc_gpu_driver(char * case_name);
+    void ctqmc_gpu_driver(const char * case_name);
 }
 #endif
 

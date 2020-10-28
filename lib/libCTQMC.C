@@ -25,7 +25,7 @@ extern "C" int EvalSim_Main(const char* case_name)
 extern "C" int CTQMCDriverStart(const char* case_name)
 {
         try {
-            ctqmc::ctqmc_driver(case_name);
+            ctqmc::ctqmc_gpu_driver(case_name);
         }
         catch (std::exception& exc) {
             std::cerr << exc.what() << " ( Thrown from worker " << mpi::rank() << " )" << std::endl;

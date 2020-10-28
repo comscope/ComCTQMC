@@ -33,6 +33,11 @@ HOST_OBJS := $(addprefix $(HOST_DIR), $(HOST_OBJS))
 GPU_OBJS := $(addprefix $(GPU_DIR), $(GPU_OBJS))
 GPU_CUDA_OBJS := $(addprefix $(GPU_DIR), $(GPU_CUDA_OBJS))
 
+LIB_OBJS = $(MAIN_OBJS)
+LIB_OBJS += $(BASE_OBJS)
+LIB_OBJS += $(EVALSIM_OBJS)
+LIB_OBJS += $(HOST_OBJS)
+
 all : cpu evalsim
 
 cpu : CTQMC_x
@@ -44,12 +49,19 @@ evalsim : EVALSIM_x
 lib : CXXFLAGS += -fPIC
 lib : libCTQMC.so
 
+gpulib: CXXFLAGS += -fPIC -DMAKE_GPU_ENABLED
+gpulib: LIB_OBJS += $(GPU_OBJS)
+gpulib: LIB_OBJS += $(GPU_CUDA_OBJS)
+gpulib: LIB_OBJS += $(GPU_CUDA_OBJS)bj.o
+gpulib: LIBS += $(CUDA_LDFLAGS)
+gpulib: $(GPU_OBJS) $(GPU_CUDA_OBJS) libCTQMC.so
+
 %.o : %.c
 	$(CXX_MPI) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 
-libCTQMC.so : $(BASE_OBJS) $(MAIN_OBJS) $(EVALSIM_OBJS) $(HOST_OBJS)
+libCTQMC.so : $(LIB_OBJS)
 	@mkdir -p $(LIB_DIR)
-	$(CXX_MPI) $(CPPFLAGS) $(CXXFLAGS) -shared $(BASE_OBJS) $(MAIN_OBJS) $(EVALSIM_OBJS) $(HOST_OBJS) -o $(LIB_DIR)/$@ ./lib/libCTQMC.C $(LFLAGS) $(LIBS)
+	$(CXX_MPI) $(CPPFLAGS) $(CXXFLAGS) -shared $(LIB_OBJS) -o $(LIB_DIR)/$@ ./lib/libCTQMC.C $(LFLAGS) $(LIBS)
 
 EVALSIM_x : $(BASE_OBJS) $(MAIN_OBJS) $(EVALSIM_OBJS)
 	@mkdir -p $(EXE_DIR)
@@ -64,7 +76,7 @@ CTQMC_x : $(BASE_OBJS) $(MAIN_OBJS) $(EVALSIM_OBJS) $(HOST_OBJS)
 CTQMC_gx : CXXFLAGS += -DMAKE_GPU_ENABLED
 CTQMC_gx : $(BASE_OBJS) $(MAIN_OBJS) $(EVALSIM_OBJS) $(HOST_OBJS) $(GPU_OBJS) $(GPU_CUDA_OBJS)
 	@mkdir -p $(EXE_DIR)
-	$(CXX_MPI) -o $(EXE_DIR)$@  $(BASE_OBJS) $(MAIN_OBJS) $(EVALSIM_OBJS) $(HOST_OBJS) $(GPU_OBJS) $(GPU_CUDA_OBJS) $(GPU_CUDA_OBJS)bj.o $(GPU_DIR)Main.C -lcudart -lcudadevrt $(LDFLAGS) $(LIBS)
+	$(CXX_MPI) -o $(EXE_DIR)$@  $(BASE_OBJS) $(MAIN_OBJS) $(EVALSIM_OBJS) $(HOST_OBJS) $(GPU_OBJS) $(GPU_CUDA_OBJS) $(GPU_CUDA_OBJS)bj.o $(GPU_DIR)Main.C $(CUDA_LDFLAGS) $(LDFLAGS) $(LIBS)
 	cp $(EXE_DIR)$@ $(EXE_DIR)CTQMC
 
 $(GPU_CUDA_OBJS) :
