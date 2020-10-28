@@ -56,7 +56,7 @@ gpulib: LIB_OBJS += $(GPU_CUDA_OBJS)bj.o
 gpulib: LIBS += $(CUDA_LDFLAGS)
 gpulib: $(GPU_OBJS) $(GPU_CUDA_OBJS) libCTQMC.so
 
-%.o : %.c
+%.o : %.C
 	$(CXX_MPI) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 
 libCTQMC.so : $(LIB_OBJS)

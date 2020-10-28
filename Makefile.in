@@ -7,7 +7,7 @@ LAPACK_LDFLAGS =
 LAPACK_LIBS = -llapack -lblas
 
 CUDA_CPPFLAGS = 
-CUDA_LDFLAGS = -L/sw/summit/cuda/10.1.168/lib64 
+CUDA_LDFLAGS = -L/sw/summit/cuda/10.1.168/lib64  -lcudart -lcudadevrt
 
 CUTLASS_CPPFLAGS = -Ictqmc/device/include
 GPU_ARCH = sm_70
