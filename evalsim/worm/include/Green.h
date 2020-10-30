@@ -24,23 +24,16 @@ namespace evalsim {
                     double const mu = jParams("mu").real64();
                     jsx::value const& jHybMatrix = jParams("hybridisation")("matrix");
                     
-                    std::vector<io::cmat> weiss(green.size(), io::cmat(jHybMatrix.size(), jHybMatrix.size()));
-                    for(std::size_t n = 0; n < sigmagreen.size(); ++n)
-                        for(std::size_t i = 0; i < jHybMatrix.size(); ++i)
-                            for(std::size_t j = 0; j < jHybMatrix.size(); ++j){
-                                weiss[n](i,j) = (i == j ? iomega(n) + mu : .0) - oneBody(i, j) - hyb[n](i, j);
-                            }
-                    
                     for(std::size_t n = 0; n < sigmagreen.size(); ++n){
-                        io::cmat weiss_inv = linalg::inv(weiss[n]);
                         
                         for(std::size_t i = 0; i < jHybMatrix.size(); ++i)
                             for(std::size_t j = 0; j < jHybMatrix.size(); ++j){
                                 green[n](i,j)=0;
                                 for(std::size_t k = 0; k < jHybMatrix.size(); ++k){
                                     
-                                    green[n](i,j) += std::abs(weiss[n](i,k)) ? //
-                                    ((j == k ? 1.0 : 0.0) + sigmagreen[n](j,k)) * weiss_inv(i,k) //(delta_ik + greensigma_ik)
+                                    green[n](i,j) += std::abs(sigmagreen[n](i,k)) ? //
+                                    ((j == k ? 1.0 : 0.0) + sigmagreen[n](j,k)) *
+                                    ((i == j ? iomega(n) + mu : .0) - oneBody(i, j) - hyb[n](i, j)(i,k)) //(delta_ik + greensigma_ik)
                                     : 0 ;
                                 }
                             }
