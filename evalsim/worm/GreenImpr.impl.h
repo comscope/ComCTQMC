@@ -29,7 +29,7 @@ namespace evalsim {
         std::tie(hyb, hybMoments) = partition::func::get_hybridisation<Value>(jParams);
         
         
-        pi::cout << "Reading greensigma function and computing green's function... " << std::flush;
+        mpi::cout << "Reading greensigma function and computing green's function... " << std::flush;
         
         std::vector<io::cmat> sigmagreen = meas::read_matrix_functions<Value,Fermion>(jMeasurements, jParams, jWorm, jHybMatrix, hyb.size());
         
