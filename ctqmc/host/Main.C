@@ -11,7 +11,7 @@ int main(int argc, char** argv)
     try {
         if(argc != 2) throw std::runtime_error("ctqmc: Wrong number of input parameters!");
         
-        ctqmc::ctqmc_gpu_driver(argv[1]);
+        ctqmc::ctqmc_driver(argv[1]);
     }
     catch (std::exception& exc) {
         std::cerr << exc.what() << " ( Thrown from worker " << mpi::rank() << " )" << std::endl;
