@@ -4,11 +4,6 @@
 #include "../../include/JsonX.h"
 #include "../../ctqmc/include/config/Worms.h"
 
-#include "../partition/Functions.h"
-#include "../partition/ReadFunctions.h"
-#include "../partition/ReadDensityMatrix.h"
-#include "../partition/ReadHamiltonian.h"
-
 #include "include/Green.h"
 #include "include/functions/Functions.h"
 #include "include/functions/Measurements.h"
@@ -21,7 +16,7 @@ namespace evalsim {
         
         template<typename Value>
         jsx::value evalsim(ut::wrap<cfg::green::Worm>, jsx::value jParams, jsx::value const& jMeasurements, jsx::value const& jPartition, jsx::value const& jObservables);
-        
+    
     }
     
 }

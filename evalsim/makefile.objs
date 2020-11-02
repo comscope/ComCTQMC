@@ -11,6 +11,10 @@ worm/Vertex.o \
 worm/VertexImpr.o \
 worm/VertexImprSum.o \
 worm/Susc.o \
+worm/include/Green.o \
+worm/include/Susc.o \
+worm/include/Hedin.o \
+worm/include/Vertex.o \
 worm/include/functions/Utilities.o \
 worm/include/functions/Measurements.o \
 partition/Bessel.o \

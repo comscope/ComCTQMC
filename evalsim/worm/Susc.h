@@ -5,9 +5,6 @@
 #include "../../include/JsonX.h"
 #include "../../ctqmc/include/config/Worms.h"
 
-#include "../partition/Functions.h"
-#include "../partition/ReadFunctions.h"
-
 #include "include/Susc.h"
 #include "include/functions/Functions.h"
 #include "include/functions/Measurements.h"

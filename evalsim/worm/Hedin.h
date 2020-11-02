@@ -4,9 +4,6 @@
 #include "../../include/JsonX.h"
 #include "../../ctqmc/include/config/Worms.h"
 
-#include "../partition/Functions.h"
-#include "../partition/ReadFunctions.h"
-
 #include "include/Common.h"
 #include "include/Hedin.h"
 #include "include/functions/Functions.h"

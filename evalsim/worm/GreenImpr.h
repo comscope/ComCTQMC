@@ -4,11 +4,6 @@
 #include "../../include/JsonX.h"
 #include "../../ctqmc/include/config/Worms.h"
 
-#include "../partition/Functions.h"
-#include "../partition/ReadFunctions.h"
-#include "../partition/ReadDensityMatrix.h"
-#include "../partition/ReadHamiltonian.h"
-
 #include "include/Green.h"
 #include "include/functions/Functions.h"
 #include "include/functions/Measurements.h"
