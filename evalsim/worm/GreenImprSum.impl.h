@@ -34,20 +34,21 @@ namespace evalsim {
         
         std::vector<io::cmat> sigmagreen = meas::read_matrix_functions<Value,Fermion>(jMeasurements, jParams, jWorm, jHybMatrix, hyb.size());
         
-        std::vector<io::cmat> green(sigmagreen.size(), io::cmat(jHybMatrix.size(), jHybMatrix.size()));
+        auto const size = std::min(sigmagreen.size(), hyb.size());
+        std::vector<io::cmat> green(size, io::cmat(jHybMatrix.size(), jHybMatrix.size()));
         func::green::compute_green_from_improved<Value>(jParams, iomega, oneBody, hyb, sigmagreen, green);
         
         mpi::cout << "OK" << std::endl;
         
         
-        mpi::cout << "Calculating self-energy with dyson ... " << std::flush;
+        mpi::cout << "Calculating self-energy ... " << std::flush;
         
-        std::vector<io::cmat> self(green.size(), io::cmat(jHybMatrix.size(), jHybMatrix.size()));
+        std::vector<io::cmat> self(size, io::cmat(jHybMatrix.size(), jHybMatrix.size()));
         func::green::compute_self_from_improved<Value>(jParams,sigmagreen,green,self);
         
         mpi::cout << "OK" << std::endl;
         
-        /*
+        
         mpi::cout << "Calculating green moments ... " << std::flush;
         
         std::vector<io::Matrix<Value>> greenMoments = func::green::compute_green_moments<Value>(jParams, hybMoments, jPartition, jObservables("partition")("scalar"));
@@ -69,7 +70,6 @@ namespace evalsim {
         func::green::add_self_tail(jHybMatrix, iomega, self, selfMoments, hyb.size());
         jObservablesOut["self-energy"] =  func::write_functions(jParams, jHybMatrix, self, selfMoments);
         
-        
         mpi::cout << "Ok" << std::endl;
         
         
@@ -79,13 +79,11 @@ namespace evalsim {
         jObservablesOut["green"] = func::write_functions(jParams, jHybMatrix, green, greenMoments);
         
         mpi::cout << "Ok" << std::endl;
-         */
+         
         
-        
-        
-        jsx::value jObservablesOut;
-        jObservablesOut["self-energy"] =  func::write_functions<Value>(jParams, jHybMatrix, self);
-        jObservablesOut["green"] =  func::write_functions<Value>(jParams, jHybMatrix, green);
+        //jsx::value jObservablesOut;
+        //jObservablesOut["self-energy"] =  func::write_functions<Value>(jParams, jHybMatrix, self);
+        //jObservablesOut["green"] =  func::write_functions<Value>(jParams, jHybMatrix, green);
         
         
         return jObservablesOut;

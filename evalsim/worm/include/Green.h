@@ -17,24 +17,30 @@ namespace evalsim {
         namespace func {
         
             namespace green {
-                
+            
                 template<typename Value>
                 void compute_green_from_improved(jsx::value const& jParams, iOmega const& iomega, io::Matrix<Value> const& oneBody, std::vector<io::cmat> const& hyb, std::vector<io::cmat> const& sigmagreen, std::vector<io::cmat> & green){
                     
                     double const mu = jParams("mu").real64();
                     jsx::value const& jHybMatrix = jParams("hybridisation")("matrix");
                     
-                    for(std::size_t n = 0; n < sigmagreen.size(); ++n){
+                    for(std::size_t n = 0; n < green.size(); ++n){
                         
+                        io::cmat inv_weiss(jHybMatrix.size(),jHybMatrix.size());
+                        for(std::size_t i = 0; i < jHybMatrix.size(); ++i)
+                            for(std::size_t j = 0; j < jHybMatrix.size(); ++j)
+                                inv_weiss(i,j) =  (i == j ? iomega(n) + mu : .0) - oneBody(i, j) - hyb[n](i, j) ;
+                            
+                        auto const weiss = linalg::inv(inv_weiss);
                         for(std::size_t i = 0; i < jHybMatrix.size(); ++i)
                             for(std::size_t j = 0; j < jHybMatrix.size(); ++j){
-                                green[n](i,j)=0;
+                                
+                                green[n](i,j) = 0;
                                 for(std::size_t k = 0; k < jHybMatrix.size(); ++k){
                                     
-                                    green[n](i,j) += std::abs(sigmagreen[n](i,k)) ? //
-                                    ((j == k ? 1.0 : 0.0) + sigmagreen[n](j,k)) *
-                                    ((i == j ? iomega(n) + mu : .0) - oneBody(i, j) - hyb[n](i, j)(i,k)) //(delta_ik + greensigma_ik)
-                                    : 0 ;
+                                    green[n](i,j) +=
+                                    weiss(i,k) * ((j == k ? 1.0 : 0.0) + sigmagreen[n](k,j));
+                                    
                                 }
                             }
                     }
@@ -46,7 +52,7 @@ namespace evalsim {
                     
                     jsx::value const& jHybMatrix = jParams("hybridisation")("matrix");
                     
-                    for(std::size_t n = 0; n < sigmagreen.size(); ++n)
+                    for(std::size_t n = 0; n < green.size(); ++n)
                         for(std::size_t i = 0; i < jHybMatrix.size(); ++i)
                             for(std::size_t j = 0; j < jHybMatrix.size(); ++j)
                                 self[n](i,j) = std::abs(green[n](i,j)) ? sigmagreen[n](i,j)/green[n](i,j) : 0;

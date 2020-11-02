@@ -46,7 +46,7 @@ namespace evalsim {
         
         mpi::cout << "OK" << std::endl;
         
-        /*
+        
         mpi::cout << "Calculating green moments ... " << std::flush;
         
         std::vector<io::Matrix<Value>> greenMoments = func::green::compute_green_moments<Value>(jParams, hybMoments, jPartition, jObservables("partition")("scalar"));
@@ -77,16 +77,17 @@ namespace evalsim {
         func::green::add_green_tail<Value>(jParams, iomega, oneBody, hyb, self, green);
         
         jObservablesOut["green"] = func::write_functions(jParams, jHybMatrix, green, greenMoments);
-           */
-        
-        mpi::cout << "Writing results ... " << std::flush;
-        
-        
-        jsx::value jObservablesOut;
-        jObservablesOut["green"] = func::write_functions<Value>(jParams, jHybMatrix, green);
-        jObservablesOut["self-energy"] =  func::write_functions<Value>(jParams, jHybMatrix, self);
         
         mpi::cout << "Ok" << std::endl;
+        
+        
+        //mpi::cout << "Writing results ... " << std::flush;
+        
+        //jsx::value jObservablesOut;
+        //jObservablesOut["green"] = func::write_functions<Value>(jParams, jHybMatrix, green);
+        //jObservablesOut["self-energy"] =  func::write_functions<Value>(jParams, jHybMatrix, self);
+        
+        //mpi::cout << "Ok" << std::endl;
         
         return jObservablesOut;
     }
