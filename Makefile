@@ -3,6 +3,10 @@ ifndef CXX_MPI
 include Makefile.in
 endif
 
+ifndef CXX_MPI
+CXX_MPI = $(CXX)
+endif
+
 ifndef EXE_DIR
 EXE_DIR = ./bin/
 endif
