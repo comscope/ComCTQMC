@@ -13,10 +13,12 @@
 #include <algorithm>
 #include <fstream>
 #include <string>
+#include <complex>
 
 #include "ClebschGordan.h"
 
 #include "../../JsonX.h"
+#include "../../io/Vector.h"
 
 namespace opt {
     

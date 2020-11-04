@@ -15,27 +15,13 @@ namespace obs {
         template<typename W> using get_index = cfg::get_index<W, cfg::Worm>;
         
         template<typename W>
-        void operator()(ut::wrap<W> w, jsx::value const& jParams, data::Data<Value>& data, Observables<Value>& observables) const {
-            
-            if(jParams.is(W::name())) {
-                mpi::cout << "Begin setting up " + W::name() + " observables" << std::endl;
-                
-                setup_worm_obs<Mode>(jParams, data, observables[get_index<W>::value], w);
-                
-                mpi::cout << "End setting up " + W::name() + " observables" << std::endl;
-            }
-            
-        }
+        void operator()(ut::wrap<W> w, jsx::value const& jParams, data::Data<Value>& data, Observables<Value>& observables) const;
     };
-    
 
     template<typename Mode, typename Value>
-    void setup_obs(jsx::value const& jParams, data::Data<Value>& data, Observables<Value>& observables) {
-
-        cfg::for_each_type<cfg::Worm>::apply(setup_worm_obs_functor<Mode, Value>(), jParams, data, observables);
-        
-    }
-
+    void setup_obs(jsx::value const& jParams, data::Data<Value>& data, Observables<Value>& observables);
 }
+
+#include "Setup.impl.h"
 
 #endif

@@ -15,6 +15,7 @@
 #include <string>
 
 #include "Basis.h"
+#include "../../io/Matrix.h"
 
 namespace opt {
     

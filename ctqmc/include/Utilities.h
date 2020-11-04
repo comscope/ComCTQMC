@@ -83,49 +83,19 @@ namespace ut {
     
     template<>
     struct Zahl<double> {
-        Zahl() : mantissa_(.0), exponent_(std::numeric_limits<int>::min()) {};
-        Zahl(double x, double y = .0) {   // constructs x*exp(y)
-            if(std::isfinite(x) && std::isfinite(y)) {
-                mantissa_ = std::frexp(x*std::exp(y - M_LN2*(static_cast<int>(y/M_LN2) + 1)), &exponent_);
-                mantissa_ != .0 ? exponent_ += static_cast<int>(y/M_LN2) + 1 : exponent_ = std::numeric_limits<int>::min();
-            } else
-                throw std::runtime_error("ut::Zahl<double>: argument of constructor is not a number");
-        };
+        Zahl();
+        Zahl(double x, double y = .0);
         Zahl(Zahl const&) = default;
         Zahl(Zahl&&) = default;
         Zahl& operator=(Zahl const&) = default;
         Zahl& operator=(Zahl&&) = default;
         ~Zahl() = default;
         
-        Zahl& operator+=(Zahl const& arg) {
-            int exp;
-            if(exponent_ > arg.exponent_) {
-                mantissa_ = std::frexp(mantissa_ + std::ldexp(arg.mantissa_, arg.exponent_ - exponent_), &exp);
-                mantissa_ != .0 ? exponent_ += exp : exponent_ = std::numeric_limits<int>::min();
-            } else {
-                mantissa_ = std::frexp(arg.mantissa_ + std::ldexp(mantissa_, exponent_ - arg.exponent_), &exp);
-                mantissa_ != .0 ? exponent_ = arg.exponent_ + exp : exponent_ = std::numeric_limits<int>::min();
-            }
-            return *this;
-        };
-        Zahl& operator*=(Zahl const& arg) {
-            int exp; mantissa_ = std::frexp(mantissa_*arg.mantissa_, &exp);
-            mantissa_ != .0 ? exponent_ += (arg.exponent_ + exp) : exponent_ = std::numeric_limits<int>::min();
-            return *this;
-        };
-        Zahl& operator/=(Zahl const& arg) {
-            if(arg.mantissa_ == .0) throw std::runtime_error("ut::Zahl<double>: division by zero");
-            
-            int exp; mantissa_ = std::frexp(mantissa_/arg.mantissa_, &exp);
-            mantissa_ != .0 ? exponent_ += (-arg.exponent_ + exp) : exponent_ = std::numeric_limits<int>::min();
-            return *this;
-        };
-        double get() const {
-            return std::ldexp(mantissa_, exponent_);
-        };
-        Zahl abs() const {
-            Zahl temp = *this; temp.mantissa_ = std::abs(temp.mantissa_); return temp;
-        };
+        Zahl& operator+=(Zahl const& arg);
+        Zahl& operator*=(Zahl const& arg);
+        Zahl& operator/=(Zahl const& arg);
+        double get() const;
+        Zahl abs() const;
         
         double mantissa() const { return mantissa_;};
         int exponent() const { return exponent_;};
@@ -139,7 +109,7 @@ namespace ut {
         friend Zahl<double> abs(Zahl<double> const&);
     };
     
-    inline int operator==(Zahl<double> const& x, Zahl<double> const& y) {   // should this be implemented for complex case as well ?
+    inline int operator==(Zahl<double> const& x, Zahl<double> const& y) {
         return (x.mantissa_ == y.mantissa_)&&(x.exponent_ == y.exponent_);
     }
     
@@ -167,54 +137,19 @@ namespace ut {
     
     template<>
     struct Zahl<complex> {
-        Zahl() : mantissa_(.0), exponent_(std::numeric_limits<int>::min()) {};
-        Zahl(complex z, double y = .0) {
-            if(std::isfinite(z.real()) && std::isfinite(z.imag()) && std::isfinite(y)) {  //better this way than using constructor of Zahl<double> because of throw
-                double const x = std::abs(z);
-                mantissa_ = x != .0 ? std::frexp(x*std::exp(y - M_LN2*(static_cast<int>(y/M_LN2) + 1)), &exponent_)*(z/x) : .0;
-                mantissa_ != .0 ? exponent_ += static_cast<int>(y/M_LN2) + 1 : exponent_ = std::numeric_limits<int>::min();
-            } else
-                throw std::runtime_error("ut::Zahl<complex>: argument of constructor is not a number");
-        };
+        Zahl();
+        Zahl(complex z, double y = .0);
         Zahl(Zahl const&) = default;
         Zahl(Zahl&&) = default;
         Zahl& operator=(Zahl const&) = default;
         Zahl& operator=(Zahl&&) = default;
         ~Zahl() = default;
         
-        Zahl& operator+=(Zahl const& arg) {
-            int exp;
-            if(exponent_ > arg.exponent_) {
-                auto const z = mantissa_ + (arg.mantissa_ != .0 ? arg.mantissa_*std::ldexp(1., arg.exponent_ - exponent_) : .0);
-                auto const x = std::abs(z); mantissa_ = x != .0 ? std::frexp(x, &exp)*(z/x) : .0;
-                mantissa_ != .0 ? exponent_ += exp : exponent_ = std::numeric_limits<int>::min();
-            } else {
-                auto const z = arg.mantissa_ + (mantissa_ != .0 ? mantissa_*std::ldexp(1., exponent_ - arg.exponent_) : .0);
-                auto const x = std::abs(z); mantissa_ = x != .0 ? std::frexp(x, &exp)*(z/x) : .0;
-                mantissa_ != .0 ? exponent_ = arg.exponent_ + exp : exponent_ = std::numeric_limits<int>::min();
-            }
-            return *this;
-        };
-        Zahl& operator*=(Zahl const& arg) {
-            auto const z = mantissa_*arg.mantissa_; int exp;
-            auto const x = std::abs(z); mantissa_ = x != .0 ? std::frexp(x, &exp)*(z/x) : .0;
-            mantissa_ != .0 ? exponent_ += (arg.exponent_ + exp) : exponent_ = std::numeric_limits<int>::min();
-            return *this;
-        };
-        Zahl& operator/=(Zahl const& arg) {
-            if(arg.mantissa_ == .0) throw std::runtime_error("ut::Zahl<complex>: division by zero");
-            
-            auto const z = mantissa_/arg.mantissa_; int exp;
-            auto const x = std::abs(z); mantissa_ = x != .0 ? std::frexp(x, &exp)*(z/x) : .0;
-            mantissa_ != .0 ? exponent_ += (-arg.exponent_ + exp) : exponent_ = std::numeric_limits<int>::min();
-            return *this;
-        };
-        complex get() const {
-            return mantissa_*std::ldexp(1., exponent_);
-        };
-        Zahl<double> abs() const {
-            Zahl<double> temp; temp.mantissa_ = std::abs(mantissa_); temp.exponent_ = exponent_; return temp;
-        };
+        Zahl& operator+=(Zahl const& arg);
+        Zahl& operator*=(Zahl const& arg);
+        Zahl& operator/=(Zahl const& arg);
+        complex get() const;
+        Zahl<double> abs() const;
         
         complex mantissa() const { return mantissa_;};
         int exponent() const { return exponent_;};
@@ -405,5 +340,6 @@ namespace ut {
     */
 }
 
+#include "Utilities.impl.h"
 
 #endif

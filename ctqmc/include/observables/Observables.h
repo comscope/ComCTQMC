@@ -12,9 +12,7 @@ namespace obs {
     template<typename Value>
     struct WormObservables {
         WormObservables() = delete;
-        WormObservables(std::string worm) :
-        worm_(worm), steps_(0), it_(obs_.end()) {
-        }
+        WormObservables(std::string worm);
         WormObservables(WormObservables const&) = delete;
         WormObservables(WormObservables&&) = default;
         WormObservables& operator=(WormObservables const&) = delete;
@@ -23,46 +21,13 @@ namespace obs {
         
         
         template<typename T, typename... Args>
-        void add(std::int64_t sweep, std::int64_t store, Args&&... args) {
-            obs_.emplace_back(sweep, obs_pointer(new T(store, std::forward<Args>(args)...)));
-            
-            it_ = obs_.end();
-        };
+        void add(std::int64_t sweep, std::int64_t store, Args&&... args);
         
-        bool sample(data::Data<Value> const& data, state::State<Value>& state) {
-            if(it_ != obs_.end()) return false;
-            
-            ++steps_;
-            
-            for(auto const& obs : obs_)
-                if(steps_%obs.first == 0)
-                {
-                    sign_ = state.sign();
-                    it_   = obs_.begin();
-                    
-                    return true;
-                }
-            
-            return false;
-        }
+        bool sample(data::Data<Value> const& data, state::State<Value>& state);
         
-        bool cycle(data::Data<Value> const& data, state::State<Value>& state, jsx::value& measurements, imp::itf::Batcher<Value>& batcher) {
-            while(it_ != obs_.end())
-            {
-                if(steps_%it_->first == 0)
-                    if(!it_->second->sample(sign_, data, state, measurements[worm_], batcher))
-                        return false;
-
-                ++it_;
-            }
-            
-            return true;
-        };
+        bool cycle(data::Data<Value> const& data, state::State<Value>& state, jsx::value& measurements, imp::itf::Batcher<Value>& batcher);
         
-        void finalize(data::Data<Value> const& data, jsx::value& measurements) {
-            for(auto& obs : obs_)
-                obs.second->finalize(data, measurements[worm_]);
-        };
+        void finalize(data::Data<Value> const& data, jsx::value& measurements);
         
     private:
         using obs_pointer = std::unique_ptr<itf::Observable<Value>>;
@@ -79,5 +44,7 @@ namespace obs {
     template<typename Value> using Observables = std::array<std::unique_ptr<WormObservables<Value>>, cfg::Worm::size()>;
 
 }
+
+#include "Observables.impl.h"
 
 #endif

@@ -20,10 +20,7 @@ namespace state {
     struct insert_worm_functor {
         
         template<typename Worm, typename Value>
-        void operator()(Worm const& worm, data::Data<Value> const& data, state::State<Value>& state) {
-            if(!cfg::insert_worm<Mode>(worm, data, state))
-                throw std::runtime_error("state::insert_worm_functor: key appears twice in " + Worm::name() + " worm");
-        };
+        void operator()(Worm const& worm, data::Data<Value> const& data, state::State<Value>& state);
 
     };
     
@@ -32,51 +29,7 @@ namespace state {
     struct State {
         State() = delete;
         template<typename Mode>
-        State(jsx::value const& jParams, data::Data<Value> const& data, jsx::value& jConfig, Mode) :
-        safe_to_load_from_json_(!jConfig.is("worm") or jParams.is(jConfig("worm")("name").string()) ? true : false),
-        signTimeOrder_(1),
-        expansion_( safe_to_load_from_json_ and jConfig.is("expansion") ? jConfig("expansion") : jsx::null_t(), data.ops().flavors()),
-        worm_( safe_to_load_from_json_ and jConfig.is("worm") ? jConfig("worm") : jsx::object_t{{"name", "partition"}, {"entry", jsx::null_t()}}),
-        product_(new imp::Product<Mode, Value>(jParams, data.eig(), data.ide(), data.ops())),
-        densityMatrix_(new imp::DensityMatrix<Mode, Value>()),
-        baths_(data.hyb().blocks().size()),
-        dyn_(data.dyn() != nullptr ? new imp::Dynamic(*data.dyn()) : new imp::itf::Dynamic()) {
-            int index = 0;
-            for(auto const& block : data.hyb().blocks()) {
-                for(auto const& flavor : block.flavorsL())
-                    for(auto const& key : expansion_.at(flavor))
-                        baths_[index].insertL(key, flavor);
-                
-                for(auto const& flavor : block.flavorsR())
-                    for(auto const& key : expansion_.at(flavor))
-                        baths_[index].insertR(key, flavor);
-                
-                baths_[index++].clean(data.hyb());
-            }
-            
-            for(auto const& bath : baths()) {
-                auto const& opsL = bath.opsL();
-                auto const& opsR = bath.opsR();
-                
-                for(std::size_t i = 0; i < opsL.size(); ++i) {
-                    if(!product().insert(opsR[i].key(), opsR[i].flavor()))
-                        throw std::runtime_error("state::State::constructor: key in config appears twice.");
-                    if(!product().insert(opsL[i].key(), opsL[i].flavor()))
-                        throw std::runtime_error("state::State::constructor: key in config appears twice.");
-                    
-                    dyn().insert(opsR[i].key(), opsR[i].flavor());
-                    dyn().insert(opsL[i].key(), opsL[i].flavor());
-                }
-            }
-
-            cfg::apply(worm(), insert_worm_functor<Mode>(), data, *this);
-
-
-            dyn().ratio();
-            dyn().accept();
-            
-            fact().accept();
-        };
+        State(jsx::value const& jParams, data::Data<Value> const& data, jsx::value& jConfig, Mode);
         State(State const&) = delete;
         State(State&&) = delete;
         State& operator=(State const&) = delete;
@@ -137,24 +90,11 @@ namespace state {
         };
         
         
-        Value sign() const {
-            Value sign = static_cast<double>(signTimeOrder())*densityMatrix().sign()*fact().sign();  //!!!!!!!!!!!!!!!!
-            for(auto const& bath : baths()) sign *= bath.sign();
-            return sign;
-        };
+        Value sign() const;
         
-        void clean(data::Data<Value> const& data) {
-            dyn().clean();
-            for(auto& bath : baths())
-                bath.clean(data.hyb());
-        };
+        void clean(data::Data<Value> const& data);
         
-        jsx::value json() const {
-            return jsx::object_t{
-                {"expansion", expansion().json()},
-                {"worm", worm().json()}
-            };
-        };
+        jsx::value json() const;
         
     private:
         bool safe_to_load_from_json_;
@@ -190,31 +130,20 @@ namespace state {
         Init& operator=(Init&&) = delete;
         ~Init() = default;
         
-        bool apply(data::Data<Value> const& data, State<Value>& state, imp::itf::Batcher<Value>& batcher) {
-            if(flag_ != ut::Flag::Pending) flag_ = prepare(data, state);
-            if(flag_ == ut::Flag::Pending) flag_ = decide(state, batcher);
-            return flag_ != ut::Flag::Pending;
-        };
+        bool apply(data::Data<Value> const& data, State<Value>& state, imp::itf::Batcher<Value>& batcher);
         
     private:
         ut::Flag flag_;
         imp::DensityMatrix<Mode, Value> densityMatrix_;
         
-        ut::Flag prepare(data::Data<Value> const& data, State<Value>& state) {
-            densityMatrix_ = imp::DensityMatrix<Mode, Value>(state.product(), data.eig());
-            if(ut::Flag::Pending != densityMatrix_.surviving(data.eig()))
-                throw std::runtime_error("state::Init: initial trace is zero");
-            return ut::Flag::Pending;
-        };
+        ut::Flag prepare(data::Data<Value> const& data, State<Value>& state);
+
         
-        ut::Flag decide(State<Value>& state, imp::itf::Batcher<Value>& batcher) {
-            if(ut::Flag::Pending == densityMatrix_.decide(.0, state.product(), batcher)) return ut::Flag::Pending;
-            imp::get<Mode>(state.densityMatrix()) = std::move(densityMatrix_);
-            state.signTimeOrder() *= state.product().accept();
-            
-            return ut::Flag::Accept;
-        };
+        ut::Flag decide(State<Value>& state, imp::itf::Batcher<Value>& batcher);
     };
+
 }
+
+#include "State.impl.h"
 
 #endif

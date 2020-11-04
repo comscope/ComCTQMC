@@ -1,0 +1,27 @@
+MAIN_OBJS = \
+Data.o \
+MonteCarlo.o \
+Params.o \
+State.o \
+Utilities.o \
+updates/Setup.o \
+observables/Setup.o \
+observables/Observables.o \
+markovchain/MarkovChain.o \
+markovchain/Scheduler.o \
+markovchain/WangLandau.o \
+impurity/DensityMatrix.o \
+impurity/Diagonal.o \
+impurity/Dynamic.o \
+impurity/Fact.o \
+impurity/Node.o \
+impurity/Observables.o \
+impurity/Operators.o \
+impurity/Product.o \
+impurity/Tensor.o \
+impurity/Utilities.o \
+config/Expansion.o \
+config/worm/Basic.o \
+bath/Hyb.o \
+bath/Bath.o
+

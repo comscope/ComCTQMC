@@ -2,6 +2,7 @@
 #define CTQMC_INCLUDE_IMPURITY_BITSET_H
 
 #include <vector>
+#include <cstring>
 
 namespace imp {
 

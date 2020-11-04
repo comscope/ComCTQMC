@@ -1,35 +1,94 @@
-driver_dir=./drivers/
-evalsim_dir=./evalsim/
-ctqmc_dir=./ctqmc/host/
-ctqmc_gpu_dir=./ctqmc/device/planar_complex/
-
+#if we haven't already set the necessary options, try loading them from Makefile.in
+ifndef CXX_MPI
 include Makefile.in
+endif
+
+ifndef EXE_DIR
+EXE_DIR = ./bin/
+endif
+
+ifndef LIB_DIR
+LIB_DIR = ./lib/
+endif 
 
 
-all:
-	+$(MAKE) -C $(evalsim_dir)
-	+$(MAKE) -C $(ctqmc_dir)
+EVALSIM_DIR=./evalsim/
+HOST_DIR=./ctqmc/host/
+GPU_DIR=./ctqmc/device/planar_complex/
+BASE_DIR=./include/
+MAIN_DIR=./ctqmc/include/
 
-cpu:
-	+$(MAKE) -C $(evalsim_dir)
-	+$(MAKE) -C $(ctqmc_dir)
+include $(EVALSIM_DIR)makefile.objs
+include $(HOST_DIR)makefile.objs
+include $(GPU_DIR)makefile.objs
+include $(BASE_DIR)makefile.objs
+include $(MAIN_DIR)makefile.objs
 
-gpu:
-	+$(MAKE) -C $(evalsim_dir)
-	+$(MAKE) -C $(ctqmc_gpu_dir)
+MAIN_OBJS := $(addprefix $(MAIN_DIR), $(MAIN_OBJS))
+BASE_OBJS := $(addprefix $(BASE_DIR), $(BASE_OBJS))
+EVALSIM_OBJS := $(addprefix $(EVALSIM_DIR), $(EVALSIM_OBJS))
 
-cpu_lib:
-	+$(MAKE) -C $(driver_dir) cpu
+HOST_OBJS := $(addprefix $(HOST_DIR), $(HOST_OBJS))
 
-gpu_lib:
-	+$(MAKE) -C $(driver_dir) gpu
+GPU_OBJS := $(addprefix $(GPU_DIR), $(GPU_OBJS))
+GPU_CUDA_OBJS := $(addprefix $(GPU_DIR), $(GPU_CUDA_OBJS))
+
+LIB_OBJS = $(MAIN_OBJS)
+LIB_OBJS += $(BASE_OBJS)
+LIB_OBJS += $(EVALSIM_OBJS)
+LIB_OBJS += $(HOST_OBJS)
+
+all : cpu evalsim
+
+cpu : CTQMC_x
+
+gpu : CTQMC_gx
+
+evalsim : EVALSIM_x
+
+lib : CXXFLAGS += -fPIC
+lib : libCTQMC.so
+
+gpulib: CXXFLAGS += -fPIC -DMAKE_GPU_ENABLED
+gpulib: LIB_OBJS += $(GPU_OBJS)
+gpulib: LIB_OBJS += $(GPU_CUDA_OBJS)
+gpulib: LIB_OBJS += $(GPU_CUDA_OBJS)bj.o
+gpulib: LIBS += $(CUDA_LDFLAGS)
+gpulib: $(GPU_OBJS) $(GPU_CUDA_OBJS) libCTQMC.so
+
+%.o : %.C
+	$(CXX_MPI) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
+
+libCTQMC.so : $(LIB_OBJS)
+	@mkdir -p $(LIB_DIR)
+	$(CXX_MPI) $(CPPFLAGS) $(CXXFLAGS) -shared $(LIB_OBJS) -o $(LIB_DIR)/$@ ./lib/libCTQMC.C $(LFLAGS) $(LIBS)
+
+EVALSIM_x : $(BASE_OBJS) $(MAIN_OBJS) $(EVALSIM_OBJS)
+	@mkdir -p $(EXE_DIR)
+	$(CXX_MPI) $(CPPFLAGS) $(CXXFLAGS) $(BASE_OBJS) $(MAIN_OBJS) $(EVALSIM_OBJS) -o $(EXE_DIR)$@ $(EVALSIM_DIR)Main.C $(LDFLAGS) $(LIBS)
+	cp $(EXE_DIR)$@ $(EXE_DIR)EVALSIM
+
+CTQMC_x : $(BASE_OBJS) $(MAIN_OBJS) $(EVALSIM_OBJS) $(HOST_OBJS) 
+	@mkdir -p $(EXE_DIR)
+	$(CXX_MPI) $(CPPFLAGS) $(CXXFLAGS) $(BASE_OBJS) $(MAIN_OBJS) $(EVALSIM_OBJS) $(HOST_OBJS) -o $(EXE_DIR)$@ $(HOST_DIR)Main.C $(LDFLAGS) $(LIBS)
+	cp $(EXE_DIR)$@ $(EXE_DIR)CTQMC
+
+CTQMC_gx : CXXFLAGS += -DMAKE_GPU_ENABLED
+CTQMC_gx : $(BASE_OBJS) $(MAIN_OBJS) $(EVALSIM_OBJS) $(HOST_OBJS) $(GPU_OBJS) $(GPU_CUDA_OBJS)
+	@mkdir -p $(EXE_DIR)
+	$(CXX_MPI) -o $(EXE_DIR)$@  $(BASE_OBJS) $(MAIN_OBJS) $(EVALSIM_OBJS) $(HOST_OBJS) $(GPU_OBJS) $(GPU_CUDA_OBJS) $(GPU_CUDA_OBJS)bj.o $(GPU_DIR)Main.C $(CUDA_LDFLAGS) $(LDFLAGS) $(LIBS)
+	cp $(EXE_DIR)$@ $(EXE_DIR)CTQMC
+
+$(GPU_CUDA_OBJS) :
+	$(NVCC) $(NVCCFLAGS) $(CUDA_CPPFLAGS) $(CUTLASS_CPPFLAGS) -dc $(@:.o=.cu) -o $@bj.o
+	$(NVCC) -arch=$(GPU_ARCH) -dlink -lcublas_device $@bj.o -o $@
+	
+clean : 
+	rm -f $(EXE_DIR)/EVALSIM* $(EXE_DIR)/CTQMC* $(LIB_DIR)/*.so
+	find . -type f -name '*.o' -exec rm {} +
 
 
-clean:
-	+$(MAKE) -C $(evalsim_dir) clean
-	+$(MAKE) -C $(ctqmc_dir) clean
-	+$(MAKE) -C $(ctqmc_gpu_dir) clean
 
-twobody: twobody.C
-	$(CXX_MPI) $(CPPFLAGS) $(CXXFLAGS) -o $@  twobody.C $(LDFLAGS) $(LIBS)
-	mv twobody bin/TWOBODY
+
+
+

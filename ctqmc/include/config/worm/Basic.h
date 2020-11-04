@@ -52,10 +52,8 @@ namespace cfg {
         int flavor_;
     };
 
-    
-    bool operator<(Flavor const& lhs, Flavor const& rhs) {   // this guy is dangerous ....
-        return lhs.flavor() < rhs.flavor();
-    };
+        
+    bool operator<(Flavor const& lhs, Flavor const& rhs);
     
     
 }

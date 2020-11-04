@@ -16,256 +16,41 @@ And provide more sensible errors when users mess up the input
 It would be nice to do this in a more automatic fashion...
 */
 
+//This is the main interface -- it will check the input jParams and fill it out with defaults
+    void initialize(jsx::value & jParams);
 
-void check_type_against_default(std::string const& entry, jsx::value const& val, jsx::value const& default_val){
-    
-    if (default_val.is<jsx::boolean_t>() and !val.is<jsx::boolean_t>())
-        throw std::runtime_error("Expected boolean for parameter named: " + entry);
-    
-    //allow promotion of integers to real
-    if (default_val.is<jsx::real64_t>() and (!val.is<jsx::real64_t>() and !val.is<jsx::int64_t>()))
-        throw std::runtime_error("Expected real number for parameter named: " + entry);
-    
-    //allow demotion of reals to integers -- can occasionally cause issues although jsonx tries to cast int to real
-    if (default_val.is<jsx::int64_t>() and (!val.is<jsx::real64_t>() and !val.is<jsx::int64_t>()))
-        throw std::runtime_error("Expected integer for parameter named: " + entry);
-    
-    if (default_val.is<jsx::string_t>() and !val.is<jsx::string_t>())
-        throw std::runtime_error("Expected string for parameter named: " + entry);
-    
-    if (default_val.is<jsx::array_t>() and !val.is<jsx::array_t>()){
-        throw std::runtime_error("Expected array for parameter named: " + entry);
-        if (default_val.size() == val.size())
-            for (auto const& x : val.array())
-                check_type_against_default(entry,x,default_val.array()[0]);
-        }
-    
-    if (default_val.is<jsx::object_t>() and !val.is<jsx::object_t>()){
-        throw std::runtime_error("Expected array for parameter named: " + entry);
-        if (default_val.size() == val.size()){
-            for (auto const& x : default_val.object())
-                check_type_against_default(entry + " -> " + x.first, val(x.first), x.second);
-        }
-    }
-}
+    void check_type_against_default(std::string const& entry, jsx::value const& val, jsx::value const& default_val);
 
-    void check_required_input(jsx::value const& jParams){
-         
-        MainRequired required;
-        for (auto const& entry : required.get().object()){
-            
-            if (!jParams.is(entry.first))
-                throw std::runtime_error("Parameter file is missing the key " + entry.first);
-            
-            if (!entry.second.is<jsx::empty_t>())
-                for (auto const& sub_entry : entry.second.array())
-                    if (!jParams(entry.first).is(sub_entry.string()))
-                        throw std::runtime_error("Parameter file is missing the key " + sub_entry.string() + " in block " + entry.first);
-            
-        }
-        
-        //check data-types of all required imput except the two-body part which doesn't fit this paradigm
-        required.init_types();
-        for (auto const& entry : required.get().object()){
-            check_type_against_default(entry.first, jParams(entry.first), entry.second);
-        }
-        
-        //check data types of two body input -- basis gets checked in opt::basis?
-        jsx::value const& jTwoBody = jParams("hloc")("two body");
-        if (jTwoBody.is<jsx::object_t>() and !jTwoBody.is("imag")){
-            
-            if (!jParams.is("basis"))
-                throw std::runtime_error("If the two body tensor is not explicity defined, you must supply the one-particle basis");
-            
-        }
-             
-         
-     }
-
-
-
+    void check_required_input(jsx::value const& jParams);
 
     struct worm_defaults_functor {
         template<typename W>
-        void operator()(ut::wrap<W> w, jsx::value & jParams, AllDefaults const& defaults) const {
-            
-            if( W::name() != cfg::partition::Worm::name() && jParams.is(W::name()) ) {
-                
-                if (cfg::worm_size<W>::value == 2){
-                    for (auto const& entry : defaults.oneTimeWormDefaults.get().object()){
-                        if (!jParams(W::name()).is(entry.first))
-                            jParams[W::name()][entry.first] = entry.second;
-                        else check_type_against_default(W::name() + " -> " + entry.first, jParams[W::name()][entry.first], entry.second);
-                    }
-                } else {
-                    for (auto const& entry : defaults.multiTimeWormDefaults.get().object()){
-                        if (!jParams(W::name()).is(entry.first))
-                            jParams[W::name()][entry.first] = entry.second;
-                        else check_type_against_default(W::name() + " -> " + entry.first, jParams[W::name()][entry.first], entry.second);
-                    }
-                }
-            }
-        }
+        void operator()(ut::wrap<W> w, jsx::value & jParams, AllDefaults const& defaults) const;
+        
+        void add_default_worms( jsx::value & jParams, AllDefaults const& defaults);
     };
-
-
-    void add_default_worms( jsx::value & jParams, AllDefaults const& defaults) {
-        
-        for (auto const& worm : defaults.listOfDefaultWorms){
-            jParams[worm] = jsx::object_t();
-            jParams[worm]["meas"] = jsx::array_t({"imprsum"});
-        }
-        
-    }
 
     struct worm_cutoffs_functor {
         template<typename W>
-           void operator()(ut::wrap<W> w, jsx::value & jParams, int const fermion_cutoff, int const boson_cutoff) const {
-                
-               if( W::name() != cfg::partition::Worm::name() && jParams.is(W::name()) ) {
-                   
-                   auto & jWorm = jParams[W::name()];
-                   
-                   if (jWorm.is("fermion cutoff") and jWorm("basis").string() == "matsubara" ) jWorm["fermion cutoff"] = fermion_cutoff;
-                   if (jWorm.is("matsubara cutoff")) jWorm["matsubara cutoff"] = fermion_cutoff;
-                   
-                   if (jWorm.is("cutoff")) jWorm["cutoff"] = boson_cutoff;
-                   if (jWorm.is("boson cutoff")) jWorm["boson cutoff"] = boson_cutoff;
-                       
-                
-               }
-               
-           }
+        void operator()(ut::wrap<W> w, jsx::value & jParams, int const fermion_cutoff, int const boson_cutoff) const;
     };
- 
-    void set_default_values(jsx::value & jParams){
-        
-        AllDefaults defaults(jParams);
-        
-        for (auto const& entry : defaults.mainDefaults.get().object()){
-            if (!jParams.is(entry.first)) jParams[entry.first] = entry.second;
-            else check_type_against_default("Main block -> " + entry.first, jParams[entry.first], entry.second);
-        }
-        
-        for (auto const& entry : defaults.partitionSpaceDefaults.get().object()){
-            if (!jParams(cfg::partition::Worm::name()).is(entry.first)) jParams[cfg::partition::Worm::name()][entry.first] = entry.second;
-            else check_type_against_default(cfg::partition::Worm::name() + " -> " + entry.first, jParams[cfg::partition::Worm::name()][entry.first], entry.second);
-        }
-        
-        cfg::for_each_type<cfg::Worm>::apply(worm_defaults_functor(), jParams, defaults);
-    }
-         
-    bool is_complex_in_cvec(io::cvec const& vec){
-        
-        bool check = false;
-        
-        for (auto const& x : vec)
-            check = check or std::abs(x.imag()) > 1e-14;
-        
-        return check;
-    }
 
-    bool is_complex_in_cmat(io::prettycmat const& mat){
-        
-        bool check = false;
-        
-        for (int i=0; i<mat.I(); i++)
-            for (int j=0; j<mat.J(); j++)
-                check = check or std::abs(mat(i,j).imag()) > 1e-14;
-        
-        return check;
-    }
+    void set_default_values(jsx::value & jParams);
 
-    bool validate_complex(jsx::value const& jParams){
-        
-        if (jParams("complex").boolean()){
-            
-            bool is_complex = false;
-            
-            if (jParams.is("basis") and jParams("basis").is("transformation")){
-                
-                auto jTransformation = jParams("basis")("transformation");
-                auto const cmat = jsx::at<io::prettycmat>( jTransformation );
-                is_complex = is_complex or is_complex_in_cmat( cmat );
-                
-            }
-            
-            if (jParams("hloc").is("two body") and jParams("hloc")("two body").is<io::cvec>()){
-                
-                auto jTwoBody = jParams("hloc")("two body");
-                auto const cvec = jsx::at<io::cvec>( jTwoBody );
-                is_complex = is_complex or is_complex_in_cvec( cvec );
-                
-            }
+    bool is_complex_in_cvec(io::cvec const& vec);
 
-            auto jOneBody = jParams("hloc")("one body");
-            auto const cmat = jsx::at<io::prettycmat>( jOneBody );
-            is_complex = is_complex or is_complex_in_cmat( cmat );
-            
-            return is_complex;
-            
-        } else {
-            return true;
-        }
-    }
+    bool is_complex_in_cmat(io::prettycmat const& mat);
 
-    io::rvec cvec_to_rvec(io::cvec const& cv){
-        io::rvec rv(cv.size());
-        
-        for (int i=0; i<cv.size(); i++) rv[i] = cv[i].real();
-        
-        return rv;
-    }
+    bool validate_complex(jsx::value const& jParams);
 
-    io::prettyrmat cmat_to_rmat(io::prettycmat const& cmat){
-        io::prettyrmat rmat(cmat.I(),cmat.J());
-        
-        for (int i=0; i<cmat.I(); i++)
-            for (int j=0; j<cmat.J(); j++)
-                rmat(i,j) = cmat(i,j).real();
-        
-        return rmat;
-    }
+    io::rvec cvec_to_rvec(io::cvec const& cv);
 
-    void change_fake_complex_to_real(jsx::value & jParams){
-        
-        if (!validate_complex(jParams)){
-            jParams["complex"] = false;
-            
-            if (jParams.is("basis") and jParams("basis").is("transformation")){
-                
-                auto jTransformation = jParams("basis")("transformation");
-                auto const cmat = jsx::at<io::prettycmat>( jTransformation );
-                jParams["basis"]["transformation"] = cmat_to_rmat(cmat);
-                
-            }
-            
-            if (jParams("hloc").is("two body") and jParams("hloc")("two body").is<io::cvec>()){
-                
-                auto jTwoBody = jParams("hloc")("two body");
-                auto const cvec = jsx::at<io::cvec>( jTwoBody );
-                jParams["hloc"]["two body"] = cvec_to_rvec(cvec);
-                
-            }
-            
-            auto jOneBody = jParams("hloc")("one body");
-            auto const cmat = jsx::at<io::prettycmat>( jOneBody );
-            jParams["hloc"]["one body"] = cmat_to_rmat(cmat);
-            
-        }
-        
-    }
+    io::prettyrmat cmat_to_rmat(io::prettycmat const& cmat);
 
-    void initialize(jsx::value & jParams){
+    void change_fake_complex_to_real(jsx::value & jParams);
         
-        change_fake_complex_to_real(jParams);
-        check_required_input(jParams);
-        set_default_values(jParams);
-        mpi::write(jParams, "defaults.json");
-        
-    }
-
-
 }
+
+#include "Initialize.impl.h"
 
 #endif
