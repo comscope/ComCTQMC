@@ -44,9 +44,9 @@ LIB_OBJS += $(HOST_OBJS)
 
 all : cpu evalsim
 
-cpu : CTQMC_x
+cpu : CTQMC_x evalsim
 
-gpu : CTQMC_gx
+gpu : CTQMC_gx evalsim
 
 evalsim : EVALSIM_x
 
@@ -54,6 +54,7 @@ lib : CXXFLAGS += -fPIC
 lib : libCTQMC.so
 
 gpulib: CXXFLAGS += -fPIC -DMAKE_GPU_ENABLED
+gpulib: NVCC += -Xcompiler -fPIC
 gpulib: LIB_OBJS += $(GPU_OBJS)
 gpulib: LIB_OBJS += $(GPU_CUDA_OBJS)
 gpulib: LIB_OBJS += $(GPU_CUDA_OBJS)bj.o
