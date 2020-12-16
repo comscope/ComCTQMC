@@ -286,6 +286,38 @@ namespace evalsim {
             
             template jsx::value write_functions<double>(jsx::value const& jParams, std::vector<io::cmat> const& functionsMatrix);
             template jsx::value write_functions<ut::complex>(jsx::value const& jParams, std::vector<io::cmat> const& functionsMatrix);
+         
+            
+            
+            template<typename Value>
+            std::vector<io::cmat> get_aux_green(jsx::value const& jParams, std::vector<io::cmat> const& selfenergy, std::vector<io::Matrix<Value>> const& selfMoments, std::vector<io::cmat> const& hyb)
+            {
+                
+                iOmega const iomega(jParams("beta").real64());
+                jsx::value const jHybMatrix = jParams("hybridisation")("matrix");
+                
+                auto const size = std::min(selfenergy.size(), hyb.size());
+                
+                std::size_t const N = jHybMatrix.size();
+                
+                std::vector<io::cmat> aux(selfenergy.size(), io::cmat(N, N));
+                
+                for(std::size_t n = 0; n < size; ++n) {
+                    io::cmat aux_inv(N, N);
+                    
+                    for(std::size_t i = 0; i < jHybMatrix.size(); ++i)
+                        for(std::size_t j = 0; j < jHybMatrix.size(); ++j)
+                                aux_inv(i, j) = (i == j ? iomega(n) + selfMoments[0](i,j) : .0) - selfenergy[n](i, j);
+                        
+                    aux[n] = linalg::inv(aux_inv);
+                }
+                
+                return aux;
+            }
+            
+            template std::vector<io::cmat> get_aux_green<double>(jsx::value const& jParams, std::vector<io::cmat> const& selfenergy, std::vector<io::Matrix<double>> const& selfMoments, std::vector<io::cmat> const& hyb);
+            template std::vector<io::cmat> get_aux_green<ut::complex>(jsx::value const& jParams, std::vector<io::cmat> const& selfenergy, std::vector<io::Matrix<ut::complex>> const& selfMoments, std::vector<io::cmat> const& hyb);
+            
             
         }
         

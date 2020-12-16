@@ -130,6 +130,15 @@ namespace evalsim {
                 
                 mpi::cout << "Ok" << std::endl;
                 
+                
+                if(jPartition.is("analytical continuation") ? jPartition("analytical continuation").boolean() : false){
+                    
+                    auto const aux = func::get_aux_green(jParams, selfenergy, selfMoments, hyb);
+                    
+                    jObservables["aux green"] = func::write_functions<Value>(jParams, aux);
+                    
+                }
+                
             } else {
                 
                 jObservables["self-energy"] = func::write_functions<Value>(jParams, selfenergy);
@@ -138,45 +147,44 @@ namespace evalsim {
                 
             }
             
-
             
             if(jPartition.is("quantum number susceptibility") ? jPartition("quantum number susceptibility").boolean() : false)
                 
                 jObservables["susceptibility"] = get_qn_susc(jParams, jPartition, jMeasurements, jObservables("scalar"));
             
             if(!lpp)
-            if((jPartition.is("occupation susceptibility bulla")  ? jPartition("occupation susceptibility bulla").boolean()  : false) ||
-               (jPartition.is("occupation susceptibility direct") ? jPartition("occupation susceptibility direct").boolean() : false)) {
-                
-                mpi::cout << "Calculating occupation susceptibility moments ... " << std::flush;
-                
-                io::rmat moments = get_occupation_susc_moments<Value>(jParams, jPartition, jMeasurements, jObservables);
-                
-                mpi::cout << "Ok" << std::endl;
-                
-                
-                if(jPartition.is("occupation susceptibility bulla")  ? jPartition("occupation susceptibility bulla").boolean()  : false) {
+                if((jPartition.is("occupation susceptibility bulla")  ? jPartition("occupation susceptibility bulla").boolean()  : false) ||
+                   (jPartition.is("occupation susceptibility direct") ? jPartition("occupation susceptibility direct").boolean() : false)) {
                     
-                    mpi::cout << "Reading bulla occupation susceptibility ... " << std::flush;
+                    mpi::cout << "Calculating occupation susceptibility moments ... " << std::flush;
                     
-                    jObservables["occupation-susceptibility-bulla"] = get_occupation_susc_bulla(jParams, jPartition, jMeasurements, moments, occupation, correlation, jObservables);
-                
-                    mpi::cout << "Ok" << std::endl;
-                    
-                }
-                
-                
-                if(jPartition.is("occupation susceptibility direct") ? jPartition("occupation susceptibility direct").boolean() : false) {
-                    
-                    mpi::cout << "Reading direct occupation susceptibility ... " << std::flush;
-                    
-                    jObservables["occupation-susceptibility-direct"] = get_occupation_susc_direct(jParams, jPartition, jMeasurements, moments, occupation, correlation, jObservables);
+                    io::rmat moments = get_occupation_susc_moments<Value>(jParams, jPartition, jMeasurements, jObservables);
                     
                     mpi::cout << "Ok" << std::endl;
                     
+                    
+                    if(jPartition.is("occupation susceptibility bulla")  ? jPartition("occupation susceptibility bulla").boolean()  : false) {
+                        
+                        mpi::cout << "Reading bulla occupation susceptibility ... " << std::flush;
+                        
+                        jObservables["occupation-susceptibility-bulla"] = get_occupation_susc_bulla(jParams, jPartition, jMeasurements, moments, occupation, correlation, jObservables);
+                    
+                        mpi::cout << "Ok" << std::endl;
+                        
+                    }
+                    
+                    
+                    if(jPartition.is("occupation susceptibility direct") ? jPartition("occupation susceptibility direct").boolean() : false) {
+                        
+                        mpi::cout << "Reading direct occupation susceptibility ... " << std::flush;
+                        
+                        jObservables["occupation-susceptibility-direct"] = get_occupation_susc_direct(jParams, jPartition, jMeasurements, moments, occupation, correlation, jObservables);
+                        
+                        mpi::cout << "Ok" << std::endl;
+                        
+                    }
+        
                 }
-    
-            }
 
             if(jPartition.is("probabilities"))
                 
