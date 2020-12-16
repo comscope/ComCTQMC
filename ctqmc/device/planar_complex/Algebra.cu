@@ -403,14 +403,14 @@ __global__ void cutlass_kernel(typename KernelClass::Params const& params)
     gemm.multiply_add();
 }
 
-template<typename BlockShape, typename ThreadShape>
+template<typename BlockShape, typename ThreadShape, typename layoutA, typename layoutB>
 __device__ void cutlass_gemm(Mult<double> const& args, Byte*& memory)
 {
 
 #ifdef USE_CUDA_SINGLE
     typedef cutlass::gemm::SgemmTraits<
-    cutlass::MatrixLayout::kColumnMajor,   // layout of A matrix
-    cutlass::MatrixLayout::kColumnMajor,
+    layoutA,
+    layoutB,
     BlockShape,
     cutlass::gemm::LinearScaling<cuda_value<double>::type>,
     ThreadShape
@@ -418,8 +418,8 @@ __device__ void cutlass_gemm(Mult<double> const& args, Byte*& memory)
     Traits;
 #elif USE_CUDA_MIXED
     typedef cutlass::gemm::HgemmTraits<
-    cutlass::MatrixLayout::kColumnMajor,   // layout of A matrix
-    cutlass::MatrixLayout::kColumnMajor,
+    layoutA,
+    layoutB,
     BlockShape,
     cutlass::gemm::LinearScaling<cuda_value<double>::type>,
     ThreadShape
@@ -427,8 +427,8 @@ __device__ void cutlass_gemm(Mult<double> const& args, Byte*& memory)
     Traits;
 #else
     typedef cutlass::gemm::DgemmTraits<
-    cutlass::MatrixLayout::kColumnMajor,   // layout of A matrix
-    cutlass::MatrixLayout::kColumnMajor,
+    layoutA,
+    layoutB,
     BlockShape,
     cutlass::gemm::LinearScaling<cuda_value<double>::type>,
     ThreadShape
@@ -464,33 +464,33 @@ __device__ void cutlass_gemm(Mult<double> const& args, Byte*& memory)
 };
 
 
-template<typename BlockShape, typename ThreadShape>
+template<typename BlockShape, typename ThreadShape, typename layoutA, typename layoutB>
 __device__ void cutlass_gemm(Mult<ut::complex> const& args, Byte*& memory)
 {
 #ifdef USE_CUDA_SINGLE
     typedef cutlass::gemm::SgemmTraits<
-       cutlass::MatrixLayout::kColumnMajor,   // layout of A matrix
-       cutlass::MatrixLayout::kColumnMajor,
-       BlockShape,
-       cutlass::gemm::LinearScaling<cuda_value<ut::complex>::type>,
-       ThreadShape
-       > Traits;
+    layoutA,
+    layoutB,
+    BlockShape,
+    cutlass::gemm::LinearScaling<cuda_value<ut::complex>::type>,
+    ThreadShape
+    > Traits;
 #elif USE_CUDA_MIXED
     typedef cutlass::gemm::HgemmTraits<
-       cutlass::MatrixLayout::kColumnMajor,   // layout of A matrix
-       cutlass::MatrixLayout::kColumnMajor,
-       BlockShape,
-       cutlass::gemm::LinearScaling<cuda_value<ut::complex>::type>,
-       ThreadShape
-       > Traits;
+    layoutA,
+    layoutB,
+    BlockShape,
+    cutlass::gemm::LinearScaling<cuda_value<ut::complex>::type>,
+    ThreadShape
+    > Traits;
 #else
     typedef cutlass::gemm::DgemmTraits<
-       cutlass::MatrixLayout::kColumnMajor,   // layout of A matrix
-       cutlass::MatrixLayout::kColumnMajor,
-       BlockShape,
-       cutlass::gemm::LinearScaling<cuda_value<ut::complex>::type>,
-       ThreadShape
-       > Traits;
+    layoutA,
+    layoutB,
+    BlockShape,
+    cutlass::gemm::LinearScaling<cuda_value<ut::complex>::type>,
+    ThreadShape
+    > Traits;
 #endif
     typedef typename Traits::Params Params;
     typedef typename Traits::KernelClass KernelClass;
@@ -918,7 +918,6 @@ void imp::traceAtB(ut::Zahl<Value>* Z, ut::Zahl<Value>* accZ, Matrix<Device, Val
         ut::Zahl<Value> temp(static_cast<cuda_value_scalar_host<Value>>(buffer), exponent);
         if(Z) *Z = temp;
         if(accZ) *accZ += temp;
-        
     });
     args.size   = At.I()*At.J();
 
@@ -999,9 +998,83 @@ namespace imp{
 
 //-------------------------------------------------------------------------------------------------------------------------------------------------
 
+/*
+template <typename Value>
+struct DensityMatrix {
+    
+    Mult<Value> multArgs;
+    
+    double exp;
+    double dt;
+    
+    double * e;
+    cuda_value_t<Value>* p;
+};
+
+template<typename Value>
+__global__ void kerDensityMatrix(DensityMatrix<Value> args){
+    
+    int i = threadIdx.x;
+    int j = threadIdx.y;
+    
+    while (i < args.I){
+        while (j < args.J){
+            
+            double const deltaE = args.e[j] - args.e[i];
+            double const delta = args.dt*deltaE;
+            args.d[j + dest.J()*i] *= std::abs(delta) > 1.e-7 ?
+                (args.p[i] - args.p[j])/deltaE :
+                args.dt/2.*(args.p[i] + args.p[j] + delta/2.*(args.p[j] - args.p[i]));
+            
+            j + = blockDim.y;
+        }
+        i + = blockDim.x;
+    }
+    
+}
+*/
+
 template <typename Value>
 void imp::density_matrix(Matrix<Device, Value>& dest, Matrix<Device, Value> const& B, Vector<Device> const& prop, Matrix<Device, Value> const& A, Energies<Device> const& energies, itf::Batcher<Value>& batcher)
 {
+    /*
+    auto& args = imp::get<Device>(batcher).template get_kernel<DensityMatrix<Value>>();
+    
+    args.multArgs.A_real = B.data().ptr(); //B=R
+    args.multArgs.B_real = A.data().ptr(); //A=L
+    args.multArgs.C_real = dest.data().ptr();
+    args.multArgs.M = B.J();
+    args.multArgs.N = A.I();
+    args.multArgs.K = A.J();
+    
+    args.multArgs.A_imag = B.data().ptr() + B.I()*B.J();
+    args.multArgs.B_imag = A.data().ptr() + A.I()*A.J();
+    args.multArgs.C_imag = dest.data().ptr() + dest.I()*dest.J();
+    
+    args.exp = A.exponent() + B.exponent() + prop.exponent();
+    args.dt = -prop.time();
+    
+    args.e = energies.data();
+    args.p = prop.data();
+    
+    args.I = dest.I();
+    args.J = dest.J();
+    */
+    
+    /* HOST VERSION
+     dest.I() = A.I(); dest.J() = B.I(); dest.exponent() = A.exponent() + B.exponent();
+     char conjNo = 'n'; char conjYes = 'c'; Value one = 1.; Value zero = .0;
+     gemm(&conjYes, &conjNo, &B.I(), &A.I(), &A.J(), &one, B.data(), &B.J(), A.data(), &A.J(), &zero, dest.data(), &dest.J());
+     
+     dest.exponent() += prop.exponent(); double const deltaTime = -prop.time(); // this is confusing, change time -> -time
+     auto d = dest.data(); auto const p = prop.data(); auto const e = energies.data();
+     for(int i = 0; i < dest.I(); ++i)
+     for(int j = 0; j < dest.J(); ++j) {
+     double const deltaE = e[j] - e[i]; double const delta = deltaTime*deltaE;
+     d[j + dest.J()*i] *= std::abs(delta) > 1.e-7 ? (p[i] - p[j])/deltaE : deltaTime/2.*(p[i] + p[j] + delta/2.*(p[j] - p[i])); //approximation is symmetric
+     }
+     */
+    
     throw std::runtime_error("imp::density_matrix: not implemented !");
 };
 
@@ -1137,15 +1210,15 @@ __global__ void kerLauncher(Kernel<Value>* kernel, int const N, Byte* memory)
 #ifdef USE_CUDA_SINGLE
             
             //shapes are from the cutlass defaults, which seem ideal in testing (so far tested only hardest problems)
-            cutlass_gemm<cutlass::Shape<8, 128, 128>, cutlass::Shape<8, 8, 8>>(args, memory);
+            cutlass_gemm<cutlass::Shape<8, 128, 128>, cutlass::Shape<8, 8, 8>, cutlass::MatrixLayout:kColumnMajor>(args, memory);
 
 #elif USE_CUDA_MIXED
             
-            cutlass_gemm<cutlass::Shape<8, 128, 128>, cutlass::Shape<8, 8, 16>>(args, memory);
+            cutlass_gemm<cutlass::Shape<8, 128, 128>, cutlass::Shape<8, 8, 16>, cutlass::MatrixLayout::kColumnMajor>(args, memory);
             
 #else
             
-            cutlass_gemm<cutlass::Shape<8, 64, 128>, cutlass::Shape<8, 8, 8>>(args, memory);
+            cutlass_gemm<cutlass::Shape<8, 64, 128>, cutlass::Shape<8, 8, 8>, cutlass::MatrixLayout::kColumnMajor>(args, memory);
             
 //use_cuda_single
 #endif
