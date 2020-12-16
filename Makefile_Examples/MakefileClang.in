@@ -3,12 +3,15 @@ BASE_LDFLAGS =
 BASE_LIBS = -lm
 
 LAPACK_CPPFLAGS = 
-LAPACK_LDFLAGS = -framework Accelerate 
+LAPACK_LDFLAGS = 
 LAPACK_LIBS = -llapack -lblas 
 
-CXX = clang++
-CXXFLAGS = -Wall -O3 -fexceptions -std=c++11 -stdlib=libc++  
+CXX = clang++ 
+CXX_MPI = mpic++ -DHAVE_MPI -flto
+CXXFLAGS = -Wall -O3 -fexceptions -std=c++11 -m64
 
 CPPFLAGS = $(BASE_CPPFLAGS) $(LAPACK_CPPFLAGS) 
 LDFLAGS = $(BASE_LDFLAGS) $(LAPACK_LDFLAGS)
 LIBS = $(BASE_LIBS) $(LAPACK_LIBS) 
+
+EXE_DIR=./bin/
