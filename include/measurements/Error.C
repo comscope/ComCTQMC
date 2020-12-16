@@ -8,11 +8,11 @@ namespace meas {
         
         mpi::all_reduce<mpi::op::sum>(temp);
         for(std::size_t i = 0; i < arg.size(); ++i)
-        temp[i] = (arg[i] - temp[i]/norm)*(arg[i] - temp[i]/norm);
+            temp[i] = (arg[i] - temp[i]/norm)*(arg[i] - temp[i]/norm);
         
         mpi::reduce<mpi::op::sum>(temp, mpi::master);
         for(std::size_t i = 0; i < arg.size(); ++i)
-        arg[i] = 2.*std::sqrt((norm - 1)/norm*temp[i]);
+            arg[i] = 2.*std::sqrt((norm - 1)/norm*temp[i]);
     }
     
     
