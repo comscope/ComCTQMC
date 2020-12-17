@@ -403,14 +403,14 @@ __global__ void cutlass_kernel(typename KernelClass::Params const& params)
     gemm.multiply_add();
 }
 
-template<typename BlockShape, typename ThreadShape, typename layoutA, typename layoutB>
+template<typename BlockShape, typename ThreadShape>
 __device__ void cutlass_gemm(Mult<double> const& args, Byte*& memory)
 {
 
 #ifdef USE_CUDA_SINGLE
     typedef cutlass::gemm::SgemmTraits<
-    layoutA,
-    layoutB,
+    cutlass::MatrixLayout::kColumnMajor,
+    cutlass::MatrixLayout::kColumnMajor,
     BlockShape,
     cutlass::gemm::LinearScaling<cuda_value<double>::type>,
     ThreadShape
@@ -418,8 +418,8 @@ __device__ void cutlass_gemm(Mult<double> const& args, Byte*& memory)
     Traits;
 #elif USE_CUDA_MIXED
     typedef cutlass::gemm::HgemmTraits<
-    layoutA,
-    layoutB,
+    cutlass::MatrixLayout::kColumnMajor,
+    cutlass::MatrixLayout::kColumnMajor,
     BlockShape,
     cutlass::gemm::LinearScaling<cuda_value<double>::type>,
     ThreadShape
@@ -427,8 +427,8 @@ __device__ void cutlass_gemm(Mult<double> const& args, Byte*& memory)
     Traits;
 #else
     typedef cutlass::gemm::DgemmTraits<
-    layoutA,
-    layoutB,
+    cutlass::MatrixLayout::kColumnMajor,
+    cutlass::MatrixLayout::kColumnMajor,
     BlockShape,
     cutlass::gemm::LinearScaling<cuda_value<double>::type>,
     ThreadShape
@@ -464,29 +464,29 @@ __device__ void cutlass_gemm(Mult<double> const& args, Byte*& memory)
 };
 
 
-template<typename BlockShape, typename ThreadShape, typename layoutA, typename layoutB>
+template<typename BlockShape, typename ThreadShape>
 __device__ void cutlass_gemm(Mult<ut::complex> const& args, Byte*& memory)
 {
 #ifdef USE_CUDA_SINGLE
     typedef cutlass::gemm::SgemmTraits<
-    layoutA,
-    layoutB,
+    cutlass::MatrixLayout::kColumnMajor,
+    cutlass::MatrixLayout::kColumnMajor,
     BlockShape,
     cutlass::gemm::LinearScaling<cuda_value<ut::complex>::type>,
     ThreadShape
     > Traits;
 #elif USE_CUDA_MIXED
     typedef cutlass::gemm::HgemmTraits<
-    layoutA,
-    layoutB,
+    cutlass::MatrixLayout::kColumnMajor,
+    cutlass::MatrixLayout::kColumnMajor,
     BlockShape,
     cutlass::gemm::LinearScaling<cuda_value<ut::complex>::type>,
     ThreadShape
     > Traits;
 #else
     typedef cutlass::gemm::DgemmTraits<
-    layoutA,
-    layoutB,
+    cutlass::MatrixLayout::kColumnMajor,
+    cutlass::MatrixLayout::kColumnMajor,
     BlockShape,
     cutlass::gemm::LinearScaling<cuda_value<ut::complex>::type>,
     ThreadShape
@@ -1210,15 +1210,15 @@ __global__ void kerLauncher(Kernel<Value>* kernel, int const N, Byte* memory)
 #ifdef USE_CUDA_SINGLE
             
             //shapes are from the cutlass defaults, which seem ideal in testing (so far tested only hardest problems)
-            cutlass_gemm<cutlass::Shape<8, 128, 128>, cutlass::Shape<8, 8, 8>, cutlass::MatrixLayout:kColumnMajor>(args, memory);
+            cutlass_gemm<cutlass::Shape<8, 128, 128>, cutlass::Shape<8, 8, 8>>(args, memory);
 
 #elif USE_CUDA_MIXED
             
-            cutlass_gemm<cutlass::Shape<8, 128, 128>, cutlass::Shape<8, 8, 16>, cutlass::MatrixLayout::kColumnMajor>(args, memory);
+            cutlass_gemm<cutlass::Shape<8, 128, 128>, cutlass::Shape<8, 8, 16>>(args, memory);
             
 #else
             
-            cutlass_gemm<cutlass::Shape<8, 64, 128>, cutlass::Shape<8, 8, 8>, cutlass::MatrixLayout::kColumnMajor>(args, memory);
+            cutlass_gemm<cutlass::Shape<8, 64, 128>, cutlass::Shape<8, 8, 8>>(args, memory);
             
 //use_cuda_single
 #endif
