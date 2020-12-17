@@ -46,7 +46,7 @@ all : cpu evalsim
 
 cpu : CTQMC_x evalsim
 
-gpu : CTQMC_gx evalsim
+gpu : CTQMC_gx EVALSIM_gx
 
 evalsim : EVALSIM_x
 
@@ -71,6 +71,11 @@ libCTQMC.so : $(LIB_OBJS)
 EVALSIM_x : $(BASE_OBJS) $(MAIN_OBJS) $(EVALSIM_OBJS)
 	@mkdir -p $(EXE_DIR)
 	$(CXX_MPI) $(CPPFLAGS) $(CXXFLAGS) $(BASE_OBJS) $(MAIN_OBJS) $(EVALSIM_OBJS) -o $(EXE_DIR)$@ $(EVALSIM_DIR)Main.C $(LDFLAGS) $(LIBS)
+	cp $(EXE_DIR)$@ $(EXE_DIR)EVALSIM
+
+EVALSIM_gx : $(BASE_OBJS) $(MAIN_OBJS) $(EVALSIM_OBJS) $(HOST_OBJS) $(GPU_OBJS) $(GPU_CUDA_OBJS)
+	@mkdir -p $(EXE_DIR)
+	$(CXX_MPI) -o $(EXE_DIR)$@  $(BASE_OBJS) $(MAIN_OBJS) $(EVALSIM_OBJS) $(HOST_OBJS) $(GPU_OBJS) $(GPU_CUDA_OBJS) $(GPU_CUDA_OBJS)bj.o $(EVALSIM_DIR)Main.C $(CUDA_LDFLAGS) $(LDFLAGS) $(LIBS)
 	cp $(EXE_DIR)$@ $(EXE_DIR)EVALSIM
 
 CTQMC_x : $(BASE_OBJS) $(MAIN_OBJS) $(EVALSIM_OBJS) $(HOST_OBJS) 
