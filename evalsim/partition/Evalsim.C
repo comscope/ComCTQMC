@@ -112,6 +112,10 @@ namespace evalsim {
             
                 mpi::cout << "Adding self-energy high frequency tail ... "  << std::flush;
                 
+                auto tail_length = hyb.size();
+                if (jParams.is("analytical continuation"))
+                    tail_length = std::max(tail_length, static_cast<std::size_t>(1.5*jParams("analytical continuation")("nf").int64()));
+                
                 func::add_self_tail(jParams, selfenergy, selfMoments, hyb.size());   //scheisse Value !! Allgemein scheiss moments ...
                     
                 jObservables["self-energy"] = func::write_functions(jParams, selfenergy, selfMoments);
@@ -119,7 +123,6 @@ namespace evalsim {
                 if(selfDyson.size()) jObservables["self-energy-dyson"] = func::write_functions(jParams, selfDyson, selfMoments);
 
                 mpi::cout << "Ok" << std::endl;
-                
                 
                 
                 mpi::cout << "Adding green function high frequency tail ... " << std::flush;
@@ -131,11 +134,20 @@ namespace evalsim {
                 mpi::cout << "Ok" << std::endl;
                 
                 
-                if(jPartition.is("analytical continuation") ? jPartition("analytical continuation").boolean() : false){
+                if(jParams.is("analytical continuation")){
                     
                     auto const aux = func::get_aux_green(jParams, selfenergy, selfMoments, hyb);
                     
-                    jObservables["aux green"] = func::write_functions<Value>(jParams, aux);
+                    auto const jAux = func::write_functions<Value>(jParams, aux);
+                    jObservables["aux green matsubara"] = jAux;
+                    
+                    std::size_t const nf = jParams("analytical continuation")("nf").int64();
+                    
+                    std::size_t ntau = jParams("analytical continuation").is("ntau") ?
+                        jParams("analytical continuation")("ntau").int64() :
+                        static_cast<std::size_t>(mpi::number_of_workers()/2);
+                    
+                    jObservables["aux green"] = func::fourier_transform(jParams, jAux, tail_length, nf, ntau);
                     
                 }
                 

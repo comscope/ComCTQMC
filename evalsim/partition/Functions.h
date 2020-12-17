@@ -7,6 +7,8 @@
 #include "../../include/io/Vector.h"
 #include "../../include/io/Matrix.h"
 #include "../../include/atomic/Generate.h"
+#include "../../include/FourierTransform.h"
+
 #include "../../ctqmc/include/bath/Hyb.h"
 #include "../../ctqmc/include/Utilities.h"
 
@@ -70,6 +72,8 @@ namespace evalsim {
             
             template<typename Value>
             std::vector<io::cmat> get_aux_green(jsx::value const& jParams, std::vector<io::cmat> const& selfenergy, std::vector<io::Matrix<Value>> const& selfMoments, std::vector<io::cmat> const& hyb);
+                
+            jsx::value fourier_transform(jsx::value const& jParams, jsx::value const& jGm, int const nf, int const nhf, int const ntau);
                 
         }
         

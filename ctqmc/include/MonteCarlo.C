@@ -174,6 +174,7 @@ namespace mc {
                 //i.e., those observables which might take a long time to compute serially
                 jParams["serial evalsim"] = true;
                 jParams["limited post-processing"] = !jParams("all errors").boolean();
+                jParams["limited post-processing"] = !jParams.is("analytical continuation");
                 
                 meas::reduce(jMeasurements, jMeasurements, jSimulation("etas"), meas::Jackknife(), false);
                 jSimulation["error"] = evalsim::evalsim<Value>(jParams, jMeasurements);
