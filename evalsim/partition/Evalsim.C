@@ -117,8 +117,13 @@ namespace evalsim {
                     tail_length = std::max(tail_length, static_cast<std::size_t>(1.5*jParams("analytical continuation")("nf").int64()));
                 
                 func::add_self_tail(jParams, selfenergy, selfMoments, tail_length);   //scheisse Value !! Allgemein scheiss moments ...
-                    
-                jObservables["self-energy"] = func::write_functions(jParams, selfenergy, selfMoments);
+                
+                auto const output_length = std::min(hyb.size(), tail_length);
+                std::vector<io::cmat> selfenergy_trunc = selfenergy;
+                if (output_length != tail_length)
+                    selfenergy_trunc.resize(output_length);
+                
+                jObservables["self-energy"] = func::write_functions(jParams, selfenergy_trunc, selfMoments);
                     
                 if(selfDyson.size()) jObservables["self-energy-dyson"] = func::write_functions(jParams, selfDyson, selfMoments);
 
@@ -139,7 +144,6 @@ namespace evalsim {
                     auto const aux = func::get_aux_green(jParams, selfenergy, selfMoments);
                     
                     auto const jAux = func::write_functions<Value>(jParams, aux);
-                    jObservables["aux green matsubara"] = jAux;
                     
                     std::size_t const nf = jParams("analytical continuation")("nf").int64();
                     
