@@ -116,7 +116,7 @@ namespace evalsim {
                 if (jParams.is("analytical continuation"))
                     tail_length = std::max(tail_length, static_cast<std::size_t>(1.5*jParams("analytical continuation")("nf").int64()));
                 
-                func::add_self_tail(jParams, selfenergy, selfMoments, hyb.size());   //scheisse Value !! Allgemein scheiss moments ...
+                func::add_self_tail(jParams, selfenergy, selfMoments, tail_length);   //scheisse Value !! Allgemein scheiss moments ...
                     
                 jObservables["self-energy"] = func::write_functions(jParams, selfenergy, selfMoments);
                     
@@ -136,7 +136,7 @@ namespace evalsim {
                 
                 if(jParams.is("analytical continuation")){
                     
-                    auto const aux = func::get_aux_green(jParams, selfenergy, selfMoments, hyb);
+                    auto const aux = func::get_aux_green(jParams, selfenergy, selfMoments);
                     
                     auto const jAux = func::write_functions<Value>(jParams, aux);
                     jObservables["aux green matsubara"] = jAux;

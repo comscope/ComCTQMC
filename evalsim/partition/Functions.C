@@ -291,13 +291,13 @@ namespace evalsim {
             
             
             template<typename Value>
-            std::vector<io::cmat> get_aux_green(jsx::value const& jParams, std::vector<io::cmat> const& selfenergy, std::vector<io::Matrix<Value>> const& selfMoments, std::vector<io::cmat> const& hyb)
+            std::vector<io::cmat> get_aux_green(jsx::value const& jParams, std::vector<io::cmat> const& selfenergy, std::vector<io::Matrix<Value>> const& selfMoments)
             {
                 
                 iOmega const iomega(jParams("beta").real64());
                 jsx::value const jHybMatrix = jParams("hybridisation")("matrix");
                 
-                auto const size = std::min(selfenergy.size(), hyb.size());
+                auto const size = selfenergy.size();
                 
                 std::size_t const norb = jHybMatrix.size();
                 
@@ -316,8 +316,8 @@ namespace evalsim {
                 return aux;
             }
             
-            template std::vector<io::cmat> get_aux_green<double>(jsx::value const& jParams, std::vector<io::cmat> const& selfenergy, std::vector<io::Matrix<double>> const& selfMoments, std::vector<io::cmat> const& hyb);
-            template std::vector<io::cmat> get_aux_green<ut::complex>(jsx::value const& jParams, std::vector<io::cmat> const& selfenergy, std::vector<io::Matrix<ut::complex>> const& selfMoments, std::vector<io::cmat> const& hyb);
+            template std::vector<io::cmat> get_aux_green<double>(jsx::value const& jParams, std::vector<io::cmat> const& selfenergy, std::vector<io::Matrix<double>> const& selfMoments);
+            template std::vector<io::cmat> get_aux_green<ut::complex>(jsx::value const& jParams, std::vector<io::cmat> const& selfenergy, std::vector<io::Matrix<ut::complex>> const& selfMoments);
             
             
             jsx::value fourier_transform(jsx::value const& jParams, jsx::value const& jGm, int const nf, int const nhf, int const ntau){

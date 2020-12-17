@@ -71,7 +71,7 @@ namespace evalsim {
             jsx::value write_functions(jsx::value const& jParams, std::vector<io::cmat> const& functionsMatrix);
             
             template<typename Value>
-            std::vector<io::cmat> get_aux_green(jsx::value const& jParams, std::vector<io::cmat> const& selfenergy, std::vector<io::Matrix<Value>> const& selfMoments, std::vector<io::cmat> const& hyb);
+            std::vector<io::cmat> get_aux_green(jsx::value const& jParams, std::vector<io::cmat> const& selfenergy, std::vector<io::Matrix<Value>> const& selfMoments);
                 
             jsx::value fourier_transform(jsx::value const& jParams, jsx::value const& jGm, int const nf, int const nhf, int const ntau);
                 
