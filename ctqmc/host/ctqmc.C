@@ -32,6 +32,7 @@ namespace ctqmc{
         mpi::write(jSimulation("info"),         std::string(std::string(case_name)) + ".info.json");
         
         if(jSimulation.is("error")) mpi::write(jSimulation("error"), std::string(std::string(case_name)) + ".err.json");
+        if(jSimulation.is("variance")) mpi::write(jSimulation("variance"), std::string(std::string(case_name)) + ".var.json");
         if(jSimulation.is("resample")) jsx::write(jSimulation("resample"), std::string(std::string(case_name)) + ".meas" + std::to_string(mpi::rank()) + ".json");
         
         mpi::cout << "Task of worker finished at " << std::asctime(std::localtime(&(time = std::time(nullptr)))) << std::endl;

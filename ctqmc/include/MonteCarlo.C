@@ -176,9 +176,21 @@ namespace mc {
                 jParams["limited post-processing"] = !jParams("all errors").boolean();
                 jParams["limited post-processing"] = !jParams.is("analytical continuation");
                 
-                meas::reduce(jMeasurements, jMeasurements, jSimulation("etas"), meas::Jackknife(), false);
-                jSimulation["error"] = evalsim::evalsim<Value>(jParams, jMeasurements);
+                jsx::value jJackknifeError;
+                
+                meas::reduce(jJackknifeError, jMeasurements, jSimulation("etas"), meas::Jackknife(), false);
+                jSimulation["error"] = evalsim::evalsim<Value>(jParams, jJackknifeError);
                 meas::error(jSimulation("error"), meas::Jackknife());
+                
+                if (jParams.is("analytical continuation")){
+                    
+                    jsx::value jVariance;
+                    
+                    meas::reduce(jVariance, jMeasurements, jSimulation("etas"), meas::Variance(), false);
+                    jSimulation["variance"] = evalsim::evalsim<Value>(jParams, jVariance);
+                    meas::error(jSimulation("variance"), meas::Variance());
+                    
+                }
                 
             } else if(jParams("error").string() == "serial") {
                 

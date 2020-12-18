@@ -16,6 +16,32 @@ namespace meas {
     }
     
     
+    void error(std::vector<double>& arg, Variance) {
+        double const norm = mpi::number_of_workers();
+        
+        for(std::size_t i = 0; i < arg.size(); ++i)
+            arg[i] = arg[i]*arg[i];
+        
+        mpi::reduce<mpi::op::sum>(arg, mpi::master);
+        for(std::size_t i = 0; i < arg.size(); ++i)
+            arg[i] /= norm*(norm-1);
+    }
+    
+    void error(std::vector<double>& arg, Covariance) {
+        double const norm = mpi::number_of_workers();
+        
+        std::vector<double> cov(arg.size()*arg.size());
+        
+        for(std::size_t i = 0; i < arg.size(); ++i)
+            for(std::size_t j = 0; j < arg.size(); ++j)
+                cov[i] = arg[i]*arg[j];
+        
+        arg = std::move(cov);
+        mpi::reduce<mpi::op::sum>(arg, mpi::master);
+        for(std::size_t i = 0; i < arg.size(); ++i)
+            arg[i] /= norm*(norm-1);
+    }
+    
     void Error::add(jsx::value const& jObservable, jsx::value const& jObservable0) {
         add(jMean_, jSquare_, jObservable, jObservable0);
     }
