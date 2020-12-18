@@ -10,8 +10,12 @@ namespace meas {
         auto temp = steps; mpi::all_reduce<mpi::op::sum>(temp); return temp - steps;
     };
     
-    std::int64_t reduce_steps(std::int64_t steps, Variance) {
+    std::int64_t reduce_steps(std::int64_t steps, Average) {
         mpi::all_reduce<mpi::op::sum>(steps); return steps;
+    };
+    
+    std::int64_t reduce_steps(std::int64_t steps, Rescale) {
+        return steps;
     };
     
     std::vector<std::string> split_by_char(std::string const& string, char const c){

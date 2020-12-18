@@ -40,6 +40,45 @@ namespace meas {
         }
     }
 
+    inline void subtract(std::vector<double>& arg1, std::vector<double> const& arg2){
+        for (int i=0; i < arg1.size(); i++)
+            arg1[i] -= arg2[i];
+    }
+
+    inline void subtract(jsx::value& jArg1, jsx::value const& jArg2) {
+        if(jArg1.is<io::rvec>())
+            subtract(jArg1.at<io::rvec>(), jArg2.at<io::rvec>());
+        else if(jArg1.is<io::cvec>()) {
+            auto& arg1 = jArg1.at<io::cvec>();
+            auto& arg2 = jArg2.at<io::cvec>();
+            
+            std::vector<double> real1, imag1, real2, imag2;
+            for(auto& entry : arg1) {
+                real1.push_back(entry.real()); imag1.push_back(entry.imag());
+            }
+            
+            for(auto& entry : arg2) {
+                real2.push_back(entry.real()); imag2.push_back(entry.imag());
+            }
+            
+            subtract(real1, real2); subtract(imag1, imag2);
+            
+            for(std::size_t i = 0; i < arg1.size(); ++i){
+                arg1[i] = {real1[i], imag1[i]};
+            }
+            
+        } else if(jArg1.is<jsx::object_t>()) {
+            for(auto& jEntry : jArg1.object()){
+                auto entry = jEntry.first;
+                subtract( jArg1(jEntry.first), jArg2(jEntry.first) );
+            }
+            
+        } else if(jArg1.is<jsx::array_t>()) {
+            for(int i = 0; i < jArg1.array().size(); i++ )
+                subtract(jArg1.array()[i], jArg2.array()[i]);
+        }
+    }
+
     struct Error {
         Error() = default;
         ~Error() = default;

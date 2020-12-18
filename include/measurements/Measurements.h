@@ -17,7 +17,7 @@
 
 namespace meas {
     
-struct All {}; struct Jackknife {}; struct Covariance {}; struct Variance {};
+struct All {}; struct Jackknife {}; struct Average {};  struct Rescale {}; struct Variance {};  struct Covariance {};
     
     
     struct Fix {};  struct Var {};
@@ -37,8 +37,8 @@ struct All {}; struct Jackknife {}; struct Covariance {}; struct Variance {};
         
         jsx::value reduce(double fact, All, bool b64) const;
         jsx::value reduce(double fact, Jackknife, bool b64) const;
-        jsx::value reduce(double fact, Covariance, bool b64) const;
-        jsx::value reduce(double fact, Variance, bool b64) const;
+        jsx::value reduce(double fact, Average, bool b64) const;
+        jsx::value reduce(double fact, Rescale, bool b64) const;
         
         void write(jsx::value& dest) const;
         
@@ -96,8 +96,8 @@ struct All {}; struct Jackknife {}; struct Covariance {}; struct Variance {};
     
     std::int64_t reduce_steps(std::int64_t steps, All);
     std::int64_t reduce_steps(std::int64_t steps, Jackknife);
-    std::int64_t reduce_steps(std::int64_t steps, Covariance);
-    std::int64_t reduce_steps(std::int64_t steps, Variance);
+    std::int64_t reduce_steps(std::int64_t steps, Average);
+    std::int64_t reduce_steps(std::int64_t steps, Rescale);
     
     
     template<typename E>

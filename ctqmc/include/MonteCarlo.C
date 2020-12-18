@@ -174,7 +174,6 @@ namespace mc {
                 //i.e., those observables which might take a long time to compute serially
                 jParams["serial evalsim"] = true;
                 jParams["limited post-processing"] = !jParams("all errors").boolean();
-                jParams["limited post-processing"] = !jParams.is("analytical continuation");
                 
                 jsx::value jJackknifeError;
                 
@@ -184,11 +183,18 @@ namespace mc {
                 
                 if (jParams.is("analytical continuation")){
                     
-                    jsx::value jVariance;
+                    jParams["limited post-processing"] = false;
                     
-                    meas::reduce(jVariance, jMeasurements, jSimulation("etas"), meas::Variance(), false);
-                    jSimulation["variance"] = evalsim::evalsim<Value>(jParams, jVariance);
-                    meas::error(jSimulation("variance"), meas::Variance());
+                    jsx::value jVariance;
+                    meas::reduce(jVariance["avg"], jMeasurements, jSimulation("etas"), meas::Average(), false);
+                    meas::reduce(jVariance["bin"], jMeasurements, jSimulation("etas"), meas::Rescale(), false);
+                    
+                    jVariance["avg"] = evalsim::evalsim<Value>(jParams, jVariance("avg"));
+                    jVariance["bin"] = evalsim::evalsim<Value>(jParams, jVariance("bin"));
+                    
+                    meas::subtract(jVariance("bin"), jVariance("avg"));
+                    jSimulation["variance"] = std::move(jVariance("bin"));
+                    meas::error(jSimulation["variance"], meas::Variance());
                     
                 }
                 

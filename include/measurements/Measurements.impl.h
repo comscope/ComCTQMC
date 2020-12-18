@@ -38,19 +38,34 @@ namespace meas {
         data.b64() = b64; return std::move(data);
     };
 
-    //Where reduce(double, All, bool) computes <M>
-    //This computes <M-<M>>
     template<typename T, typename M>
-    jsx::value Vector<T,M>::reduce(double fact, Variance, bool b64) const {
+    jsx::value Vector<T,M>::reduce(double fact, Average, bool b64) const {
         auto samples = samples_;  mpi::barrier(); mpi::all_reduce<mpi::op::sum>(samples);
         
         if(!samples) throw std::runtime_error(name() + "::write: no measurements taken !");  //Scheisse das sštt eh nie passiere.
         
-        auto data = data_;  resize_reduce(data, M()); mpi::barrier(); mpi::all_reduce<mpi::op::sum>(data);
+        auto data = data_; resize_reduce(data, M()); mpi::barrier(); mpi::all_reduce<mpi::op::sum>(data);
         
-        for(std::size_t i = 0; i < data_.size(); ++i) data[i] = fact*(data_[i] - data[i]*(1./samples));
+        for(auto& x : data) x *= fact/samples;
         
-        data.b64() = b64; return std::move(data);
+        data.b64() = b64;
+        
+        return std::move(data);
+    };
+
+    template<typename T, typename M>
+    jsx::value Vector<T,M>::reduce(double fact, Rescale, bool b64) const {
+    auto samples = samples_;  mpi::barrier(); mpi::all_reduce<mpi::op::sum>(samples);
+    
+    if(!samples) throw std::runtime_error(name() + "::write: no measurements taken !");  //Scheisse das sštt eh nie passiere.
+    
+    auto data = data_; resize_reduce(data, M());
+    
+    for(auto& x : data) x *= fact;
+    
+    data.b64() = b64;
+    
+    return std::move(data);
     };
 
     template<typename T, typename M>

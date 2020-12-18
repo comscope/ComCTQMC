@@ -34,7 +34,7 @@ namespace meas {
         
         for(std::size_t i = 0; i < arg.size(); ++i)
             for(std::size_t j = 0; j < arg.size(); ++j)
-                cov[i] = arg[i]*arg[j];
+                cov[i*arg.size() + j] = arg[i]*arg[j];
         
         arg = std::move(cov);
         mpi::reduce<mpi::op::sum>(arg, mpi::master);
