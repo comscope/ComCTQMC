@@ -193,8 +193,12 @@ namespace mc {
                     jVariance["bin"] = evalsim::evalsim<Value>(jParams, jVariance("bin"));
                     
                     meas::subtract(jVariance("bin"), jVariance("avg"));
-                    jSimulation["variance"] = std::move(jVariance("bin"));
+                    
+                    jSimulation["variance"] = jVariance("bin");
                     meas::error(jSimulation["variance"], meas::Variance());
+                    
+                    jSimulation["covariance"] = std::move(jVariance("bin"));
+                    meas::error(jSimulation["covariance"], meas::Covariance());
                     
                 }
                 

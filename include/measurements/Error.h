@@ -18,6 +18,7 @@ namespace meas {
 
     void error(std::vector<double>& arg, Jackknife);
     void error(std::vector<double>& arg, Variance);
+    void error(std::vector<double>& arg, Covariance);
 
     template<typename E>
     inline void error(jsx::value& jArg, E) {
