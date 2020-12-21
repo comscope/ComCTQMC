@@ -36,10 +36,10 @@ namespace meas {
             for(std::size_t j = 0; j < arg.size(); ++j)
                 cov[i*arg.size() + j] = arg[i]*arg[j];
         
-        arg = std::move(cov);
-        mpi::reduce<mpi::op::sum>(arg, mpi::master);
+        arg.resize(cov.size());
+        mpi::reduce<mpi::op::sum>(cov, mpi::master);
         for(std::size_t i = 0; i < arg.size(); ++i)
-            arg[i] /= norm*(norm-1);
+            arg[i] = cov[i]/(norm*(norm-1));
     }
     
     void Error::add(jsx::value const& jObservable, jsx::value const& jObservable0) {

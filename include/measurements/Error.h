@@ -25,15 +25,19 @@ namespace meas {
         if(jArg.is<io::rvec>())
             error(jArg.at<io::rvec>(), E());
         else if(jArg.is<io::cvec>()) {
-            auto& arg = jArg.at<io::cvec>();
+            auto arg = jArg.at<io::cvec>();
             
             std::vector<double> real, imag;
             for(auto& entry : arg) {
                 real.push_back(entry.real()); imag.push_back(entry.imag());
             }
             error(real, E()); error(imag, E());
+            arg.resize(real.size());
             for(std::size_t i = 0; i < arg.size(); ++i)
                 arg[i] = {real[i], imag[i]};
+            
+            jArg = std::move(arg);
+            
         } else if(jArg.is<jsx::object_t>()) {
             for(auto& jEntry : jArg.object()) error(jEntry.second, E());
         } else if(jArg.is<jsx::array_t>()) {
