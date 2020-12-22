@@ -194,10 +194,10 @@ namespace mc {
                     
                     meas::subtract(jVariance("bin"), jVariance("avg"));
                     
-                    jSimulation["variance"] = jVariance("bin");
+                    jSimulation["variance"] = jVariance("bin")("partition")("aux green");
                     meas::error(jSimulation["variance"], meas::Variance());
                     
-                    jSimulation["covariance"] = std::move(jVariance("bin"));
+                    jSimulation["covariance"] = std::move(jVariance("bin")("partition")("aux green"));
                     meas::error(jSimulation["covariance"], meas::Covariance());
                     
                 }

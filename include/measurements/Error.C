@@ -33,9 +33,9 @@ namespace meas {
         std::vector<double> cov(arg.size()*arg.size());
         
         for(std::size_t i = 0; i < arg.size(); ++i)
-            for(std::size_t j = 0; j < arg.size(); ++j)
+            for(std::size_t j = 0; j < arg.size(); ++j){
                 cov[i*arg.size() + j] = arg[i]*arg[j];
-        
+            }
         arg.resize(cov.size());
         mpi::reduce<mpi::op::sum>(cov, mpi::master);
         for(std::size_t i = 0; i < arg.size(); ++i)
