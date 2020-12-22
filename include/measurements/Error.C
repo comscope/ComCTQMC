@@ -37,9 +37,20 @@ namespace meas {
                 cov[i*arg.size() + j] = arg[i]*arg[j];
             }
         arg.resize(cov.size());
+        mpi::barrier();
         mpi::reduce<mpi::op::sum>(cov, mpi::master);
-        for(std::size_t i = 0; i < arg.size(); ++i)
+        for(std::size_t i = 0; i < arg.size(); ++i){
             arg[i] = cov[i]/(norm*(norm-1));
+            //mpi::cout << "avg " << i  << " " << arg[i] << "\n";
+        }
+    }
+    
+    void error(std::vector<double>& arg, Average) {
+        double const norm = mpi::number_of_workers();
+        
+        mpi::all_reduce<mpi::op::sum>(arg);
+        for(std::size_t i = 0; i < arg.size(); ++i)
+            arg[i] /= norm;
     }
     
     void Error::add(jsx::value const& jObservable, jsx::value const& jObservable0) {

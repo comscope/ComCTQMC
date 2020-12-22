@@ -185,20 +185,19 @@ namespace mc {
                     
                     jParams["limited post-processing"] = false;
                     
-                    jsx::value jVariance;
-                    meas::reduce(jVariance["avg"], jMeasurements, jSimulation("etas"), meas::Average(), false);
-                    meas::reduce(jVariance["bin"], jMeasurements, jSimulation("etas"), meas::Rescale(), false);
+                    jsx::value jBin;
+                    meas::reduce(jBin, jMeasurements, jSimulation("etas"), meas::Rescale(), false);
+                    jBin = evalsim::evalsim<Value>(jParams, jBin);
+                    jBin = jBin["partition"]["aux green"];
+                    auto jAvg = jBin;
+                    auto jDif = jBin;
                     
-                    jVariance["avg"] = evalsim::evalsim<Value>(jParams, jVariance("avg"));
-                    jVariance["bin"] = evalsim::evalsim<Value>(jParams, jVariance("bin"));
+                    meas::error(jAvg, meas::Average());
+                    meas::subtract(jDif, jAvg);
+                  
+                    meas::error(jDif, meas::Covariance());
                     
-                    meas::subtract(jVariance("bin"), jVariance("avg"));
-                    
-                    jSimulation["variance"] = jVariance("bin")("partition")("aux green");
-                    meas::error(jSimulation["variance"], meas::Variance());
-                    
-                    jSimulation["covariance"] = std::move(jVariance("bin")("partition")("aux green"));
-                    meas::error(jSimulation["covariance"], meas::Covariance());
+                    jSimulation["covariance"] = jDif;
                     
                 }
                 

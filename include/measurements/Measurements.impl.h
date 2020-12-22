@@ -55,10 +55,13 @@ namespace meas {
 
     template<typename T, typename M>
     jsx::value Vector<T,M>::reduce(double fact, Rescale, bool b64) const {
+        //auto samples = samples_;  mpi::barrier(); mpi::all_reduce<mpi::op::sum>(samples); samples *
+        
+        //if(!samples) throw std::runtime_error(name() + "::write: no measurements taken !");  //Scheisse das sštt eh nie passiere.
         
         auto data = data_; resize_reduce(data, M());
         
-        for(auto& x : data) x *= fact/samples_;
+        for(auto& x : data) x *= fact / samples_;
         
         data.b64() = b64;
         
