@@ -17,8 +17,12 @@ namespace meas {
 
 
     void error(std::vector<double>& arg, Jackknife);
+
     void error(std::vector<double>& arg, Variance);
+
     void error(std::vector<double>& arg, Covariance);
+    void error(std::vector<ut::complex>& arg, Covariance);
+
     void error(std::vector<double>& arg, Average);
 
     template<typename E>
@@ -33,7 +37,6 @@ namespace meas {
                 real.push_back(entry.real()); imag.push_back(entry.imag());
             }
             error(real, E()); error(imag, E());
-            arg.resize(real.size());
             for(std::size_t i = 0; i < arg.size(); ++i)
                 arg[i] = {real[i], imag[i]};
             
@@ -43,6 +46,23 @@ namespace meas {
             for(auto& jEntry : jArg.object()) error(jEntry.second, E());
         } else if(jArg.is<jsx::array_t>()) {
             for(auto& jEntry : jArg.array()) error(jEntry, E());
+        }
+    }
+
+    template<>
+    inline void error(jsx::value& jArg, Covariance) {
+        if(jArg.is<io::rvec>())
+            error(jArg.at<io::rvec>(), Covariance());
+        
+        else if(jArg.is<io::cvec>()) {
+            auto arg = jArg.at<io::cvec>();
+            error(arg, Covariance());
+            jArg = std::move(arg);
+            
+        } else if(jArg.is<jsx::object_t>()) {
+            for(auto& jEntry : jArg.object()) error(jEntry.second, Covariance());
+        } else if(jArg.is<jsx::array_t>()) {
+            for(auto& jEntry : jArg.array()) error(jEntry, Covariance());
         }
     }
 

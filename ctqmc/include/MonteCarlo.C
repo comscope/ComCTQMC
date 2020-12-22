@@ -188,7 +188,7 @@ namespace mc {
                     jsx::value jBin;
                     meas::reduce(jBin, jMeasurements, jSimulation("etas"), meas::Rescale(), false);
                     jBin = evalsim::evalsim<Value>(jParams, jBin);
-                    jBin = jBin["partition"]["aux green"];
+                    jBin = jBin["partition"]["green"];
                     auto jAvg = jBin;
                     auto jDif = jBin;
                     

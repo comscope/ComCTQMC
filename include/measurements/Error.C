@@ -33,15 +33,33 @@ namespace meas {
         std::vector<double> cov(arg.size()*arg.size());
         
         for(std::size_t i = 0; i < arg.size(); ++i)
-            for(std::size_t j = 0; j < arg.size(); ++j){
-                cov[i*arg.size() + j] = arg[i]*arg[j];
-            }
+        for(std::size_t j = 0; j < arg.size(); ++j){
+            cov[i*arg.size() + j] = arg[i]*arg[j];
+        }
+        
         arg.resize(cov.size());
         mpi::barrier();
         mpi::reduce<mpi::op::sum>(cov, mpi::master);
         for(std::size_t i = 0; i < arg.size(); ++i){
             arg[i] = cov[i]/(norm*(norm-1));
-            //mpi::cout << "avg " << i  << " " << arg[i] << "\n";
+        }
+    }
+    
+    void error(std::vector<ut::complex>& arg, Covariance) {
+        double const norm = mpi::number_of_workers();
+        
+        std::vector<ut::complex> cov(arg.size()*arg.size());
+        
+        for(std::size_t i = 0; i < arg.size(); ++i)
+            for(std::size_t j = 0; j < arg.size(); ++j){
+                cov[i*arg.size() + j] = arg[i]*std::conj(arg[j]);
+            }
+        
+        arg.resize(cov.size());
+        mpi::barrier();
+        mpi::reduce<mpi::op::sum>(cov, mpi::master);
+        for(std::size_t i = 0; i < arg.size(); ++i){
+            arg[i] = cov[i]/(norm*(norm-1));
         }
     }
     
