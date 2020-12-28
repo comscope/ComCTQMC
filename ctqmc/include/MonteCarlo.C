@@ -186,17 +186,18 @@ namespace mc {
                     jsx::value jBin;
                     meas::reduce(jBin, jMeasurements, jSimulation("etas"), meas::Rescale(), false);
                     jBin = evalsim::evalsim<Value>(jParams, jBin);
-                    jBin = jBin["partition"]["green"];
-                    auto jAvg = jBin;
-                    auto jDif = jBin;
+                    jBin = jBin["partition"]["aux green matsubara"];
                     
+                    auto jAvg = jBin;
                     meas::error(jAvg, meas::Average());
+                    
+                    auto jDif = jBin;
                     meas::subtract(jDif, jAvg);
                     
                     auto jCov = jDif;
-                    auto jVar = jDif
-                    
                     meas::error(jCov, meas::Covariance());
+                    
+                    auto jVar = jDif;
                     meas::error(jVar, meas::Variance());
                     
                     jSimulation["covariance"] = jCov;
