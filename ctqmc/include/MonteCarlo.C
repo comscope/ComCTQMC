@@ -188,17 +188,22 @@ namespace mc {
                     jsx::value jBin;
                     meas::reduce(jBin, jMeasurements, jSimulation("etas"), meas::Rescale(), false);
                     jBin = evalsim::evalsim<Value>(jParams, jBin);
-                    jBin = jBin["partition"]["green"];
+                    jBin = jBin["partition"]["aux green matsubara"];
+                    
                     auto jAvg = jBin;
-                    auto jDif = jBin;
-                    
                     meas::error(jAvg, meas::Average());
+                    
+                    auto jDif = jBin;
                     meas::subtract(jDif, jAvg);
-                  
-                    meas::error(jDif, meas::Covariance());
                     
-                    jSimulation["covariance"] = jDif;
+                    auto jCov = jDif;
+                    meas::error(jCov, meas::Covariance());
+                    jSimulation["covariance"] = jCov;
                     
+                    auto jVar = jDif;
+                    meas::error(jVar, meas::Variance());
+                    jSimulation["variance"] = jVar;
+
                 }
                 
             } else if(jParams("error").string() == "serial") {
