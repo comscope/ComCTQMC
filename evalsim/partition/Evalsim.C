@@ -139,13 +139,13 @@ namespace evalsim {
                     
                     auto const aux = func::get_aux_green(jParams, selfenergy, selfMoments);
                     
-                    auto const jAux = func::write_functions<Value>(jParams, aux);
+                    jObservables["aux green matsubara"] = func::write_functions<Value>(jParams, aux);
                     
                     std::size_t ntau = jParams("analytical continuation").is("ntau") ?
                         jParams("analytical continuation")("ntau").int64() :
                         static_cast<std::size_t>(mpi::number_of_workers()/2);
                     
-                    jObservables["aux green"] = func::fourier_transform(jParams, jAux, tail_length, tail_length - nf_measured, ntau);
+                    jObservables["aux green"] = func::fourier_transform(jParams, jObservables("aux green matsubara"), tail_length, tail_length - nf_measured, ntau);
                     
                 }
                 
