@@ -183,26 +183,23 @@ namespace mc {
                 
                 if (jParams.is("analytical continuation")){
                     
+
                     jParams["limited post-processing"] = false;
                     
                     jsx::value jBin;
                     meas::reduce(jBin, jMeasurements, jSimulation("etas"), meas::Rescale(), false);
                     jBin = evalsim::evalsim<Value>(jParams, jBin);
                     jBin = jBin["partition"]["aux green matsubara"];
-                    
                     auto jAvg = jBin;
-                    meas::error(jAvg, meas::Average());
-                    
                     auto jDif = jBin;
+                    
+                    meas::error(jAvg, meas::Average());
                     meas::subtract(jDif, jAvg);
+                  
+                    meas::error(jDif, meas::Covariance());
                     
-                    auto jCov = jDif;
-                    meas::error(jCov, meas::Covariance());
-                    jSimulation["covariance"] = jCov;
+                    jSimulation["covariance"] = jDif;
                     
-                    auto jVar = jDif;
-                    meas::error(jVar, meas::Variance());
-                    jSimulation["variance"] = jVar;
 
                 }
                 
