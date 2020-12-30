@@ -16,6 +16,7 @@
 
 namespace upd {
     
+    jsx::value ph_diagonal_updates(jsx::value const& jParams);
     
     template<typename Update, typename Mode, typename Value, typename...Args>
     mch::unique_update_ptr<Value> make_update(double prob, Args&&... args) {

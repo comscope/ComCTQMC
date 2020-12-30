@@ -61,8 +61,9 @@ namespace upd {
                 if(jOpsList.is<jsx::empty_t>())
                     all_ops<Ops...>::apply(data, functor);
                 else
-                    for(auto const& jOp : jOpsList.array())
+                    for(auto const& jOp : jOpsList.array()){
                         read_op<Ops...>::apply(data, jOp.array().begin(), functor);
+                    }
             }
             
             template<typename Value>
