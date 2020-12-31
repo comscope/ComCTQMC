@@ -28,15 +28,30 @@ namespace meas {
     }
     
     void error(std::vector<double>& arg, Covariance) {
-        double const norm = mpi::number_of_workers();
-        
         std::vector<double> cov(arg.size()*arg.size());
         
+        bool is_bad_worker = false;
+
         for(std::size_t i = 0; i < arg.size(); ++i)
         for(std::size_t j = 0; j < arg.size(); ++j){
             cov[i*arg.size() + j] = arg[i]*arg[j];
+            if (!is_bad_worker or std::isnan(cov[i*arg.size() + j]) ) { is_bad_worker = true; break; }
         }
+        std::cout << mpi::rank() << " " << cov[0] << " " << is_bad_worker << "\n";        
+        double norm = 1;
+        if (is_bad_worker){
+            norm--;
+            std::fill(cov.begin(), cov.end(), 0.0);
+        }
+        mpi::barrier();
+        mpi::reduce<mpi::op::sum>(norm, mpi::master);
         
+        if (norm < 2){
+            mpi::cout << "Warning workers did not get good estimates of covariance\n";
+            norm = 2;
+            std::fill(cov.begin(),cov.end(),-2);
+        }
+
         arg.resize(cov.size());
         mpi::barrier();
         mpi::reduce<mpi::op::sum>(cov, mpi::master);
@@ -46,15 +61,29 @@ namespace meas {
     }
     
     void error(std::vector<ut::complex>& arg, Covariance) {
-        double const norm = mpi::number_of_workers();
-        
         std::vector<ut::complex> cov(arg.size()*arg.size());
-        
+        bool is_bad_worker = false;
+
         for(std::size_t i = 0; i < arg.size(); ++i)
             for(std::size_t j = 0; j < arg.size(); ++j){
-                cov[i*arg.size() + j] = arg[i]*std::conj(arg[j]);
+                cov[i*arg.size() + j] = arg[i]*arg[j];
+                if (!is_bad_worker or std::isnan(cov[i*arg.size() + j].real() )) { is_bad_worker = true; break; }
             }
         
+        double norm = 1;
+        if (is_bad_worker){
+            norm--;
+            std::fill(cov.begin(), cov.end(), 0.0);
+        }
+        mpi::barrier();
+        mpi::reduce<mpi::op::sum>(norm, mpi::master);
+
+        if (norm < 2){
+            mpi::cout << "Warning workers did not get good estimates of covariance\n";
+            norm = 2;
+            std::fill(cov.begin(),cov.end(),-2);
+        }
+
         arg.resize(cov.size());
         mpi::barrier();
         mpi::reduce<mpi::op::sum>(cov, mpi::master);
