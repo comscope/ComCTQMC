@@ -57,7 +57,7 @@ namespace meas {
     jsx::value Vector<T,M>::reduce(double fact, Rescale, bool b64) const {
         auto samples = samples_; 
         
-        auto data = data_; resize_reduce(data, M());
+        auto data = data_; mpi::barrier(); resize_reduce(data, M()); mpi::barrier(); 
         
         for(auto& x : data) x *= fact / samples;
         

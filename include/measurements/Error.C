@@ -95,6 +95,7 @@ namespace meas {
     void error(std::vector<double>& arg, Average) {
         double const norm = mpi::number_of_workers();
         
+        mpi::barrier();
         mpi::all_reduce<mpi::op::sum>(arg);
         for(std::size_t i = 0; i < arg.size(); ++i)
             arg[i] /= norm;
