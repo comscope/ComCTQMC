@@ -66,8 +66,8 @@ namespace meas {
 
         for(std::size_t i = 0; i < arg.size(); ++i)
             for(std::size_t j = 0; j < arg.size(); ++j){
-                cov[i*arg.size() + j] = arg[i]*arg[j];
-                if (!is_bad_worker or std::isnan(cov[i*arg.size() + j].real() )) { is_bad_worker = true; break; }
+                cov[i*arg.size() + j] = arg[i]*std::conj(arg[j]);
+                if ( std::isnan(cov[i*arg.size() + j].real()) ) { is_bad_worker = true; break; }
             }
         
         double norm = 1;
@@ -76,7 +76,7 @@ namespace meas {
             std::fill(cov.begin(), cov.end(), 0.0);
         }
         mpi::barrier();
-        mpi::reduce<mpi::op::sum>(norm, mpi::master);
+        mpi::all_reduce<mpi::op::sum>(norm);
 
         if (norm < 2){
             mpi::cout << "Warning workers did not get good estimates of covariance\n";
