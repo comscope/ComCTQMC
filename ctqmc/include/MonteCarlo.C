@@ -183,24 +183,35 @@ namespace mc {
                 
                 if (jParams.is("analytical continuation")){
                     
-
                     jParams["limited post-processing"] = false;
                     
                     jsx::value jBin;
                     meas::reduce(jBin, jMeasurements, jSimulation("etas"), meas::Rescale(), false);
                     jBin = evalsim::evalsim<Value>(jParams, jBin);
-                    jBin = jBin["partition"]["aux green matsubara"];
-                    auto jAvg = jBin;
-                    auto jDif = jBin;
+                    
+                    auto jAvg = jBin["partition"]["aux green matsubara"];
+                    auto jDif = jBin["partition"]["aux green matsubara"];
                     
                     meas::error(jAvg, meas::Average());
                     meas::subtract(jDif, jAvg);
                   
                     meas::error(jDif, meas::Covariance());
                     
-                    jSimulation["covariance"] = jDif;
+                    jSimulation["covariance"]["aux green matsubara"] = jDif;
                     
-
+                    if (jBin.is("susc ph")) {
+                        
+                        auto jAvg = jBin["susc ph"]["greens function"];
+                        auto jDif = jBin["susc ph"]["greens function"];
+                        
+                        meas::error(jAvg, meas::Average());
+                        meas::subtract(jDif, jAvg);
+                        
+                        meas::error(jDif, meas::Covariance());
+                        
+                        jSimulation["covariance"]["susc ph"] = jDif;
+                    }
+                    
                 }
                 
             } else if(jParams("error").string() == "serial") {

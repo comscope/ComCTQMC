@@ -32,7 +32,12 @@ namespace evalsim {
                         std::vector<io::ctens> susc = meas::read_tensor_functions<Value,Boson>(jMeasurements, jParams, jWorm, jHybMatrix, hyb.size());
                         
                         mpi::cout << "Ok" << std::endl;
-                                              
+                        
+                        std::vector<io::ctens> susc_symm(susc.size(), io::ctens(jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size()));
+                        func::susc::ph::enforce_symmetries<Value>(jParams,jWorm,susc,susc_symm);
+                        
+                        jsx::value jObservablesOut;
+                        jObservablesOut["greens function"] = func::write_functions<Value>(jParams, jHybMatrix, susc_symm);
                         
                         mpi::cout << "Computing susceptibility ... " << std::flush;
                         
@@ -42,12 +47,9 @@ namespace evalsim {
                         
                         mpi::cout << "Enforcing symmetries ... " << std::flush;
                         
-                        std::vector<io::ctens> susc_symm(susc.size(), io::ctens(jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size()));
                         func::susc::ph::enforce_symmetries<Value>(jParams,jWorm,susc,susc_symm);
                         
                         mpi::cout << "Ok" << std::endl;
-                        
-                        jsx::value jObservablesOut;
                         
                         jObservablesOut["susceptibility"] = func::write_functions<Value>(jParams, jHybMatrix, susc_symm);
                         
@@ -76,7 +78,7 @@ namespace evalsim {
                         auto const omega = frequencies.omega_b();
                         
                         for(std::size_t n = 0; n < full_in_connected_out.size(); ++n){
-                            for(auto const ijkl : full_in_connected_out[n].ijkl()){
+                            for(auto const& ijkl : full_in_connected_out[n].ijkl()){
                             
                                 auto const i = ijkl[1];
                                 auto const j = ijkl[2];
@@ -108,7 +110,7 @@ namespace evalsim {
                         for(std::size_t n = 0; n < no_symm.size(); ++n){
                             int const m = std::is_same<Value,double>::value ? n : omega_b.pos(-omega_b(n));
                             
-                            for(auto const ijkl : no_symm[n].ijkl()){
+                            for(auto const& ijkl : no_symm[n].ijkl()){
                             
                                 auto const i = ijkl[1];
                                 auto const j = ijkl[2];
@@ -189,7 +191,7 @@ namespace evalsim {
                         jsx::value const jHybMatrix = jParams("hybridisation")("matrix");
                         
                         for(std::size_t n = 0; n < no_symm.size(); ++n)
-                            for(auto const ijkl : no_symm[n].ijkl()){
+                            for(auto const& ijkl : no_symm[n].ijkl()){
                         
                                 auto const i = ijkl[1];
                                 auto const j = ijkl[2];
