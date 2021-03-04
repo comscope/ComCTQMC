@@ -201,8 +201,8 @@ namespace mc {
                     
                     if (jBin.is("susc ph")) {
                         
-                        auto jAvg = jBin["susc ph"]["greens function"];
-                        auto jDif = jBin["susc ph"]["greens function"];
+                        auto jAvg = jBin["susc ph"]["susceptibility"];
+                        auto jDif = jBin["susc ph"]["susceptibility"];
                         
                         meas::error(jAvg, meas::Average());
                         meas::subtract(jDif, jAvg);
