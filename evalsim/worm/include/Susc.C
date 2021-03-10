@@ -34,10 +34,10 @@ namespace evalsim {
                         mpi::cout << "Ok" << std::endl;
                         
                         std::vector<io::ctens> susc_symm(susc.size(), io::ctens(jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size()));
-                        func::susc::ph::enforce_symmetries<Value>(jParams,jWorm,susc,susc_symm);
                         
                         jsx::value jObservablesOut;
-                        jObservablesOut["greens function"] = func::write_functions<Value>(jParams, jHybMatrix, susc_symm);
+                        //func::susc::ph::enforce_symmetries<Value>(jParams,jWorm,susc,susc_symm);
+                        //jObservablesOut["greens function"] = func::write_functions<Value>(jParams, jHybMatrix, susc_symm);
                         
                         mpi::cout << "Computing susceptibility ... " << std::flush;
                         
@@ -52,6 +52,8 @@ namespace evalsim {
                         mpi::cout << "Ok" << std::endl;
                         
                         jObservablesOut["susceptibility"] = func::write_functions<Value>(jParams, jHybMatrix, susc_symm);
+                        
+                        jObservablesOut["qn"] = qn_susc(jParams,susc_symm);
                         
                         return jObservablesOut;
                     }
@@ -126,6 +128,34 @@ namespace evalsim {
                                 }
                         }
                         
+                    }
+                    
+                    jsx::value qn_susc(jsx::value const& jParams, std::vector<io::ctens> const& susc_tensor){
+                        
+                        jsx::value qn_susceptibilities;
+                        
+                        for (auto& entry : jParams("partition")("quantum numbers").object() ){
+                            
+                            auto const qn = entry.second;
+                            
+                            io::cvec s(susc_tensor.size(),0);
+                            
+                            for(int i=0; i<qn.size(); i++){
+                                for(int j=0; j<qn.size(); j++){
+                                    for (int om=0; om<susc_tensor.size(); om++){
+                                        
+                                        s[om] += qn(i).real64()*susc_tensor[om](i,i,j,j)*qn(j).real64();
+                                        
+                                    }
+                                }
+                            }
+                            
+                            qn_susceptibilities[entry.first] = s;
+                            
+                        }
+                        
+                        
+                        return qn_susceptibilities;
                     }
                     
                 }

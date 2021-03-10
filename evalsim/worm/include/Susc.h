@@ -34,6 +34,8 @@ namespace evalsim {
                     template <typename Value>
                     void enforce_symmetries(jsx::value const& jParams, jsx::value const& jWorm, std::vector<io::ctens> const& no_symm, std::vector<io::ctens>& symm);
                     
+                    jsx::value qn_susc(jsx::value const& jParams, std::vector<io::ctens> const& susc_tensor);
+                
                 }
                 
                 namespace pp {
