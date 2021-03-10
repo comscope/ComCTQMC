@@ -53,7 +53,7 @@ namespace evalsim {
                         
                         jObservablesOut["susceptibility"] = func::write_functions<Value>(jParams, jHybMatrix, susc_symm);
                         
-                        jObservablesOut["qn"] = qn_susc(jParams,susc_symm);
+                        jObservablesOut["qn"] = qn_susc<Value>(jParams,susc_symm);
                         
                         return jObservablesOut;
                     }
@@ -130,11 +130,15 @@ namespace evalsim {
                         
                     }
                     
+                    template <typename Value>
                     jsx::value qn_susc(jsx::value const& jParams, std::vector<io::ctens> const& susc_tensor){
                         
                         jsx::value qn_susceptibilities;
                         
-                        for (auto& entry : jParams("partition")("quantum numbers").object() ){
+                        auto jqn = jParams("partition")("quantum numbers");
+                        opt::complete_qn<Value>(jParams, jqn);
+                        
+                        for (auto& entry : jqn.object() ){
                             
                             auto const qn = entry.second;
                             
