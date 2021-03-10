@@ -136,11 +136,9 @@ namespace evalsim {
                         jsx::value qn_susceptibilities;
                         
                         auto jqn = jParams("partition")("quantum numbers");
-                        opt::complete_qn<Value>(jParams, jqn);
-                        
                         for (auto& entry : jqn.object() ){
                             
-                            auto const qn = entry.second;
+                            auto const qn = jsx::at<io::rvec>(entry.second);
                             
                             io::cvec s(susc_tensor.size(),0);
                             
@@ -148,7 +146,7 @@ namespace evalsim {
                                 for(int j=0; j<qn.size(); j++){
                                     for (int om=0; om<susc_tensor.size(); om++){
                                         
-                                        s[om] += qn(i).real64()*susc_tensor[om](i,i,j,j)*qn(j).real64();
+                                        s[om] += qn[i]*susc_tensor[om](i,i,j,j)*qn[j];
                                         
                                     }
                                 }
