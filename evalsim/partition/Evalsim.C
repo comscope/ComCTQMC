@@ -10,25 +10,9 @@ namespace evalsim {
             //This options allows one to not compute those objects which can take a while to compute
             bool const lpp = jParams.is("limited post-processing") ? jParams("limited post-processing").boolean() : false;
             
-            //TODO: Move this?
-            bool const ising = (jParams("hloc")("two body").is<jsx::object_t>() && jParams("hloc")("two body").is("approximation")) ? (jParams("hloc")("two body")("approximation").string() == "ising") : false;
-            
-            jParams["hloc"] = ga::read_hloc<Value>("hloc.json");
-            
-            jParams["operators"] = ga::construct_annihilation_operators<Value>(jParams("hloc"));
-            
-            if(jParams.is("dyn"))
-                jParams("dyn")("functions") = mpi::read(jParams("dyn")("functions").string());
-            
-            
             jsx::value jPartition = jParams(cfg::partition::Worm::name());
             
-            opt::complete_qn<Value>(jParams, jPartition["quantum numbers"]);
-            
-            opt::complete_observables<Value>(jParams, jPartition["observables"],ising);
-            
             jsx::value jObservables;
-            
             
             
             jObservables["sign"] = jMeasurements("sign");
