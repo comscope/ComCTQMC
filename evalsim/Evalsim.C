@@ -45,6 +45,9 @@ namespace evalsim {
         
         jsx::value jPartition = jParams(cfg::partition::Worm::name());
         
+        //In case we need the raw input rather than, e.g., the sparse representation
+        jParams["partition record"] = jPartition;
+        
         opt::complete_qn<Value>(jParams, jPartition["quantum numbers"]);
         
         opt::complete_observables<Value>(jParams, jPartition["observables"], ising);

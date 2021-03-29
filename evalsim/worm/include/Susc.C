@@ -135,10 +135,11 @@ namespace evalsim {
                         
                         jsx::value qn_susceptibilities;
                         
-                        auto jqn = jParams("partition")("quantum numbers");
-                        for (auto& entry : jqn.object() ){
+                        auto const& jqn = jParams("partition")("quantum numbers");
+                        for (auto const& entry : jqn.object() ){
                             
-                            auto const qn = jsx::at<io::rvec>(entry.second);
+                            auto vec = entry.second;
+                            auto const qn = jsx::at<io::rvec>( vec );
                             
                             io::cvec s(susc_tensor.size(),0);
                             
@@ -154,6 +155,36 @@ namespace evalsim {
                             
                             qn_susceptibilities[entry.first] = s;
                             
+                        }
+                        
+                        if (jParams("partition record").is("observables")){
+                            auto const& jObs = jParams("partition record")("observables");
+                            for (auto const& entry : jObs.object() ){
+                                
+                                auto jHam = entry.second;
+                                
+                                auto const obs = jsx::at<io::PrettyMatrix<Value>>(jHam["one body"]);
+                                
+                                io::cvec s(susc_tensor.size(),0);
+                                
+                                for(int i=0; i<obs.I(); i++){
+                                    for(int j=0; j<obs.J(); j++){
+                                        for(int k=0; k<obs.I(); k++){
+                                            for(int l=0; l<obs.J(); l++){
+                                                
+                                                for (int om=0; om<susc_tensor.size(); om++){
+                                                    
+                                                    s[om] += obs(i,j)*susc_tensor[om](i,j,k,l)*obs(k,l);
+                                                    
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                            qn_susceptibilities[entry.first] = s;
+                                
+                            }
                         }
                         
                         
