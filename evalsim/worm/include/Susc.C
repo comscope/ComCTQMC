@@ -157,8 +157,8 @@ namespace evalsim {
                             
                         }
                         
-                        if (jParams("partition record").is("observables")){
-                            auto const& jObs = jParams("partition record")("observables");
+                        if (1){
+                            auto const& jObs = jParams("observables record");
                             for (auto const& entry : jObs.object() ){
                                 
                                 auto jHam = entry.second;
