@@ -157,36 +157,33 @@ namespace evalsim {
                             
                         }
                         
-                        if (1){
-                            auto const& jObs = jParams("observables record");
-                            for (auto const& entry : jObs.object() ){
+                        auto const& jObs = jParams("observables record");
+                        for (auto const& entry : jObs.object() ){
                                 
-                                auto jHam = entry.second;
+                            auto jHam = entry.second;
                                 
-                                auto const obs = jsx::at<io::PrettyMatrix<Value>>(jHam["one body"]);
+                            auto const obs = jsx::at<io::PrettyMatrix<Value>>(jHam["one body"]);
                                 
-                                io::cvec s(susc_tensor.size(),0);
+                            io::cvec s(susc_tensor.size(),0);
                                 
-                                for(int i=0; i<obs.I(); i++){
-                                    for(int j=0; j<obs.J(); j++){
-                                        for(int k=0; k<obs.I(); k++){
-                                            for(int l=0; l<obs.J(); l++){
+                            for(int i=0; i<obs.I(); i++){
+                                for(int j=0; j<obs.J(); j++){
+                                    for(int k=0; k<obs.I(); k++){
+                                        for(int l=0; l<obs.J(); l++){
                                                 
-                                                for (int om=0; om<susc_tensor.size(); om++){
+                                            for (int om=0; om<susc_tensor.size(); om++){
                                                     
-                                                    s[om] += obs(i,j)*susc_tensor[om](i,j,k,l)*obs(k,l);
-                                                    
-                                                }
+                                                s[om] += obs(i,j)*susc_tensor[om](i,j,k,l)*obs(k,l);
+                                                
                                             }
                                         }
                                     }
                                 }
-                                
-                            qn_susceptibilities[entry.first] = s;
-                                
                             }
+                                
+                        qn_susceptibilities[entry.first] = s;
+                                
                         }
-                        
                         
                         return qn_susceptibilities;
                     }
