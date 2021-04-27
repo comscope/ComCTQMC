@@ -1,0 +1,22 @@
+target_sources(ctqmc
+	PUBLIC
+	parameters/Defaults.C
+	parameters/Defaults.C 
+	parameters/Initialize.C 
+	options/Basis.C 
+	options/Interaction.C 
+	options/Observable.C 
+	options/Options.C 
+	options/Transformation.C 
+	mpi/Basic.C 
+	mpi/Utilities.C 
+	measurements/Error.C 
+	measurements/Measurements.C 
+	linalg/Operators.C 
+	linalg/LinAlg.C 
+	io/Matrix.C 
+	io/Tensor.C 
+	io/Vector.C 
+	atomic/Tensor.C 
+	atomic/Generate.C
+)
