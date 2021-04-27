@@ -21,9 +21,9 @@ check_language(CUDA)
 IF(CMAKE_CUDA_COMPILER)
 	enable_language(CUDA)
 	add_definitions(-DUSE_CUDA_SINGLE)
-
-	include_directories(${CUDA_INCLUDE_PATH})
-	add_link_options(${CUDA_LINKER_FLAGS})
+	add_definitions(-DMAKE_GPU_ENABLED)
+	include_directories(${CMAKE_SOURCE_DIR}/ctqmc/device/include/)
+        find_package(CUDAToolkit)
 ELSE()
 	message(STATUS "No CUDA support detected")
 ENDIF()
@@ -54,27 +54,35 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 ##################################################################
 
 add_library(ctqmc SHARED)
-target_sources(ctqmc PUBLIC lib/libCTQMC.C)
+target_sources(ctqmc PRIVATE lib/libCTQMC.C)
+
+IF(CMAKE_CUDA_COMPILER)
 target_link_libraries(ctqmc
     ${MPI_LIBRARIES}
     ${LAPACK_LIBRARIES}
     ${BLAS_LIBRARIES}
-)
+    CUDA::cudart)
+ELSE()
+target_link_libraries(ctqmc
+    ${MPI_LIBRARIES}
+    ${LAPACK_LIBRARIES}
+    ${BLAS_LIBRARIES})
+ENDIF()
 
 add_executable(ctqmc_x)
 if (CMAKE_CUDA_COMPILER)
-	target_sources(ctqmc_x PUBLIC ctqmc/device/planar/complex/Main.C)
+	target_sources(ctqmc_x PRIVATE ctqmc/device/planar_complex/Main.C)
 ELSE()
-	target_sources(ctqmc_x PUBLIC ctqmc/host/Main.C)
+	target_sources(ctqmc_x PRIVATE ctqmc/host/Main.C)
 ENDIF()
 target_link_libraries(ctqmc_x ctqmc
     ${MPI_LIBRARIES}
     ${LAPACK_LIBRARIES}
-    ${BLAS_LIBRARIES}
+    ${BLAS_LIBRARIES} 
 )
 
 add_executable(evalsim_x)
-target_sources(evalsim_x PUBLIC evalsim/Main.C)
+target_sources(evalsim_x PRIVATE evalsim/Main.C)
 target_link_libraries(evalsim_x ctqmc
     ${MPI_LIBRARIES}
     ${LAPACK_LIBRARIES}
@@ -87,4 +95,8 @@ add_subdirectory(include)
 add_subdirectory(evalsim)
 add_subdirectory(ctqmc)
 
+##################################################################
 
+if (CMAKE_CUDA_COMPILER)
+	set_property(TARGET ctqmc PROPERTY CUDA_SEPARABLE_COMPILATION ON)
+endif()

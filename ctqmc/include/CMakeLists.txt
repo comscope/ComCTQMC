@@ -1,5 +1,5 @@
 target_sources(ctqmc
-	PUBLIC
+	PRIVATE
 Data.C
 MonteCarlo.C
 Params.C

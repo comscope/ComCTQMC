@@ -1,5 +1,5 @@
 target_sources(ctqmc
-	PUBLIC
+	PRIVATE
 	parameters/Defaults.C
 	parameters/Defaults.C 
 	parameters/Initialize.C 

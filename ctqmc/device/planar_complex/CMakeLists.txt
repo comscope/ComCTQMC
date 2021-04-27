@@ -1,5 +1,5 @@
 target_sources(ctqmc
-	PUBLIC
+	PRIVATE
 ctqmc.C 
 Algebra.cu
 )

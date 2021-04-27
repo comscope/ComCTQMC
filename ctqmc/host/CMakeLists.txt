@@ -1,4 +1,4 @@
 target_sources(ctqmc
-	PUBLIC
+	PRIVATE
 ctqmc.C 
 )
