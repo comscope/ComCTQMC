@@ -17,12 +17,16 @@
 
 namespace evalsim {
     
+
 //Main interfaces
     void evalsim_driver(const char* case_name);
 
 //---------------------------------------------------------------------------------------------------------------------
+    
+    template <typename Value>
+    void complete_params(jsx::value & jParams);
 
-    jsx::value get_observables(jsx::value const& jParams, std::string const name);
+    jsx::value get_observables(jsx::value & jParams, std::string const name);
 
     namespace worm {
         
@@ -69,7 +73,7 @@ namespace evalsim {
     
     
     template<typename Value>
-    jsx::value evalsim(jsx::value const& jParams, jsx::value& jMeasurements);
+    jsx::value evalsim(jsx::value & jParams, jsx::value& jMeasurements);
         
     
 }

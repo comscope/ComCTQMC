@@ -10,25 +10,9 @@ namespace evalsim {
             //This options allows one to not compute those objects which can take a while to compute
             bool const lpp = jParams.is("limited post-processing") ? jParams("limited post-processing").boolean() : false;
             
-            //TODO: Move this?
-            bool const ising = (jParams("hloc")("two body").is<jsx::object_t>() && jParams("hloc")("two body").is("approximation")) ? (jParams("hloc")("two body")("approximation").string() == "ising") : false;
-            
-            jParams["hloc"] = ga::read_hloc<Value>("hloc.json");
-            
-            jParams["operators"] = ga::construct_annihilation_operators<Value>(jParams("hloc"));
-            
-            if(jParams.is("dyn"))
-                jParams("dyn")("functions") = mpi::read(jParams("dyn")("functions").string());
-            
-            
             jsx::value jPartition = jParams(cfg::partition::Worm::name());
             
-            opt::complete_qn<Value>(jParams, jPartition["quantum numbers"]);
-            
-            opt::complete_observables<Value>(jParams, jPartition["observables"],ising);
-            
             jsx::value jObservables;
-            
             
             
             jObservables["sign"] = jMeasurements("sign");
@@ -112,14 +96,18 @@ namespace evalsim {
             
                 mpi::cout << "Adding self-energy high frequency tail ... "  << std::flush;
                 
-                func::add_self_tail(jParams, selfenergy, selfMoments, hyb.size());   //scheisse Value !! Allgemein scheiss moments ...
-                    
+                auto nf_measured = selfenergy.size();
+                auto tail_length = hyb.size();
+                //if (jParams.is("analytical continuation"))
+                 //   tail_length = std::max(tail_length, static_cast<std::size_t>(jParams("analytical continuation")("nf").int64()));
+                
+                func::add_self_tail(jParams, selfenergy, selfMoments, tail_length);   //scheisse Value !! Allgemein scheiss moments ...
+                
                 jObservables["self-energy"] = func::write_functions(jParams, selfenergy, selfMoments);
                     
                 if(selfDyson.size()) jObservables["self-energy-dyson"] = func::write_functions(jParams, selfDyson, selfMoments);
 
                 mpi::cout << "Ok" << std::endl;
-                
                 
                 
                 mpi::cout << "Adding green function high frequency tail ... " << std::flush;
@@ -130,6 +118,21 @@ namespace evalsim {
                 
                 mpi::cout << "Ok" << std::endl;
                 
+                
+                if(jParams.is("analytical continuation")){
+                    
+                    auto const aux = func::get_aux_green(jParams, selfenergy, selfMoments);
+                    
+                    jObservables["aux green matsubara"] = func::write_functions<Value>(jParams, aux);
+                    
+                    std::size_t ntau = jParams("analytical continuation").is("ntau") ?
+                        jParams("analytical continuation")("ntau").int64() :
+                        static_cast<std::size_t>(mpi::number_of_workers()/2);
+                    
+                    jObservables["aux green"] = func::fourier_transform(jParams, jObservables("aux green matsubara"), tail_length, tail_length - nf_measured, ntau);
+                    
+                }
+                
             } else {
                 
                 jObservables["self-energy"] = func::write_functions<Value>(jParams, selfenergy);
@@ -138,45 +141,44 @@ namespace evalsim {
                 
             }
             
-
             
             if(jPartition.is("quantum number susceptibility") ? jPartition("quantum number susceptibility").boolean() : false)
                 
                 jObservables["susceptibility"] = get_qn_susc(jParams, jPartition, jMeasurements, jObservables("scalar"));
             
             if(!lpp)
-            if((jPartition.is("occupation susceptibility bulla")  ? jPartition("occupation susceptibility bulla").boolean()  : false) ||
-               (jPartition.is("occupation susceptibility direct") ? jPartition("occupation susceptibility direct").boolean() : false)) {
-                
-                mpi::cout << "Calculating occupation susceptibility moments ... " << std::flush;
-                
-                io::rmat moments = get_occupation_susc_moments<Value>(jParams, jPartition, jMeasurements, jObservables);
-                
-                mpi::cout << "Ok" << std::endl;
-                
-                
-                if(jPartition.is("occupation susceptibility bulla")  ? jPartition("occupation susceptibility bulla").boolean()  : false) {
+                if((jPartition.is("occupation susceptibility bulla")  ? jPartition("occupation susceptibility bulla").boolean()  : false) ||
+                   (jPartition.is("occupation susceptibility direct") ? jPartition("occupation susceptibility direct").boolean() : false)) {
                     
-                    mpi::cout << "Reading bulla occupation susceptibility ... " << std::flush;
+                    mpi::cout << "Calculating occupation susceptibility moments ... " << std::flush;
                     
-                    jObservables["occupation-susceptibility-bulla"] = get_occupation_susc_bulla(jParams, jPartition, jMeasurements, moments, occupation, correlation, jObservables);
-                
-                    mpi::cout << "Ok" << std::endl;
-                    
-                }
-                
-                
-                if(jPartition.is("occupation susceptibility direct") ? jPartition("occupation susceptibility direct").boolean() : false) {
-                    
-                    mpi::cout << "Reading direct occupation susceptibility ... " << std::flush;
-                    
-                    jObservables["occupation-susceptibility-direct"] = get_occupation_susc_direct(jParams, jPartition, jMeasurements, moments, occupation, correlation, jObservables);
+                    io::rmat moments = get_occupation_susc_moments<Value>(jParams, jPartition, jMeasurements, jObservables);
                     
                     mpi::cout << "Ok" << std::endl;
                     
+                    
+                    if(jPartition.is("occupation susceptibility bulla")  ? jPartition("occupation susceptibility bulla").boolean()  : false) {
+                        
+                        mpi::cout << "Reading bulla occupation susceptibility ... " << std::flush;
+                        
+                        jObservables["occupation-susceptibility-bulla"] = get_occupation_susc_bulla(jParams, jPartition, jMeasurements, moments, occupation, correlation, jObservables);
+                    
+                        mpi::cout << "Ok" << std::endl;
+                        
+                    }
+                    
+                    
+                    if(jPartition.is("occupation susceptibility direct") ? jPartition("occupation susceptibility direct").boolean() : false) {
+                        
+                        mpi::cout << "Reading direct occupation susceptibility ... " << std::flush;
+                        
+                        jObservables["occupation-susceptibility-direct"] = get_occupation_susc_direct(jParams, jPartition, jMeasurements, moments, occupation, correlation, jObservables);
+                        
+                        mpi::cout << "Ok" << std::endl;
+                        
+                    }
+        
                 }
-    
-            }
 
             if(jPartition.is("probabilities"))
                 

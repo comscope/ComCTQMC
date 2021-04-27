@@ -5,7 +5,10 @@
 #include "../../partition/ReadFunctions.h"
 
 #include "../../../include/JsonX.h"
+#include "../../../include/options/Options.h"
+
 #include "../../../ctqmc/include/config/Worms.h"
+
 #include "functions/Functions.h"
 #include "functions/Measurements.h"
 #include "functions/Utilities.h"
@@ -34,6 +37,9 @@ namespace evalsim {
                     template <typename Value>
                     void enforce_symmetries(jsx::value const& jParams, jsx::value const& jWorm, std::vector<io::ctens> const& no_symm, std::vector<io::ctens>& symm);
                     
+                    template <typename Value>
+                    jsx::value qn_susc(jsx::value const& jParams, std::vector<io::ctens> const& susc_tensor);
+                
                 }
                 
                 namespace pp {

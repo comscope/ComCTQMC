@@ -28,6 +28,9 @@ io::Matrix<Value> inv(io::Matrix<Value> const& matrix);
     
 double spectral_norm(io::rmat const& matrix);
 double spectral_norm(io::cmat const& matrix);
+
+template <typename T>
+typename std::enable_if<!std::is_integral<T>::value, std::vector<T>>::type linspace(std::size_t const size, T const begin, T const end, bool endpoint = true);
  
 }
 

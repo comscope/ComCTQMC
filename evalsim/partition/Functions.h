@@ -7,6 +7,8 @@
 #include "../../include/io/Vector.h"
 #include "../../include/io/Matrix.h"
 #include "../../include/atomic/Generate.h"
+#include "../../include/FourierTransform.h"
+
 #include "../../ctqmc/include/bath/Hyb.h"
 #include "../../ctqmc/include/Utilities.h"
 
@@ -68,6 +70,13 @@ namespace evalsim {
             template<typename Value>
             jsx::value write_functions(jsx::value const& jParams, std::vector<io::cmat> const& functionsMatrix);
             
+            template<typename Value>
+            std::vector<io::cmat> get_aux_green(jsx::value const& jParams, std::vector<io::cmat> const& selfenergy, std::vector<io::Matrix<Value>> const& selfMoments);
+            
+            //nf is the number of frequencies in the functions stored by jGm
+            //nhf is the number of these which are in the "high-frequency regime", i.e., added by the tail fit
+            jsx::value fourier_transform(jsx::value const& jParams, jsx::value const& jGm, int const nf, int const nhf, int const ntau);
+                
         }
         
     }

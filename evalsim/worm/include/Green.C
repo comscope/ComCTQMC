@@ -12,8 +12,6 @@ namespace evalsim {
                 jsx::value non_impr_est_evalsim(jsx::value jParams, jsx::value const& jWorm, jsx::value const& jMeasurements, jsx::value const& jPartition, jsx::value const& jObservables){
                     
                     ////Initialization
-                    jParams["hloc"] = ga::read_hloc<Value>("hloc.json");
-                    jParams["operators"] = ga::construct_annihilation_operators<Value>(jParams("hloc"));
                     
                     double const beta = jParams("beta").real64();
                     func::iOmega const iomega(beta); auto const oneBody = jsx::at<io::Matrix<Value>>(jParams("hloc")("one body"));
@@ -83,10 +81,6 @@ namespace evalsim {
                 jsx::value impr_est_evalsim(jsx::value jParams, jsx::value const& jWorm, jsx::value const& jMeasurements, jsx::value const& jPartition, jsx::value const& jObservables){
                     
                     ////Initialization
-                    
-                    jParams["hloc"] = ga::read_hloc<Value>("hloc.json");
-                    
-                    jParams["operators"] = ga::construct_annihilation_operators<Value>(jParams("hloc"));
                     
                     double const beta = jParams("beta").real64();
                     func::iOmega const iomega(beta); auto const oneBody = jsx::at<io::Matrix<Value>>(jParams("hloc")("one body"));

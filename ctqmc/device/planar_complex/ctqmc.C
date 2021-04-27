@@ -103,6 +103,8 @@ namespace ctqmc{
     
     
     if(jSimulation.is("error")) mpi::write(jSimulation("error"), std::string(case_name) + ".err.json");
+    if(jSimulation.is("variance")) mpi::write(jSimulation("variance"), std::string(std::string(case_name)) + ".var.json");
+    if(jSimulation.is("covariance")) mpi::write(jSimulation("covariance"), std::string(std::string(case_name)) + ".covar.json");
     if(jSimulation.is("resample")) jsx::write(jSimulation("resample"), std::string(case_name) + ".meas" + std::to_string(mpi::rank()) + ".json");
     
     

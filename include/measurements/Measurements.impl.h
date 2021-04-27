@@ -39,6 +39,34 @@ namespace meas {
     };
 
     template<typename T, typename M>
+    jsx::value Vector<T,M>::reduce(double fact, Average, bool b64) const {
+        auto samples = samples_;  mpi::barrier(); mpi::all_reduce<mpi::op::sum>(samples);
+        
+        if(!samples) throw std::runtime_error(name() + "::write: no measurements taken !");  //Scheisse das sštt eh nie passiere.
+        
+        auto data = data_; resize_reduce(data, M()); mpi::barrier(); mpi::all_reduce<mpi::op::sum>(data);
+        
+        for(auto& x : data) x *= fact/samples;
+        
+        data.b64() = b64;
+        
+        return std::move(data);
+    };
+
+    template<typename T, typename M>
+    jsx::value Vector<T,M>::reduce(double fact, Rescale, bool b64) const {
+        auto samples = samples_; 
+        
+        auto data = data_; mpi::barrier(); resize_reduce(data, M()); mpi::barrier(); 
+        
+        for(auto& x : data) x *= fact / samples;
+        
+        data.b64() = b64;
+        
+        return std::move(data);
+    };
+
+    template<typename T, typename M>
     void Vector<T,M>::write(jsx::value& dest) const {
         throw std::runtime_error(name() + "::write: not implemented");
     };

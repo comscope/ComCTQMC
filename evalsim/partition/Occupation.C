@@ -72,8 +72,10 @@ namespace evalsim {
             for(auto const& entry : occupation_entries)
                 jOccupation[entry.first] = io::Vector<Value>{{entry.second}};
             
+	    jOccupation["matrix"] = occupation;
+
             occupation = func::get_matrix(occupation_entries, jHybMatrix);
-            
+
             mpi::cout << "Ok" << std::endl;
             
             

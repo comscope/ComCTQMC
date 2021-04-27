@@ -196,7 +196,25 @@ It would be nice to do this in a more automatic fashion...
             auto jOneBody = jParams("hloc")("one body");
             auto const cmat = jsx::at<io::prettycmat>( jOneBody );
             jParams["hloc"]["one body"] = cmat_to_rmat(cmat);
-            
+             
+            if (jParams("partition").is("observables")){
+                
+                for (auto & jObs : jParams("partition")("observables").object()){
+
+                    if (jObs.second.is("one body")){
+                        auto jOneBody = jObs.second("one body");
+                        auto const cmat = jsx::at<io::prettycmat>( jOneBody );
+                        jObs.second["one body"] = cmat_to_rmat(cmat);
+                    }
+                
+                    if (jObs.second.is("two body")){
+                        auto jTwoBody = jObs.second("two body");
+                        auto const cvec = jsx::at<io::cvec>( jTwoBody );
+                        jObs.second["two body"] = cvec_to_rvec(cvec);
+        	    }
+
+		}
+            }  
         }
         
     }

@@ -3,6 +3,22 @@
 
 namespace upd {
     
+    jsx::value ph_diagonal_updates(jsx::value const& jParams){
+        
+        auto const& jHybMatrix = jParams("hybridisation")("matrix");
+        
+        jsx::array_t updates(jHybMatrix.size() * jHybMatrix.size());
+        
+        int indx = 0;
+        for (int i = 0; i < jHybMatrix.size(); i++)
+            for (int j = 0; j < jHybMatrix.size(); j++){
+                updates[indx] = jsx::array_t{2*i + 1, 2*i, 2*j + 1, 2*j};
+                indx++;
+            }
+        
+        return updates;
+    }
+    
     template<typename Mode, typename Value>
     void setup_updates(jsx::value const& jParams, data::Data<Value>& data, state::State<Value> const& state, mch::MarkovChain<Value>& markovChain, int const stream) {
         
@@ -139,10 +155,12 @@ namespace upd {
         
         if(jParams.is(susc_ph::Worm::name())) {
             
+            auto const jOps = jParams(susc_ph::Worm::name())("diagonal").boolean() ? ph_diagonal_updates(jParams) : jsx::empty_t();
+            
             expansion::setup_updates<susc_ph::Worm, Mode>(jParams, data, state, markovChain, stream);
 
-            markovChain.add(make_update<InsertOps<partition::Worm, std::tuple<bilinearPH, bilinearPH>, susc_ph::Worm, ut::sequence<0, 1>>, Mode, Value>(1., jsx::empty_t(), data),
-                            make_update<RemoveOps<susc_ph::Worm, partition::Worm, std::tuple<bilinearPH, bilinearPH>, ut::sequence<0, 1>>, Mode, Value>(1., jsx::empty_t(), data));
+            markovChain.add(make_update<InsertOps<partition::Worm, std::tuple<bilinearPH, bilinearPH>, susc_ph::Worm, ut::sequence<0, 1>>, Mode, Value>(1., jOps, data),
+                            make_update<RemoveOps<susc_ph::Worm, partition::Worm, std::tuple<bilinearPH, bilinearPH>, ut::sequence<0, 1>>, Mode, Value>(1., jOps, data));
             
             markovChain.add(make_update<Reconnect<susc_ph::Worm, 0>, Mode, Value>(0.5));
             markovChain.add(make_update<Reconnect<susc_ph::Worm, 1>, Mode, Value>(0.5));

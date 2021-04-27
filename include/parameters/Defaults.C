@@ -13,6 +13,7 @@ namespace params {
         defaults_["meas"] = jsx::array_t({"imprsum"}); //use improved estimators/not (["imprsum"/""]) (improved estimators not implemented for susceptibilities)
         defaults_["sweep"] = 50;
         defaults_["store"] = 100;
+        defaults_["diagonal"] = false;
         
     }
     
@@ -26,6 +27,7 @@ namespace params {
         defaults_["sweep"] = 50;
         defaults_["store"] = 100;
         defaults_["full"] = true; //compute the full vertex -- only effects the "vertex x" worms and "kernels" block
+        defaults_["diagonal"] = false;
         
     }
 

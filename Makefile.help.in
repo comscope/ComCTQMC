@@ -1,0 +1,94 @@
+# This section is used to set compiler and linker options, and place the required libraries
+#
+#	Compiler options of note:
+#	 	-DNDEBUG : don't make as many runtime checks
+#		-DUSE_CUDA_SINGLE : use single precision representations for the real/complex
+#				valued matrices stored and manipulated on the GPU, this has 
+#				a very large impact on problems with large invariant subspaces 
+#				in the local Hilbert space, particularly if you are running out 
+#				of GPU memory before the acceleration curve is saturated or when
+#				using bulla operators. 
+#	Libraries of note:
+#		You must typically link a math library, i.e., -lm
+
+BASE_CPPFLAGS = -DNDEBUG -DUSE_CUDA_SINGLE
+BASE_LDFLAGS =
+BASE_LIBS = -lm
+
+
+
+# This section is used to set which BLAS and LAPACK libraries will be linked, and also which 
+# compiler/linker flags might be needed to optimize their usage, we have tested with ESSL/LAPACK/MKL
+
+LAPACK_CPPFLAGS =
+LAPACK_LDFLAGS =
+LAPACK_LIBS = -llapack -lblas
+
+
+# This section is used to set compiler and linker flags related to CUDA
+# This section is not needed if you do not intend to compile a GPU accelerated version of ComCTQMC
+# Typically, you only need to set 
+#	the location (-I/$(CUDA_ROOT)/include, -L/$(CUDA_ROOT)/lib64)
+# 	the libraries (-lcudart -lcudadevrt)
+# 	the architecture/compute capability of the GPUs (e.g., sm_70)
+#		see https://developer.nvidia.com/cuda-gpus#compute
+
+CUDA_CPPFLAGS =
+CUDA_LDFLAGS = -L/sw/summit/cuda/10.1.168/lib64 -I/sw/summit/cuda/10.1.168/include
+CUDA_LIBS = -lcudart -lcudadevrt
+GPU_ARCH = sm_70
+
+
+# This section provides the location of the CUTLASS libraries (which are included in this distribution)
+# Do not change this option unless you are working on the GPU code and want to use a different version of CUTLASS
+# This section is not needed if you do not intend to compile a GPU accelerated version of ComCTQMC
+
+CUTLASS_CPPFLAGS = -Ictqmc/device/include
+
+
+# This section sets the compilers and the flags needed to optimize them
+# 	CXX : The non-mpi enabled c++11 compiler
+#	CXX_MPI : The mpi enabled c++11 compiler (including the flag -DHAVE_MPI)
+#	CXXFLAGS : important flags are
+#		-std=c++11 : one must indicate which c++ standard (c++11) ComCTQMC is built upon
+#		-O3 -flto : Optimization level and link time optimization lead to substantial speed gains
+#		-fsigned-char : we require that char's are signed by default
+#		-fexceptions : We requrie exceptions by default
+#		-Wno-sign-compare : Not required, but you will see a large number of harmless warnings if
+#				if you don't turn off this set of warnings
+#		-fPIC : Required if you want to generate a library
+#
+# If a non-mpi build is desired, do not set CXX_MPI or else do not use -DHAVE_MPI
+#
+# If a GPU enabled build is desired, you must set both CXX and CXX_MPI
+#	The compilers for both CXX and CXX_MPI should be the same, 
+#		although CXX_MPI should include the MPI wrapper, 
+#		e.g., g++/mpic++, icpc/mpiicpc
+#
+# If a non-GPU, MPI build is required, only CXX_MPI is required
+
+CXX = g++
+CXX_MPI = mpic++ -DHAVE_MPI
+CXXFLAGS = -std=c++11 -fsigned-char -fno-common -O3 -flto -fexceptions -Wall -Wno-sign-compare
+
+
+#This section sets the CUDA capable compiler and its flags
+#Typically, one reproduces the CXX_FLAGS here, with -Xcompiler preceding them 
+#Typically, on should not change -arch=$(GPU_ARCH) or -ccbin=$(CXX)
+
+NVCC = nvcc
+NVCCFLAGS = -ccbin=$(CXX) -std=c++11 -O3 -Xcompiler -fsigned-char -Xcompiler -fno-common -Xcompiler -fexceptions -Xcompiler -Wall -Xcompiler -Wno-sign-compare -arch=$(GPU_ARCH)
+
+
+#installation directories for executables and libraries
+
+EXE_DIR = ./bin/
+LIB_DIR = ./lib/
+
+
+#Do not change
+
+CPPFLAGS = $(CUTLASS_CPPFLAGS) $(BASE_CPPFLAGS) $(LAPACK_CPPFLAGS) $(CUDA_CPPFLAGS)
+LDFLAGS = $(BASE_LDFLAGS) $(LAPACK_LDFLAGS) $(CUDA_LDFLAGS)
+LIBS = $(BASE_LIBS) $(LAPACK_LIBS)
+

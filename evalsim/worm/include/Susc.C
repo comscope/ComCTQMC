@@ -32,7 +32,12 @@ namespace evalsim {
                         std::vector<io::ctens> susc = meas::read_tensor_functions<Value,Boson>(jMeasurements, jParams, jWorm, jHybMatrix, hyb.size());
                         
                         mpi::cout << "Ok" << std::endl;
-                                              
+                        
+                        std::vector<io::ctens> susc_symm(susc.size(), io::ctens(jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size()));
+                        
+                        jsx::value jObservablesOut;
+                        //func::susc::ph::enforce_symmetries<Value>(jParams,jWorm,susc,susc_symm);
+                        //jObservablesOut["greens function"] = func::write_functions<Value>(jParams, jHybMatrix, susc_symm);
                         
                         mpi::cout << "Computing susceptibility ... " << std::flush;
                         
@@ -42,14 +47,13 @@ namespace evalsim {
                         
                         mpi::cout << "Enforcing symmetries ... " << std::flush;
                         
-                        std::vector<io::ctens> susc_symm(susc.size(), io::ctens(jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size()));
                         func::susc::ph::enforce_symmetries<Value>(jParams,jWorm,susc,susc_symm);
                         
                         mpi::cout << "Ok" << std::endl;
                         
-                        jsx::value jObservablesOut;
-                        
                         jObservablesOut["susceptibility"] = func::write_functions<Value>(jParams, jHybMatrix, susc_symm);
+                        
+                        jObservablesOut["qn"] = qn_susc<Value>(jParams,susc_symm);
                         
                         return jObservablesOut;
                     }
@@ -76,7 +80,7 @@ namespace evalsim {
                         auto const omega = frequencies.omega_b();
                         
                         for(std::size_t n = 0; n < full_in_connected_out.size(); ++n){
-                            for(auto const ijkl : full_in_connected_out[n].ijkl()){
+                            for(auto const& ijkl : full_in_connected_out[n].ijkl()){
                             
                                 auto const i = ijkl[1];
                                 auto const j = ijkl[2];
@@ -108,7 +112,7 @@ namespace evalsim {
                         for(std::size_t n = 0; n < no_symm.size(); ++n){
                             int const m = std::is_same<Value,double>::value ? n : omega_b.pos(-omega_b(n));
                             
-                            for(auto const ijkl : no_symm[n].ijkl()){
+                            for(auto const& ijkl : no_symm[n].ijkl()){
                             
                                 auto const i = ijkl[1];
                                 auto const j = ijkl[2];
@@ -124,6 +128,64 @@ namespace evalsim {
                                 }
                         }
                         
+                    }
+                    
+                    template <typename Value>
+                    jsx::value qn_susc(jsx::value const& jParams, std::vector<io::ctens> const& susc_tensor){
+                        
+                        jsx::value qn_susceptibilities;
+                        
+                        auto const& jqn = jParams("partition")("quantum numbers");
+                        for (auto const& entry : jqn.object() ){
+                            
+                            auto vec = entry.second;
+                            auto const qn = jsx::at<io::rvec>( vec );
+                            
+                            io::cvec s(susc_tensor.size(),0);
+                            
+                            for(int i=0; i<qn.size(); i++){
+                                for(int j=0; j<qn.size(); j++){
+                                    for (int om=0; om<susc_tensor.size(); om++){
+                                        
+                                        s[om] += qn[i]*susc_tensor[om](i,i,j,j)*qn[j];
+                                        
+                                    }
+                                }
+                            }
+                            
+                            qn_susceptibilities[entry.first] = s;
+                            
+                        }
+                        
+                        auto const& jObs = jParams("observables record");
+                        for (auto const& entry : jObs.object() ){
+                                
+                            auto jHam = entry.second;
+                                
+                            auto const obs = jsx::at<io::PrettyMatrix<Value>>(jHam["one body"]);
+                                
+                            io::cvec s(susc_tensor.size(),0);
+                                
+                            for(int i=0; i<obs.I(); i++){
+                                for(int j=0; j<obs.J(); j++){
+                                    for(int k=0; k<obs.I(); k++){
+                                        for(int l=0; l<obs.J(); l++){
+                                                
+                                            for (int om=0; om<susc_tensor.size(); om++){
+                                                    
+                                                s[om] += obs(i,j)*susc_tensor[om](i,j,k,l)*obs(k,l);
+                                                
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                                
+                        qn_susceptibilities[entry.first] = s;
+                                
+                        }
+                        
+                        return qn_susceptibilities;
                     }
                     
                 }
@@ -189,7 +251,7 @@ namespace evalsim {
                         jsx::value const jHybMatrix = jParams("hybridisation")("matrix");
                         
                         for(std::size_t n = 0; n < no_symm.size(); ++n)
-                            for(auto const ijkl : no_symm[n].ijkl()){
+                            for(auto const& ijkl : no_symm[n].ijkl()){
                         
                                 auto const i = ijkl[1];
                                 auto const j = ijkl[2];

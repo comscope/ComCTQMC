@@ -6,10 +6,11 @@ namespace evalsim {
         
         namespace func {
             
-                iOmega::iOmega(double beta) : beta_(beta) {};
-                std::complex<double> iOmega::operator()(int n) const {
-                    return {.0, (2*n + 1)*M_PI/beta_};
-                };
+            
+            iOmega::iOmega(double beta) : beta_(beta) {};
+            std::complex<double> iOmega::operator()(int n) const {
+                return {.0, (2*n + 1)*M_PI/beta_};
+            };
         
             
             template<typename Value>
@@ -286,6 +287,62 @@ namespace evalsim {
             
             template jsx::value write_functions<double>(jsx::value const& jParams, std::vector<io::cmat> const& functionsMatrix);
             template jsx::value write_functions<ut::complex>(jsx::value const& jParams, std::vector<io::cmat> const& functionsMatrix);
+         
+            
+            
+            template<typename Value>
+            std::vector<io::cmat> get_aux_green(jsx::value const& jParams, std::vector<io::cmat> const& selfenergy, std::vector<io::Matrix<Value>> const& selfMoments)
+            {
+                
+                iOmega const iomega(jParams("beta").real64());
+                jsx::value const jHybMatrix = jParams("hybridisation")("matrix");
+                
+                auto const size = selfenergy.size();
+                
+                std::size_t const norb = jHybMatrix.size();
+                
+                std::vector<io::cmat> aux(selfenergy.size(), io::cmat(norb, norb));
+                
+                for(std::size_t n = 0; n < size; ++n) {
+                    io::cmat aux_inv(norb, norb);
+                    
+                    for(std::size_t i = 0; i < norb; ++i)
+                        for(std::size_t j = 0; j < norb; ++j)
+                                aux_inv(i, j) = (i == j ? iomega(n) + selfMoments[0](i,j) : .0) - selfenergy[n](i, j);
+                        
+                    aux[n] = linalg::inv(aux_inv);
+                }
+                
+                return aux;
+            }
+            
+            template std::vector<io::cmat> get_aux_green<double>(jsx::value const& jParams, std::vector<io::cmat> const& selfenergy, std::vector<io::Matrix<double>> const& selfMoments);
+            template std::vector<io::cmat> get_aux_green<ut::complex>(jsx::value const& jParams, std::vector<io::cmat> const& selfenergy, std::vector<io::Matrix<ut::complex>> const& selfMoments);
+            
+            
+            jsx::value fourier_transform(jsx::value const& jParams, jsx::value const& jGm, int const nf, int const nhf, int const ntau){
+                
+                auto const beta = jParams("beta").real64();
+                
+                auto const taus = linalg::linspace<double>(ntau, 0, beta);
+                
+                iOmega const iomega(beta);
+                std::vector<double> omegas(nf);
+                for (int i=0; i < omegas.size(); i++)
+                    omegas[i] = iomega(i).imag();
+                
+                jsx::value jGtau;
+                for (auto& function : jGm.object()){
+                    auto f = function.second;
+                    auto Gm = jsx::at<io::cvec>(f("function"));
+                    jGtau[function.first] = io::cvec(ft::inverseFourier( Gm, omegas, taus, beta, nhf));
+                }
+                
+                return jGtau;
+                
+            }
+            
+            
             
         }
         

@@ -175,9 +175,44 @@ namespace mc {
                 jParams["serial evalsim"] = true;
                 jParams["limited post-processing"] = !jParams("all errors").boolean();
                 
-                meas::reduce(jMeasurements, jMeasurements, jSimulation("etas"), meas::Jackknife(), false);
-                jSimulation["error"] = evalsim::evalsim<Value>(jParams, jMeasurements);
+                jsx::value jJackknifeError;
+                
+                meas::reduce(jJackknifeError, jMeasurements, jSimulation("etas"), meas::Jackknife(), false);
+                jSimulation["error"] = evalsim::evalsim<Value>(jParams, jJackknifeError);
                 meas::error(jSimulation("error"), meas::Jackknife());
+                
+                if (jParams.is("analytical continuation")){
+                    
+                    jParams["limited post-processing"] = false;
+                    
+                    jsx::value jBin;
+                    meas::reduce(jBin, jMeasurements, jSimulation("etas"), meas::Rescale(), false);
+                    jBin = evalsim::evalsim<Value>(jParams, jBin);
+                    
+                    auto jAvg = jBin["partition"]["aux green matsubara"];
+                    auto jDif = jBin["partition"]["aux green matsubara"];
+                    
+                    meas::error(jAvg, meas::Average());
+                    meas::subtract(jDif, jAvg);
+                  
+                    meas::error(jDif, meas::Covariance());
+                    
+                    jSimulation["covariance"]["aux green matsubara"] = jDif;
+                    
+                    if (jBin.is("susc ph")) {
+                        
+                        auto jAvg = jBin["susc ph"]["susceptibility"];
+                        auto jDif = jBin["susc ph"]["susceptibility"];
+                        
+                        meas::error(jAvg, meas::Average());
+                        meas::subtract(jDif, jAvg);
+                        
+                        meas::error(jDif, meas::Covariance());
+                        
+                        jSimulation["covariance"]["susc ph"] = jDif;
+                    }
+                    
+                }
                 
             } else if(jParams("error").string() == "serial") {
                 

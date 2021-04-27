@@ -8,13 +8,98 @@ namespace meas {
         
         mpi::all_reduce<mpi::op::sum>(temp);
         for(std::size_t i = 0; i < arg.size(); ++i)
-        temp[i] = (arg[i] - temp[i]/norm)*(arg[i] - temp[i]/norm);
+            temp[i] = (arg[i] - temp[i]/norm)*(arg[i] - temp[i]/norm);
         
         mpi::reduce<mpi::op::sum>(temp, mpi::master);
         for(std::size_t i = 0; i < arg.size(); ++i)
-        arg[i] = 2.*std::sqrt((norm - 1)/norm*temp[i]);
+            arg[i] = 2.*std::sqrt((norm - 1)/norm*temp[i]);
     }
     
+    
+    void error(std::vector<double>& arg, Variance) {
+        double const norm = mpi::number_of_workers();
+        
+        for(std::size_t i = 0; i < arg.size(); ++i)
+            arg[i] = arg[i]*arg[i];
+        
+        mpi::reduce<mpi::op::sum>(arg, mpi::master);
+        for(std::size_t i = 0; i < arg.size(); ++i)
+            arg[i] /= norm*(norm-1);
+    }
+    
+    void error(std::vector<double>& arg, Covariance) {
+        std::vector<double> cov(arg.size()*arg.size());
+        
+        bool is_bad_worker = false;
+
+        for(std::size_t i = 0; i < arg.size(); ++i)
+        for(std::size_t j = 0; j < arg.size(); ++j){
+            cov[i*arg.size() + j] = arg[i]*arg[j];
+            if (!is_bad_worker or std::isnan(cov[i*arg.size() + j]) ) { is_bad_worker = true; break; }
+        }
+        std::cout << mpi::rank() << " " << cov[0] << " " << is_bad_worker << "\n";        
+        double norm = 1;
+        if (is_bad_worker){
+            norm--;
+            std::fill(cov.begin(), cov.end(), 0.0);
+        }
+        mpi::barrier();
+        mpi::reduce<mpi::op::sum>(norm, mpi::master);
+        
+        if (norm < 2){
+            mpi::cout << "Warning workers did not get good estimates of covariance\n";
+            norm = 2;
+            std::fill(cov.begin(),cov.end(),-2);
+        }
+
+        arg.resize(cov.size());
+        mpi::barrier();
+        mpi::reduce<mpi::op::sum>(cov, mpi::master);
+        for(std::size_t i = 0; i < arg.size(); ++i){
+            arg[i] = cov[i]/(norm*(norm-1));
+        }
+    }
+    
+    void error(std::vector<ut::complex>& arg, Covariance) {
+        std::vector<ut::complex> cov(arg.size()*arg.size());
+        bool is_bad_worker = false;
+
+        for(std::size_t i = 0; i < arg.size(); ++i)
+            for(std::size_t j = 0; j < arg.size(); ++j){
+                cov[i*arg.size() + j] = arg[i]*std::conj(arg[j]);
+                if ( std::isnan(cov[i*arg.size() + j].real()) ) { is_bad_worker = true; break; }
+            }
+        
+        double norm = 1;
+        if (is_bad_worker){
+            norm--;
+            std::fill(cov.begin(), cov.end(), 0.0);
+        }
+        mpi::barrier();
+        mpi::all_reduce<mpi::op::sum>(norm);
+
+        if (norm < 2){
+            mpi::cout << "Warning workers did not get good estimates of covariance\n";
+            norm = 2;
+            std::fill(cov.begin(),cov.end(),-2);
+        }
+
+        arg.resize(cov.size());
+        mpi::barrier();
+        mpi::reduce<mpi::op::sum>(cov, mpi::master);
+        for(std::size_t i = 0; i < arg.size(); ++i){
+            arg[i] = cov[i]/(norm*(norm-1));
+        }
+    }
+    
+    void error(std::vector<double>& arg, Average) {
+        double const norm = mpi::number_of_workers();
+        
+        mpi::barrier();
+        mpi::all_reduce<mpi::op::sum>(arg);
+        for(std::size_t i = 0; i < arg.size(); ++i)
+            arg[i] /= norm;
+    }
     
     void Error::add(jsx::value const& jObservable, jsx::value const& jObservable0) {
         add(jMean_, jSquare_, jObservable, jObservable0);

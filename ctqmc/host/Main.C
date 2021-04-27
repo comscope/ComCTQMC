@@ -1,7 +1,9 @@
 
 #include "ctqmc.h"
 
+#ifndef CMAKE
 ut::Beta ut::beta;
+#endif
 
 int main(int argc, char** argv)
 {

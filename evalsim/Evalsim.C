@@ -2,6 +2,7 @@
 
 namespace evalsim {
 
+
     
     void evalsim_driver(const char* case_name){
         std::time_t time;
@@ -9,7 +10,7 @@ namespace evalsim {
         mpi::cout << "Start post-processing at " << std::ctime(&(time = std::time(nullptr))) << std::endl;
         
         jsx::value jParams = mpi::read(std::string(case_name) + ".json"); params::initialize(jParams); params::complete_worms(jParams);
-           
+        
         jsx::value jObservables0 = get_observables(jParams, std::string(case_name) + ".meas.json");
            
         std::size_t number_of_mpi_processes = mpi::read(std::string(case_name) + ".info.json")("number of mpi processes").int64();
@@ -31,8 +32,28 @@ namespace evalsim {
     
     //---------------------------------------------------------------------------------------------------------------------------------------
     
+    template <typename Value>
+    void complete_params(jsx::value & jParams){
+        bool const ising = (jParams("hloc")("two body").is<jsx::object_t>() && jParams("hloc")("two body").is("approximation")) ? (jParams("hloc")("two body")("approximation").string() == "ising") : false;
+        
+        jParams["hloc"] = ga::read_hloc<Value>("hloc.json");
+        
+        jParams["operators"] = ga::construct_annihilation_operators<Value>(jParams("hloc"));
+        
+        if(jParams.is("dyn"))
+            jParams("dyn")("functions") = mpi::read(jParams("dyn")("functions").string());
+        
+        jsx::value jPartition = jParams(cfg::partition::Worm::name());
+        
+        opt::complete_qn<Value>(jParams, jPartition["quantum numbers"]);
+        
+        opt::complete_observables<Value>(jParams, jPartition["observables"], ising);
+        
+        jParams(cfg::partition::Worm::name()) = jPartition;
+        
+    }
 
-    jsx::value get_observables(jsx::value const& jParams, std::string const name) {
+    jsx::value get_observables(jsx::value & jParams, std::string const name) {
         jsx::value jMeasurements = mpi::read(name);  io::from_tagged_json(jMeasurements);
         
         if(jParams.is("complex") ? jParams("complex").boolean() : false)
@@ -83,9 +104,10 @@ namespace evalsim {
     }
     
     template<typename Value>
-    jsx::value evalsim(jsx::value const& jParams, jsx::value& jMeasurements){
+    jsx::value evalsim(jsx::value & jParams, jsx::value& jMeasurements){
         jsx::value jObservables;
         
+        complete_params<Value>(jParams);
         
         mpi::cout << "Begin evaluating partition measurements" << std::endl;
         
@@ -128,8 +150,8 @@ namespace evalsim {
         
     }
     
-    template jsx::value evalsim<double>(jsx::value const& jParams, jsx::value& jMeasurements);
-    template jsx::value evalsim<ut::complex>(jsx::value const& jParams, jsx::value& jMeasurements);
+    template jsx::value evalsim<double>(jsx::value & jParams, jsx::value& jMeasurements);
+    template jsx::value evalsim<ut::complex>(jsx::value & jParams, jsx::value& jMeasurements);
     
 }
 

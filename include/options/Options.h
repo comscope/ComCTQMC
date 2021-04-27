@@ -36,7 +36,7 @@ namespace opt {
     jsx::value read_observable(jsx::value const& jObservable, int const N, bool ising);
 
     template<typename Value>
-    void complete_observables(jsx::value const& jParams, jsx::value& jObservables, bool ising);
+    void complete_observables(jsx::value& jParams, jsx::value& jObservables, bool ising);
     
 };
 

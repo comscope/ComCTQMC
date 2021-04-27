@@ -186,9 +186,6 @@ namespace opt {
         jTensors["one body"] = std::move(one_body);
         
         
-        
-        
-        
         if (jObservable.is("two body")){
             
             mpi::cout << "two body part ... " << std::flush;
@@ -225,41 +222,51 @@ namespace opt {
     template jsx::value read_observable<std::complex<double>>(jsx::value const& jObservable, int const N, bool ising);
     
     template<typename Value>
-    void complete_observables(jsx::value const& jParams, jsx::value& jObservables, bool ising) {
+    void complete_observables(jsx::value & jParams, jsx::value& jObservables, bool ising) {
     
-    if(jObservables.is<jsx::empty_t>()) jObservables = jsx::object_t();
-    
-    std::vector<std::string> obs_to_delete;
-    for(auto& obs : jObservables.object()){
-        if(!obs.second.size()) {
-            Observable observable = get_observable(jParams("basis"), obs.first);
-            Transformation<Value> transformation(observable.N(), jParams("basis").is("transformation") ? jParams("basis")("transformation") : jsx::empty_t());
+        //ensure we only do this once
+        if (jParams.is("observables constructed") == false){
+                
+            //In case we need the raw input rather than the sparse representation
+            jParams["observables record"] = jObservables;
             
-            obs.second = transform(observable, transformation, ising);
-        } else {
-            mpi::cout << "Reading in and checking observable " << obs.first << " ... " << std::flush;
-            obs.second = read_observable<Value>(obs.second, jParams("hybridisation")("matrix").size(), ising);
+            if(jObservables.is<jsx::empty_t>()) jObservables = jsx::object_t();
+            
+            std::vector<std::string> obs_to_delete;
+            for(auto& obs : jObservables.object()){
+                
+                if(!obs.second.size()) {
+                    Observable observable = get_observable(jParams("basis"), obs.first);
+                    Transformation<Value> transformation(observable.N(), jParams("basis").is("transformation") ? jParams("basis")("transformation") : jsx::empty_t());
+                    
+                    obs.second = transform(observable, transformation, ising);
+                } else {
+                    mpi::cout << "Reading in and checking observable " << obs.first << " ... " << std::flush;
+                    obs.second = read_observable<Value>(obs.second, jParams("hybridisation")("matrix").size(), ising);
+                }
+                
+                obs.second = ga::construct_observable<Value>(jParams("hloc"), obs.second, false);
+                
+                if (obs.second.is<jsx::empty_t>())
+                    obs_to_delete.push_back(obs.first);
+                
+                mpi::cout << " Ok" << std::endl;
+            }
+            
+            //clean up observables which dont survive, i.e., meet commutation requirements
+            for (auto const& key : obs_to_delete){
+                auto& obs = jObservables.object();
+                auto const it = obs.find(key);
+                obs.erase(it);
+            }
+            
+            jParams["observables constructed"] = true;
+            
         }
-
-        obs.second = ga::construct_observable<Value>(jParams("hloc"), obs.second, false);
-        
-        if (obs.second.is<jsx::empty_t>())
-            obs_to_delete.push_back(obs.first);
-        
-        mpi::cout << " Ok" << std::endl;
     }
     
-    //clean up observables which dont survive, i.e., meet commutation requirements
-    for (auto const& key : obs_to_delete){
-        auto& obs = jObservables.object();
-        auto const it = obs.find(key);
-        obs.erase(it);
-    }
-    
-}
-    
-    template void complete_observables<double>(jsx::value const& jParams, jsx::value& jObservables, bool ising);
-    template void complete_observables<std::complex<double>>(jsx::value const& jParams, jsx::value& jObservables, bool ising);
+    template void complete_observables<double>(jsx::value & jParams, jsx::value& jObservables, bool ising);
+    template void complete_observables<std::complex<double>>(jsx::value & jParams, jsx::value& jObservables, bool ising);
     
 };
 
