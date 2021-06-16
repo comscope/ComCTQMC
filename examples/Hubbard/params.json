@@ -16,7 +16,7 @@
             [ "A", "" ], 
             [ "", "A" ] ]
     },
-    "measurement time": 50,
+    "measurement time": 4,
     "thermalisation time": 1,
     "mu": 4,
     "partition": {
@@ -33,41 +33,41 @@
         "susceptibility cutoff": 50,
         "susceptibility tail": 200
     },
-    "green-": {
+    "green": {
         "basis": "matsubara",
         "cutoff": 50,
         "meas": [ "imprsum" ]
     },
-    "susc ph": {
+    "susc ph-": {
         "basis": "matsubara",
         "cutoff": 50,
         "meas": [ "" ]
     },
-    "susc pp": {
+    "susc pp-": {
         "basis": "matsubara",
         "cutoff": 50,
         "meas": [ "" ]
     },
-    "hedin ph": {
+    "hedin ph-": {
         "basis": "matsubara",
         "fermion cutoff": 100,
 	"boson cutoff": 50,
         "meas": [ "imprsum" ]
     },
-    "hedin pp": {
+    "hedin pp-": {
         "basis": "matsubara",
         "fermion cutoff": 100,
 	"boson cutoff": 50,
         "meas": [ "imprsum" ]
     },
-    "vertex": {
+    "vertex-": {
         "basis": "matsubara",
         "fermion cutoff": 25,
 	"boson cutoff": 10,
         "meas": [ "imprsum" ],
 	"full": true
     },
-    "kernels": {
+    "kernels-": {
         "asymptotic cutoff": 5,
         "boson cutoff": 11,
         "fermion cutoff": 20,
