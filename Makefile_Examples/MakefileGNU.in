@@ -1,0 +1,15 @@
+BASE_CPPFLAGS = -DNDEBUG
+BASE_LDFLAGS =
+BASE_LIBS = -lm -lmpi
+
+LAPACK_CPPFLAGS = 
+LAPACK_LDFLAGS = 
+LAPACK_LIBS = -llapack -lblas -lstdc++ -lmpi_cxx
+
+CXX = gcc
+CXX_MPI = mpicc -DHAVE_MPI -I/usr/include/mpi
+CXXFLAGS = -Wall -O3 -fexceptions -std=c++11 -m64
+
+CPPFLAGS = $(BASE_CPPFLAGS) $(LAPACK_CPPFLAGS) 
+LDFLAGS = $(BASE_LDFLAGS) $(LAPACK_LDFLAGS)
+LIBS = $(BASE_LIBS) $(LAPACK_LIBS) 
