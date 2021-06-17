@@ -1,9 +1,10 @@
 {
     "beta": 10,
+    "mu": 4,
     "complex": false,
-    "restart": false,
-    "partition fraction": 0.2,
     "sim per device": 0,
+    "measurement time": 4,
+    "thermalisation time": 1,
     "hloc": {
         "one body": [ 
             [ 0, 0 ], 
@@ -16,9 +17,6 @@
             [ "A", "" ], 
             [ "", "A" ] ]
     },
-    "measurement time": 4,
-    "thermalisation time": 1,
-    "mu": 4,
     "partition": {
         "green basis": "matsubara",
         "green bulla": true,
@@ -33,7 +31,7 @@
         "susceptibility cutoff": 50,
         "susceptibility tail": 200
     },
-    "green": {
+    "green-": {
         "basis": "matsubara",
         "cutoff": 50,
         "meas": [ "imprsum" ]
