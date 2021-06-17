@@ -29,7 +29,7 @@ def Arguments(add_help=False):
                      
                      
     group.add_argument("--cutoff", dest="cutoff",
-                     default=50,
+                     default=50, type=int,
                      help="Show firs {cutoff} frequencies of {field}")
                      
     return parser
