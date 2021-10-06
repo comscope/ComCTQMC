@@ -129,6 +129,7 @@ namespace evalsim {
                     mpi::cout << "Adding self-energy high frequency tail ... "  << std::flush;
                     
                     func::green::add_self_tail(jHybMatrix, iomega, self, selfMoments, hyb.size());
+                    selfMoments = get_function_matrix(get_function_entries(selfMoments, jHybMatrix), jHybMatrix);
                     jObservablesOut["self-energy"] =  func::write_functions(jParams, jHybMatrix, self, selfMoments);
                     
                     mpi::cout << "Ok" << std::endl;
@@ -137,6 +138,7 @@ namespace evalsim {
                     mpi::cout << "Adding green function high frequency tail ... " << std::flush;
                     
                     func::green::add_green_tail<Value>(jParams, iomega, oneBody, hyb, self, green);
+                    greenMoments = func::get_function_matrix(func::get_function_entries(greenMoments, jHybMatrix), jHybMatrix);
                     jObservablesOut["green"] = func::write_functions(jParams, jHybMatrix, green, greenMoments);
                     
                     mpi::cout << "Ok" << std::endl;
@@ -165,15 +167,15 @@ namespace evalsim {
                             for(std::size_t j = 0; j < jHybMatrix.size(); ++j)
                                 inv_weiss(i,j) =  (i == j ? iomega(n) + mu : .0) - oneBody(i, j) - hyb[n](i, j) ;
                             
-                        auto const weiss = linalg::inv(inv_weiss);
+                        
                         for(std::size_t i = 0; i < jHybMatrix.size(); ++i)
                             for(std::size_t j = 0; j < jHybMatrix.size(); ++j){
                                 
                                 green[n](i,j) = 0;
                                 for(std::size_t k = 0; k < jHybMatrix.size(); ++k){
                                     
-                                    green[n](i,j) +=
-                                    weiss(i,k) * ((j == k ? 1.0 : 0.0) + sigmagreen[n](k,j));
+                                    green[n](i,j) += std::abs(inv_weiss(i,k)) > 0 ? 
+                                     ((j == k ? 1.0 : 0.0) + sigmagreen[n](k,j)) / inv_weiss(i,k) : 0.;
                                     
                                 }
                             }
@@ -203,7 +205,6 @@ namespace evalsim {
                     std::vector<io::Matrix<Value>> greenMoments;
                     
                     jsx::value jHamiltonian =  evalsim::partition::get_hamiltonian<Value>(jParams);
-                    
                     jsx::value jC = jsx::array_t(jHybMatrix.size());
                     for(std::size_t i = 0; i < jHybMatrix.size(); ++i)
                     {
@@ -318,12 +319,11 @@ namespace evalsim {
                         
                     }
                     
-                    greenMoments = func::get_function_matrix(func::get_function_entries(greenMoments, jHybMatrix), jHybMatrix);
-                    
                     for(std::size_t i = 0; i < jHybMatrix.size(); ++i)
                         for(std::size_t j = 0; j < jHybMatrix.size(); ++j)
                             greenMoments[2](i, j) += hybMoments[0](i, j);
-                    
+                        
+
                     return greenMoments;
                 }
                 
@@ -346,8 +346,6 @@ namespace evalsim {
                             selfMoments[0](i, j) += (i == j ? mu : .0) - oneBody(i, j) - greenMoments[1](i, j);
                             selfMoments[1](i, j) += greenMoments[2](i, j) - gm1gm1(i, j);
                         }
-                    
-                    selfMoments = get_function_matrix(get_function_entries(selfMoments, jHybMatrix), jHybMatrix);
                     
                     
                     return  selfMoments;

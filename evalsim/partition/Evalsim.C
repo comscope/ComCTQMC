@@ -129,7 +129,7 @@ namespace evalsim {
                         jParams("analytical continuation")("ntau").int64() :
                         static_cast<std::size_t>(mpi::number_of_workers()/2);
                     
-                    jObservables["aux green"] = func::fourier_transform(jParams, jObservables("aux green matsubara"), tail_length, tail_length - nf_measured, ntau);
+                    //jObservables["aux green"] = func::fourier_transform(jParams, jObservables("aux green matsubara"), tail_length, tail_length - nf_measured, ntau);
                     
                 }
                 
