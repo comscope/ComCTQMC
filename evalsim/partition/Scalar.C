@@ -53,6 +53,37 @@ namespace evalsim {
             mpi::cout << "Ok" << std::endl;
             
             
+            mpi::cout << "Calculating (log of) the Atomic Partition Function ... " << std::flush;
+            
+            double beta = jParams("beta").real64();
+            io::rvec energies;
+            
+            for(std::size_t s = 0; s < jHamiltonianEff.size(); ++s){
+                if(!jHamiltonianEff(s)("target").is<jsx::null_t>()) {
+                    std::size_t const m = jHamiltonianEff(s)("target").int64();
+                    
+                    if(!jHamiltonianEff(m)("target").is<jsx::null_t>()) {
+                        std::size_t const t = jHamiltonianEff(m)("target").int64();
+                        
+                        auto mat = jsx::at<io::rmat>(jHamiltonianEff(s)("matrix"));
+                        for (std::size_t i = 0; i < mat.I(); ++i){
+                            energies.push_back( - beta * mat(i,i));
+                        }
+                    }
+                }
+            }
+            
+            auto it = std::max_element(std::begin(energies), std::end(energies));
+            auto const maxe = *it;
+            auto sum = 0;
+            for (auto const& x : energies)
+                sum += std::exp(x - maxe);
+            
+            jScalar["ln(atomic Z)"] = io::rvec{{maxe + std::log(sum)}};
+                
+                
+            mpi::cout << "Ok" << std::endl;
+            
             return jScalar;
         }
         
