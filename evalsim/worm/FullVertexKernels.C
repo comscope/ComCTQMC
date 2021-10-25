@@ -368,17 +368,17 @@ namespace evalsim {
             if (do_spp)
                 jKernel_1["pp"] = func::write_functions<Value>(jParams, jHybMatrix, kernel_1_pp);
             
-            if (do_hph or do_sph)
+            if (do_hph)
                 jKernel_2["ph"] = func::write_functions<Value>(jParams, jHybMatrix, kernel_2_ph);
-            if (do_htph or do_stph)
+            if (do_htph)
                 jKernel_2["tph"] = func::write_functions<Value>(jParams, jHybMatrix, kernel_2_tph);
-            if (do_hpp or do_spp)
+            if (do_hpp)
                 jKernel_2["pp"] = func::write_functions<Value>(jParams, jHybMatrix, kernel_2_pp);
             
             if (do_sph or do_spp or do_stph)
                 jObservablesOut["kernel 1"] = std::move(jKernel_1);
             
-            if (do_hph or do_hpp or do_htph or do_sph or do_spp or do_stph)
+            if (do_hph or do_hpp or do_htph)
                 jObservablesOut["kernel 2"] = std::move(jKernel_2);
             
             mpi::cout << "OK" << std::endl;
