@@ -16,7 +16,7 @@ namespace evalsim {
                     
                 if (symmetric){
                     if (!bosonic and !n%2) throw std::runtime_error("symmetric OmegaMap: number of fermionic frequencies must be even\n");
-                    if (bosonic and n%2 == n) throw std::runtime_error("symmetric OmegaMap: number of bosonic frequencies must be odd\n");
+                    if (bosonic and n%2 == 0) throw std::runtime_error("symmetric OmegaMap: number of bosonic frequencies must be odd\n");
                 }
                 
                 int const start = !symmetric ? 0 : -n_/2;

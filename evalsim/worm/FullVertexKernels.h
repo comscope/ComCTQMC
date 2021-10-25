@@ -66,6 +66,8 @@ namespace evalsim {
         
         template<typename Value>
         jsx::value evaluateFullVertexFromKernels(jsx::value jParams, jsx::value const& jObservables);
+    
+        std::vector<std::vector<int>> construct_ijkls(int const);
         
         
     }

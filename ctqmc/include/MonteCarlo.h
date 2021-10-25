@@ -31,6 +31,10 @@ namespace mc {
     template<typename Value>
     void statistics(jsx::value jParams, jsx::value& jSimulation);
 
+
+    template <typename Value>
+    jsx::value covariance(jsx::value const& jBin);
+
 }
 
 #include "MonteCarlo.impl.h"

@@ -189,28 +189,7 @@ namespace mc {
                     meas::reduce(jBin, jMeasurements, jSimulation("etas"), meas::Rescale(), false);
                     jBin = evalsim::evalsim<Value>(jParams, jBin);
                     
-                    auto jAvg = jBin["partition"]["aux green matsubara"];
-                    auto jDif = jBin["partition"]["aux green matsubara"];
-                    
-                    meas::error(jAvg, meas::Average());
-                    meas::subtract(jDif, jAvg);
-                  
-                    meas::error(jDif, meas::Covariance());
-                    
-                    jSimulation["covariance"]["aux green matsubara"] = jDif;
-                    
-                    if (jBin.is("susc ph")) {
-                        
-                        auto jAvg = jBin["susc ph"]["susceptibility"];
-                        auto jDif = jBin["susc ph"]["susceptibility"];
-                        
-                        meas::error(jAvg, meas::Average());
-                        meas::subtract(jDif, jAvg);
-                        
-                        meas::error(jDif, meas::Covariance());
-                        
-                        jSimulation["covariance"]["susc ph"] = jDif;
-                    }
+                    jSimulation["covariance"]["aux green matsubara"] = covariance<Value>(jBin["partition"]["aux green matsubara"]);
                     
                 }
                 
@@ -231,6 +210,24 @@ namespace mc {
     
     template void statistics<double>(jsx::value jParams, jsx::value& jSimulation);
     template void statistics<ut::complex>(jsx::value jParams, jsx::value& jSimulation);
+    
+    template <typename Value>
+    jsx::value covariance(jsx::value const& jBin){
+        
+        auto jAvg = jBin;
+        auto jDif = jBin;
+        
+        meas::error(jAvg, meas::Average());
+        meas::subtract(jDif, jAvg);
+        
+        meas::error(jDif, meas::Covariance());
+        
+        return jDif;
+        
+    }
+    
+    template jsx::value covariance<double>(jsx::value const& jBin);
+    template jsx::value covariance<std::complex<double>>(jsx::value const& jBin);
 }
 
 

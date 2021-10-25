@@ -143,37 +143,25 @@ namespace evalsim {
             
             mpi::cout << "Evaluating asymptotic vertex kernels" << std::endl;
             
-            if (!jObservables.is(cfg::susc_ph::Worm::name()) or
-                !jObservables.is(cfg::susc_pp::Worm::name()) or
-                !jObservables.is(cfg::hedin_ph_imprsum::Worm::name()) or
-                !jObservables.is(cfg::hedin_pp_imprsum::Worm::name())){
-                
-                mpi::cout << jObservables.is(cfg::susc_ph::Worm::name()) << std::endl;
-                mpi::cout << jObservables.is(cfg::susc_pp::Worm::name()) << std::endl;
-                mpi::cout << jObservables.is(cfg::hedin_ph_imprsum::Worm::name()) << std::endl;
-                mpi::cout << jObservables.is(cfg::hedin_pp_imprsum::Worm::name()) << std::endl;
-                
-                throw std::runtime_error("Vertex kernel evaluation require ctqmc measurement of susc_ph/pp and hedin_ph/pp (imprsum versions)");
-                
-                return jsx::null_t();
-            }
+            jsx::value jWorm = jParams(worm::Kernels::name);
             
-            jsx::value jWorm = jParams(cfg::hedin_ph_imprsum::Worm::name());
+            int b_cutoff =  jWorm.is("boson cutoff") ? std::max(1, int(jWorm("boson cutoff").int64())) : 1;
+            int f_cutoff = jWorm.is("fermion cutoff") ? std::max(1, int(jWorm("fermion cutoff").int64())) : 50;
+            
             
             //double const beta = jParams("beta").real64();
             int const pos_and_neg_freq = (std::is_same<Value,double>::value ? 1 : 2);
-            int const nMatGB = pos_and_neg_freq*jWorm("boson cutoff").int64()-pos_and_neg_freq+1;
-            int const nMatGF = 2*(jWorm("basis").string() == "matsubara" ? jWorm("fermion cutoff").int64() : ( jWorm.is("fermion cutoff") ? jWorm("fermion cutoff").int64() : 50 ));
+            int const nMatGB = pos_and_neg_freq*b_cutoff - pos_and_neg_freq + 1;
+            int const nMatGF = 2*f_cutoff;
             
             func::OmegaMap omega_f(nMatGF,false,true);
             func::OmegaMap omega_b(nMatGB,true,!std::is_same<Value,double>::value);
             
-            int const nMatGB_kernel = 2*jWorm("boson cutoff").int64()-1;
-            int const nMatGF_kernel = 2*(jWorm("basis").string() == "matsubara" ? jWorm("fermion cutoff").int64() : ( jWorm.is("fermion cutoff") ? jWorm("fermion cutoff").int64() : 50 ));
+            int const nMatGB_kernel = 2*b_cutoff - 1;
+            int const nMatGF_kernel = nMatGF;
             
             func::OmegaMap omega_f_kernel(nMatGF_kernel,false,true);
             func::OmegaMap omega_b_kernel(nMatGB_kernel,true,true);
-            
             
             jsx::value const jHybMatrix = jParams("hybridisation")("matrix");
             std::vector<io::cmat> hyb; std::vector<io::Matrix<Value>> hybMoments;
@@ -187,38 +175,42 @@ namespace evalsim {
             func::OmegaMap greenOM(green.size(),false,true);
             
             
-            auto const susc_ph = rearrange_susc_ph( meas::read_tensor_functions_from_obs<ut::complex>(jObservables(cfg::susc_ph::Worm::name())("susceptibility"), jParams, jParams(cfg::susc_ph::Worm::name()), jHybMatrix, hyb.size()));
-            auto const susc_pp = rearrange_susc_pp( meas::read_tensor_functions_from_obs<ut::complex>(jObservables(cfg::susc_pp::Worm::name())("susceptibility"), jParams, jParams(cfg::susc_ph::Worm::name()), jHybMatrix, hyb.size()));
-            auto const susc_tph = rearrange_susc_tph(susc_ph);
+            auto const susc_ph = jObservables.is(cfg::susc_ph::Worm::name()) ?
+            rearrange_susc_ph( meas::read_tensor_functions_from_obs<ut::complex>(jObservables(cfg::susc_ph::Worm::name())("susceptibility"), jParams, jParams(cfg::susc_ph::Worm::name()), jHybMatrix, hyb.size())) : std::vector<io::ctens>();
+            auto const susc_pp = jObservables.is(cfg::susc_pp::Worm::name()) ?
+                rearrange_susc_pp( meas::read_tensor_functions_from_obs<ut::complex>(jObservables(cfg::susc_pp::Worm::name())("susceptibility"), jParams, jParams(cfg::susc_ph::Worm::name()), jHybMatrix, hyb.size())) : std::vector<io::ctens>();
+            auto const susc_tph = jObservables.is(cfg::susc_ph::Worm::name()) ? rearrange_susc_tph(susc_ph) : std::vector<io::ctens>();
             
-            auto const hedin_ph = rearrange_hedin_ph( meas::read_tensor_functions_from_obs<ut::complex>(jObservables(cfg::hedin_ph_imprsum::Worm::name())("susceptibility"), jParams, jParams(cfg::hedin_ph_imprsum::Worm::name()), jHybMatrix, hyb.size()));
-            auto const hedin_pp = rearrange_hedin_pp( meas::read_tensor_functions_from_obs<ut::complex>(jObservables(cfg::hedin_pp_imprsum::Worm::name())("susceptibility"), jParams, jParams(cfg::hedin_pp_imprsum::Worm::name()), jHybMatrix, hyb.size()));
-            auto const hedin_tph = rearrange_hedin_tph(hedin_ph);
+            auto const do_sph = susc_ph.size() > 0;
+            auto const do_spp = susc_pp.size() > 0;
+            auto const do_stph = susc_tph.size() > 0;
             
-            std::vector<io::ctens> vertex = meas::read_tensor_functions_from_obs<ut::complex>(jObservables(cfg::vertex_imprsum::Worm::name())("susceptibility"), jParams, jParams(cfg::vertex_imprsum::Worm::name()), jHybMatrix, hyb.size());
+            auto const hedin_ph = jObservables.is(cfg::hedin_ph_imprsum::Worm::name()) ?
+                rearrange_hedin_ph( meas::read_tensor_functions_from_obs<ut::complex>(jObservables(cfg::hedin_ph_imprsum::Worm::name())("susceptibility"), jParams, jParams(cfg::hedin_ph_imprsum::Worm::name()), jHybMatrix, hyb.size())) : std::vector<io::ctens>();
+            auto const hedin_pp = jObservables.is(cfg::hedin_pp_imprsum::Worm::name()) ?
+            rearrange_hedin_pp( meas::read_tensor_functions_from_obs<ut::complex>(jObservables(cfg::hedin_pp_imprsum::Worm::name())("susceptibility"), jParams, jParams(cfg::hedin_pp_imprsum::Worm::name()), jHybMatrix, hyb.size())) : std::vector<io::ctens>();
+            auto const hedin_tph = jObservables.is(cfg::hedin_ph_imprsum::Worm::name()) ? rearrange_hedin_tph(hedin_ph) : std::vector<io::ctens>();
+            
+            auto const do_hph = hedin_ph.size() > 0;
+            auto const do_hpp = hedin_pp.size() > 0;
+            auto const do_htph = hedin_tph.size() > 0;
+            
+            std::vector<io::ctens> vertex = jObservables.is(cfg::vertex_imprsum::Worm::name()) ?
+            meas::read_tensor_functions_from_obs<ut::complex>(jObservables(cfg::vertex_imprsum::Worm::name())("susceptibility"), jParams, jParams(cfg::vertex_imprsum::Worm::name()), jHybMatrix, hyb.size()) : std::vector<io::ctens>();
+            
+            auto const do_v = vertex.size() > 0;
             
             mpi::cout << "OK" << std::endl;
             
             //Construct interaction matrix U_ijkl
-            mpi::cout << "Constructing interaction matrix ... " << std::endl;
+            mpi::cout << "Constructing interaction matrix ... " << std::flush;
             
             //This matrix has a factor of 1/2 built in, so we must adjust the resulting kernel equations
-            params::complete_impurity<Value>(jParams);
+            //params::complete_impurity<Value>(jParams);
             imp::Tensor<Value> const U_tmp(jParams("hloc")("two body"),jHybMatrix.size());
             InteractionTensor<Value> const U(U_tmp,jHybMatrix.size());
             
             mpi::cout << "OK" << std::endl;
-            
-            
-            if (susc_ph.size() != susc_pp.size())
-            throw std::runtime_error("To evaluate asymptotic vertex kernels, all hedin and susc worms must share cutoff frequencies\n");
-            
-            if (hedin_ph.size() != hedin_pp.size())
-            throw std::runtime_error("To evaluate asymptotic vertex kernels, all hedin and susc worms must share cutoff frequencies\n");
-            
-            if (susc_ph.size() != nMatGB)
-            throw std::runtime_error("To evaluate asymptotic vertex kernels, all hedin and susc worms must share cutoff frequencies\n");
-            
             
             //Construct Kernel-1 Functions
             mpi::cout << "Calculating Kernel-1 functions ... " << std::flush;
@@ -227,18 +219,20 @@ namespace evalsim {
             std::vector<io::ctens> kernel_1_pp(nMatGB_kernel, io::ctens(jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size()));
             std::vector<io::ctens> kernel_1_tph(nMatGB_kernel, io::ctens(jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size()));
             
+            auto const abcds = do_v ? vertex[0].ijkl() : construct_ijkls(jHybMatrix.size());
+            
             for (int n=0; n<nMatGB_kernel; n++){
                 
                 int const n_susc_test = omega_b.pos(omega_b_kernel(n));
                 bool const do_conj = n_susc_test < 0 ? true : false;
                 int const n_susc = do_conj ? omega_b.pos(-omega_b_kernel(n)) : n_susc_test;
                 
-                for(auto const& ijkl : vertex[0].ijkl()){
+                for(auto const& abcd : abcds){
                     
-                    auto const a=ijkl[1];
-                    auto const b=ijkl[2];
-                    auto const c=ijkl[3];
-                    auto const d=ijkl[4];
+                    auto const a=abcd[1];
+                    auto const b=abcd[2];
+                    auto const c=abcd[3];
+                    auto const d=abcd[4];
                     
                     std::string const entry = std::to_string(2*a)+"_"+std::to_string(2*b+1)+"_"+std::to_string(2*c)+"_"+std::to_string(2*d+1);
                     
@@ -246,23 +240,45 @@ namespace evalsim {
                     kernel_1_tph[n].emplace(a,b,c,d,entry,0.);
                     kernel_1_pp[n].emplace(a,b,c,d,entry,0.);
                     
-                    for(std::size_t i = 0; i < jHybMatrix.size(); ++i)
-                    for(std::size_t j = 0; j < jHybMatrix.size(); ++j)
-                    for(std::size_t k = 0; k < jHybMatrix.size(); ++k)
-                    for(std::size_t l = 0; l < jHybMatrix.size(); ++l){
-                        
-                        if (do_conj){
-                            kernel_1_ph[n](a,b,c,d) -= 4.*U(a,j,b,i) * std::conj(susc_ph[n_susc].at(i,j,k,l)) * U(l,c,k,d);
-                            kernel_1_tph[n](a,b,c,d) -= 4.*U(a,l,i,d) * std::conj(susc_tph[n_susc].at(i,j,k,l)) * U(j,c,b,k);
-                            kernel_1_pp[n](a,b,c,d) -= U(a,c,k,i) * std::conj(susc_pp[n_susc].at(i,j,k,l)) * U(l,j,b,d);
-                        } else {
-                            kernel_1_ph[n](a,b,c,d) -= 4.*U(a,j,b,i) * susc_ph[n_susc].at(i,j,k,l) * U(l,c,k,d);
-                            kernel_1_tph[n](a,b,c,d) -= 4.*U(a,l,i,d) * susc_tph[n_susc].at(i,j,k,l) * U(j,c,b,k);
-                            kernel_1_pp[n](a,b,c,d) -= U(a,c,k,i) * susc_pp[n_susc].at(i,j,k,l) * U(l,j,b,d);
+                    if (do_sph)
+                        for (auto const& ijkl : susc_ph[0].ijkl()){
+                            auto const i=ijkl[1];
+                            auto const j=ijkl[2];
+                            auto const k=ijkl[3];
+                            auto const l=ijkl[4];
+                            if (do_conj)
+                                kernel_1_ph[n](a,b,c,d) -= 4.*U(a,j,b,i) * std::conj(susc_ph[n_susc].at(i,j,k,l)) * U(l,c,k,d);
+                            else
+                                kernel_1_ph[n](a,b,c,d) -= 4.*U(a,j,b,i) * susc_ph[n_susc].at(i,j,k,l) * U(l,c,k,d);
+                            
                         }
-                        
-                    }
+                      
+                    if (do_stph)
+                        for (auto const& ijkl : susc_tph[0].ijkl()){
+                            auto const i=ijkl[1];
+                            auto const j=ijkl[2];
+                            auto const k=ijkl[3];
+                            auto const l=ijkl[4];
+                            if (do_conj)
+                                kernel_1_tph[n](a,b,c,d) -= 4.*U(a,l,i,d) * std::conj(susc_tph[n_susc].at(i,j,k,l)) * U(j,c,b,k);
+                            else
+                                kernel_1_tph[n](a,b,c,d) -= 4.*U(a,l,i,d) * susc_tph[n_susc].at(i,j,k,l) * U(j,c,b,k);
+                        }
+                    
+                    if (do_spp)
+                        for (auto const& ijkl : susc_pp[0].ijkl()){
+                            auto const i=ijkl[1];
+                            auto const j=ijkl[2];
+                            auto const k=ijkl[3];
+                            auto const l=ijkl[4];
+                            if (do_conj)
+                                kernel_1_pp[n](a,b,c,d) -= U(a,c,k,i) * std::conj(susc_pp[n_susc].at(i,j,k,l)) * U(l,j,b,d);
+                            else
+                                kernel_1_pp[n](a,b,c,d) -= U(a,c,k,i) * susc_pp[n_susc].at(i,j,k,l) * U(l,j,b,d);
+                        }
+                    
                 }
+                
             }
             
             mpi::cout << "OK" << std::endl;
@@ -288,14 +304,13 @@ namespace evalsim {
                 int const nu_neg = omega_f_kernel.pos(-omega_f_kernel(nu));
                 int const n_susc = do_conj ? nu_neg + om_susc*nMatGF : nu + om_susc*nMatGF;
                 
+                for(auto const& abcd : abcds){
                 
-                for(auto const& ijkl : vertex[0].ijkl()){
-                
-                    auto const a=ijkl[1];
-                    auto const b=ijkl[2];
-                    auto const c=ijkl[3];
-                    auto const d=ijkl[4];
-                
+                    auto const a=abcd[1];
+                    auto const b=abcd[2];
+                    auto const c=abcd[3];
+                    auto const d=abcd[4];
+                    
                     std::string const entry = std::to_string(2*a)+"_"+std::to_string(2*b+1)+"_"+std::to_string(2*c)+"_"+std::to_string(2*d+1);
                     
                     kernel_2_ph[n].emplace(a,b,c,d,entry, -kernel_1_ph[om].at(a,b,c,d));
@@ -304,17 +319,35 @@ namespace evalsim {
                     
                     for(std::size_t i = 0; i < jHybMatrix.size(); ++i)
                     for(std::size_t j = 0; j < jHybMatrix.size(); ++j){
-                        
-                        if (do_conj){
-                            kernel_2_ph[n](a,b,c,d)  -= 2.* std::conj(hedin_ph[n_susc].at(a,b,j,i))*U(i,c,j,d)/(green[wf](a,a)*green[wb](b,b));
-                            kernel_2_tph[n](a,b,c,d) -= 2.*std::conj(hedin_tph[n_susc].at(a,i,j,d))*U(i,c,b,j)/(green[wf](a,a)*green[wb](d,d));
-                            kernel_2_pp[n](a,b,c,d)  +=     std::conj(hedin_pp[n_susc].at(a,i,c,j))*U(j,i,b,d)/(green[wf](a,a)*green[wc](c,c));
-                        } else {
-                            kernel_2_ph[n](a,b,c,d)  -= 2.* (hedin_ph[n_susc].at(a,b,j,i))*U(i,c,j,d)/(green[wf](a,a)*green[wb](b,b));
-                            kernel_2_tph[n](a,b,c,d) -= 2.*(hedin_tph[n_susc].at(a,i,j,d))*U(i,c,b,j)/(green[wf](a,a)*green[wb](d,d));
-                            kernel_2_pp[n](a,b,c,d)  +=     (hedin_pp[n_susc].at(a,i,c,j))*U(j,i,b,d)/(green[wf](a,a)*green[wc](c,c));
+                    
+                        if (do_hph){
+                            if (do_conj){
+                                kernel_2_ph[n](a,b,c,d)  -= 2.* std::conj(hedin_ph[n_susc].at(a,b,j,i))*U(i,c,j,d)/(green[wf](a,a)*green[wb](b,b));
+                            } else {
+                                kernel_2_ph[n](a,b,c,d)  -= 2.* (hedin_ph[n_susc].at(a,b,j,i))*U(i,c,j,d)/(green[wf](a,a)*green[wb](b,b));
+                            }
                         }
-                     
+                            
+                        
+                        
+                        if (do_htph){
+                            if (do_conj) {
+                                kernel_2_tph[n](a,b,c,d) -= 2.*std::conj(hedin_tph[n_susc].at(a,i,j,d))*U(i,c,b,j)/(green[wf](a,a)*green[wb](d,d));
+                            } else {
+                                kernel_2_tph[n](a,b,c,d) -= 2.*(hedin_tph[n_susc].at(a,i,j,d))*U(i,c,b,j)/(green[wf](a,a)*green[wb](d,d));
+                            }
+                        }
+                            
+                        
+                        if (do_hpp){
+                            if (do_conj){
+                                kernel_2_pp[n](a,b,c,d)  +=     std::conj(hedin_pp[n_susc].at(a,i,c,j))*U(j,i,b,d)/(green[wf](a,a)*green[wc](c,c));
+                            } else {
+                                kernel_2_pp[n](a,b,c,d)  +=     (hedin_pp[n_susc].at(a,i,c,j))*U(j,i,b,d)/(green[wf](a,a)*green[wc](c,c));
+                            }
+                        }
+                        
+                        
                     }
                 }
             }
@@ -328,16 +361,25 @@ namespace evalsim {
             jsx::value jObservablesOut;
             jsx::value jKernel_1,jKernel_2;
             
-            jKernel_1["ph"] = func::write_functions<Value>(jParams, jHybMatrix, kernel_1_ph);
-            jKernel_1["tph"] = func::write_functions<Value>(jParams, jHybMatrix, kernel_1_tph);
-            jKernel_1["pp"] = func::write_functions<Value>(jParams, jHybMatrix, kernel_1_pp);
+            if (do_sph)
+                jKernel_1["ph"] = func::write_functions<Value>(jParams, jHybMatrix, kernel_1_ph);
+            if (do_stph)
+                jKernel_1["tph"] = func::write_functions<Value>(jParams, jHybMatrix, kernel_1_tph);
+            if (do_spp)
+                jKernel_1["pp"] = func::write_functions<Value>(jParams, jHybMatrix, kernel_1_pp);
             
-            jKernel_2["ph"] = func::write_functions<Value>(jParams, jHybMatrix, kernel_2_ph);
-            jKernel_2["tph"] = func::write_functions<Value>(jParams, jHybMatrix, kernel_2_tph);
-            jKernel_2["pp"] = func::write_functions<Value>(jParams, jHybMatrix, kernel_2_pp);
+            if (do_hph or do_sph)
+                jKernel_2["ph"] = func::write_functions<Value>(jParams, jHybMatrix, kernel_2_ph);
+            if (do_htph or do_stph)
+                jKernel_2["tph"] = func::write_functions<Value>(jParams, jHybMatrix, kernel_2_tph);
+            if (do_hpp or do_spp)
+                jKernel_2["pp"] = func::write_functions<Value>(jParams, jHybMatrix, kernel_2_pp);
             
-            jObservablesOut["kernel 1"] = std::move(jKernel_1);
-            jObservablesOut["kernel 2"] = std::move(jKernel_2);
+            if (do_sph or do_spp or do_stph)
+                jObservablesOut["kernel 1"] = std::move(jKernel_1);
+            
+            if (do_hph or do_hpp or do_htph or do_sph or do_spp or do_stph)
+                jObservablesOut["kernel 2"] = std::move(jKernel_2);
             
             mpi::cout << "OK" << std::endl;
             
@@ -351,20 +393,24 @@ namespace evalsim {
             auto const name = worm::Kernels::name;
             jsx::value jWorm = jParams(name);
             
+            int b_cutoff =  jWorm.is("boson cutoff") ? std::max(1, int(jWorm("boson cutoff").int64())) : 1;
+            int f_cutoff = jWorm.is("fermion cutoff") ? std::max(1, int(jWorm("fermion cutoff").int64())) : 50;
+            int vb_cutoff =  jWorm.is("vertex boson cutoff") ? std::max(1, int(jWorm("vertex boson cutoff").int64())) : 1;
+            int vf_cutoff = jWorm.is("vertex fermion cutoff") ? std::max(1, int(jWorm("vertex fermion cutoff").int64())) : 50;
+            
             //Full vertex only for +/- range if complex
             int const pos_and_neg_freq = std::is_same<Value,double>::value ? 1 : 2;
-            int const nMatGB = pos_and_neg_freq*jWorm("boson cutoff").int64()-pos_and_neg_freq+1;
-            int const nMatGF = 2*jWorm("fermion cutoff").int64();
-            int const asymptotic_cutoff_l = jParams(name).is("asymptotic cutoff") ? jParams(name)("asymptotic cutoff").int64() : 10;
-            int const asymptotic_cutoff_l_4 = std::pow(asymptotic_cutoff_l,4);
+            int const nMatGB = pos_and_neg_freq*vb_cutoff-pos_and_neg_freq+1;
+            int const nMatGF = 2*vf_cutoff;
+            int asymptotic_cutoff_l = jParams(name).is("asymptotic cutoff") ? jParams(name)("asymptotic cutoff").int64() : 10;
+            int asymptotic_cutoff_l_4 = std::pow(asymptotic_cutoff_l,4);
             
             func::OmegaMap omega_f(nMatGF,false,true);
             func::OmegaMap omega_b(nMatGB,true,!std::is_same<Value,double>::value);
             
             //Kernels are always for full +/- frequency range
-            auto const name_kernel = cfg::hedin_ph_imprsum::Worm::name();
-            int const nMatGF_kernel = 2*(jParams(name_kernel)("basis").string() == "matsubara" ? jParams(name_kernel)("fermion cutoff").int64() : ( jParams(name_kernel).is("fermion cutoff") ? jParams(name_kernel)("fermion cutoff").int64() : 50 ));
-            int const nMatGB_kernel = 2*jParams(name_kernel)("boson cutoff").int64()-1;
+            int const nMatGB_kernel = 2*b_cutoff-1;
+            int const nMatGF_kernel = 2*f_cutoff;
             
             func::OmegaMap omega_f_kernel(nMatGF_kernel,false,true);
             func::OmegaMap omega_b_kernel(nMatGB_kernel,true,true);
@@ -373,26 +419,43 @@ namespace evalsim {
             std::vector<io::cmat> hyb; std::vector<io::Matrix<Value>> hybMoments;
             std::tie(hyb, hybMoments) = partition::func::get_hybridisation<Value>(jParams);
             
-            params::complete_impurity<Value>(jParams);
+            //params::complete_impurity<Value>(jParams);
             imp::Tensor<Value> const U_tmp(jParams("hloc")("two body"),jHybMatrix.size());
             InteractionTensor<Value> const U(U_tmp,jHybMatrix.size());
             
             //Read in green functions and susc and hedin susceptibilities
             mpi::cout << "Reading in kernels ... " << std::flush;
             
-            std::vector<io::ctens> kernel_1_ph = meas::read_tensor_functions_from_obs<ut::complex>(jObservables(worm::Kernels::name)("kernel 1")("ph"), jParams, jParams(cfg::susc_ph::Worm::name()), jHybMatrix, hyb.size());
-            std::vector<io::ctens> kernel_1_tph = meas::read_tensor_functions_from_obs<ut::complex>(jObservables(worm::Kernels::name)("kernel 1")("tph"), jParams, jParams(cfg::susc_ph::Worm::name()), jHybMatrix, hyb.size());
-            std::vector<io::ctens> kernel_1_pp = meas::read_tensor_functions_from_obs<ut::complex>(jObservables(worm::Kernels::name)("kernel 1")("pp"), jParams, jParams(cfg::susc_ph::Worm::name()), jHybMatrix, hyb.size());
+            std::vector<io::ctens> kernel_1_ph = jObservables(worm::Kernels::name).is("kernel 1") and jObservables(worm::Kernels::name)("kernel 1").is("ph") ?
+                meas::read_tensor_functions_from_obs<ut::complex>(jObservables(worm::Kernels::name)("kernel 1")("ph"), jParams, jParams(cfg::susc_ph::Worm::name()), jHybMatrix, hyb.size())
+                : std::vector<io::ctens>(nMatGB_kernel);
+            std::vector<io::ctens> kernel_1_tph = jObservables(worm::Kernels::name).is("kernel 1") and jObservables(worm::Kernels::name)("kernel 1").is("tph") ?
+                meas::read_tensor_functions_from_obs<ut::complex>(jObservables(worm::Kernels::name)("kernel 1")("tph"), jParams, jParams(cfg::susc_ph::Worm::name()), jHybMatrix, hyb.size())
+                : std::vector<io::ctens>(nMatGB_kernel);
+            std::vector<io::ctens> kernel_1_pp = jObservables(worm::Kernels::name).is("kernel 1") and jObservables(worm::Kernels::name)("kernel 1").is("pp") ?
+            meas::read_tensor_functions_from_obs<ut::complex>(jObservables(worm::Kernels::name)("kernel 1")("pp"), jParams, jParams(cfg::susc_ph::Worm::name()), jHybMatrix, hyb.size())
+                : std::vector<io::ctens>(nMatGB_kernel);;
             
-            std::vector<io::ctens> kernel_2_ph = meas::read_tensor_functions_from_obs<ut::complex>(jObservables(worm::Kernels::name)("kernel 2")("ph"), jParams, jParams(cfg::hedin_ph_imprsum::Worm::name()), jHybMatrix, hyb.size());
-            std::vector<io::ctens> kernel_2_tph = meas::read_tensor_functions_from_obs<ut::complex>(jObservables(worm::Kernels::name)("kernel 2")("tph"), jParams, jParams(cfg::hedin_ph_imprsum::Worm::name()), jHybMatrix, hyb.size());
-            std::vector<io::ctens> kernel_2_pp = meas::read_tensor_functions_from_obs<ut::complex>(jObservables(worm::Kernels::name)("kernel 2")("pp"), jParams, jParams(cfg::hedin_pp_imprsum::Worm::name()), jHybMatrix, hyb.size());
+            std::vector<io::ctens> kernel_2_ph = jObservables(worm::Kernels::name).is("kernel 2") and jObservables(worm::Kernels::name)("kernel 2").is("ph") ?
+                meas::read_tensor_functions_from_obs<ut::complex>(jObservables(worm::Kernels::name)("kernel 2")("ph"), jParams, jParams(worm::Kernels::name), jHybMatrix, hyb.size())
+                : std::vector<io::ctens>(nMatGB_kernel*nMatGF_kernel);
+            std::vector<io::ctens> kernel_2_tph = jObservables(worm::Kernels::name).is("kernel 2") and jObservables(worm::Kernels::name)("kernel 2").is("tph") ? meas::read_tensor_functions_from_obs<ut::complex>(jObservables(worm::Kernels::name)("kernel 2")("tph"), jParams, jParams(worm::Kernels::name), jHybMatrix, hyb.size())
+                : std::vector<io::ctens>(nMatGB_kernel*nMatGF_kernel);
+            std::vector<io::ctens> kernel_2_pp = jObservables(worm::Kernels::name).is("kernel 2") and jObservables(worm::Kernels::name)("kernel 2").is("pp") ? meas::read_tensor_functions_from_obs<ut::complex>(jObservables(worm::Kernels::name)("kernel 2")("pp"), jParams, jParams(worm::Kernels::name), jHybMatrix, hyb.size())
+                : std::vector<io::ctens>(nMatGB_kernel*nMatGF_kernel);
             
             mpi::cout << "OK" << std::endl;
             
             mpi::cout << "Reading in measured vertex ... " << std::flush;
             
-            std::vector<io::ctens> measured_vertex = meas::read_tensor_functions_from_obs<ut::complex>(jObservables(cfg::vertex_imprsum::Worm::name())("full vertex"), jParams, jParams(cfg::vertex_imprsum::Worm::name()), jHybMatrix, hyb.size());
+            std::vector<io::ctens> measured_vertex = jParams.is(cfg::vertex_imprsum::Worm::name()) ?
+            meas::read_tensor_functions_from_obs<ut::complex>(jObservables(cfg::vertex_imprsum::Worm::name())("full vertex"), jParams, jParams(cfg::vertex_imprsum::Worm::name()), jHybMatrix, hyb.size()) : std::vector<io::ctens>();
+            
+            auto const do_v = measured_vertex.size() > 0;
+            if (!do_v){
+                asymptotic_cutoff_l = 0;
+                asymptotic_cutoff_l_4 = 0;
+            }
             
             mpi::cout << "OK" << std::endl;
             
@@ -400,6 +463,7 @@ namespace evalsim {
             mpi::cout << "Calculating Asymptotic Vertex from kernels ... " << std::flush;
             
             std::vector<io::ctens> asymptotic_vertex(nMatGB*nMatGF*nMatGF, io::ctens(jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size()));
+            auto const abcds = do_v ? measured_vertex[0].ijkl() : construct_ijkls(jHybMatrix.size());
             
             for (int om=0; om<nMatGB; om++)
             for (int nu1=0; nu1<nMatGF; nu1++)
@@ -427,14 +491,18 @@ namespace evalsim {
                 int const n2_tph = nu2_tph + om_tph * nMatGF_kernel;
                 int const n2_pp = nu2_pp + om_pp * nMatGF_kernel;
                                 
-                for(auto const& ijkl : measured_vertex[0].ijkl()){
+                for(auto const& abcd :abcds){
                 
-                    auto const a=ijkl[1];
-                    auto const b=ijkl[2];
-                    auto const c=ijkl[3];
-                    auto const d=ijkl[4];
+                    auto const a=abcd[1];
+                    auto const b=abcd[2];
+                    auto const c=abcd[3];
+                    auto const d=abcd[4];
                     
-                    asymptotic_vertex[n].emplace(a,b,c,d,measured_vertex[0].entry(a,b,c,d), -2.*U(a,c,b,d));
+                    if (do_v)
+                        asymptotic_vertex[n].emplace(a,b,c,d,measured_vertex[0].entry(a,b,c,d), -2.*U(a,c,b,d));
+                    else
+                        asymptotic_vertex[n].emplace(a,b,c,d, std::to_string(2*a)+"_"+std::to_string(2*b+1)+"_"+std::to_string(2*c)+"_"+std::to_string(2*d+1) , -2.*U(a,c,b,d));
+                        
                     
                     //PH
                     if(1)
@@ -442,16 +510,16 @@ namespace evalsim {
                         asymptotic_vertex[n](a,b,c,d) += kernel_1_ph[om_ph].at(a,b,c,d);
                         if (nu1_tph>=0 and nu2_ph>=0 and 1){
                             //1;
-                            asymptotic_vertex[n](a,b,c,d) += kernel_2_ph[n1_ph].at(a,b,c,d) + kernel_2_ph[n2_ph].at(a,b,c,d);// + kernel_1_ph[om_ph](a,b,c,d);
+                            asymptotic_vertex[n](a,b,c,d) += kernel_2_ph[n1_ph].at(a,b,c,d) + kernel_2_ph[n2_ph].at(a,b,c,d);// + kernel_1_ph[om_ph].at(a,b,c,d);
                             
                             
                         } else if (0) {
-                            if (nu1_ph>=0)
+                            if (nu1_ph>=0 and 0)
                                 asymptotic_vertex[n](a,b,c,d) += kernel_2_ph[n1_ph].at(a,b,c,d) + 0.5*kernel_1_ph[om_ph].at(a,b,c,d);
-                            else if (nu2_ph>=0)
+                            else if (nu2_ph>=0 and 0)
                                 asymptotic_vertex[n](a,b,c,d) += kernel_2_ph[n2_ph].at(a,b,c,d) + 0.5*kernel_1_ph[om_ph].at(a,b,c,d);
-                            //else
-                            //    full_vertex[n](a,b,c,d) -= 2.*kernel_1_ph[om_ph](a,b,c,d);
+                            else
+                                asymptotic_vertex[n](a,b,c,d) -= 2.*kernel_1_ph[om_ph].at(a,b,c,d);
                         }
                     }
                     
@@ -461,7 +529,7 @@ namespace evalsim {
                         asymptotic_vertex[n](a,b,c,d) += kernel_1_tph[om_tph].at(a,b,c,d);
                         if (nu1_tph>=0 and nu2_tph>=0 and 1){
                             
-                            asymptotic_vertex[n](a,b,c,d) += kernel_2_tph[n1_tph].at(a,b,c,d) + kernel_2_tph[n2_tph].at(a,b,c,d);
+                            asymptotic_vertex[n](a,b,c,d) += kernel_2_tph[n1_tph].at(a,b,c,d) + kernel_2_tph[n2_tph].at(a,b,c,d);// + kernel_1_tph[om_tph].at(a,b,c,d);;
                             
                             
                         } else if (0) {
@@ -501,7 +569,8 @@ namespace evalsim {
             
             mpi::cout << "Combining asymptotic and measured vertices ... " << std::flush;
             
-            func::Frequencies<Value> frequencies_meas(jParams(cfg::vertex_imprsum::Worm::name()));
+            auto const ref_worm =  do_v ? jParams(cfg::vertex_imprsum::Worm::name()) : jParams(worm::Kernels::name);
+            auto const frequencies_meas =func::Frequencies<Value>(ref_worm);
             auto const& omega_f_meas = frequencies_meas.omega_f();
             auto const& omega_b_meas = frequencies_meas.omega_b();
             
@@ -524,14 +593,14 @@ namespace evalsim {
                 
                 int const n_meas = nu1_meas + nu2_meas*frequencies_meas.nMatGF() + om_meas*frequencies_meas.nMatGF()*frequencies_meas.nMatGF();
                 
-                for(auto const& ijkl : measured_vertex[0].ijkl()){
+                for(auto const& abcd : abcds){
                 
-                    auto const a=ijkl[1];
-                    auto const b=ijkl[2];
-                    auto const c=ijkl[3];
-                    auto const d=ijkl[4];
+                    auto const a=abcd[1];
+                    auto const b=abcd[2];
+                    auto const c=abcd[3];
+                    auto const d=abcd[4];
                     
-                    combined_vertex[n].emplace(a,b,c,d, measured_vertex[0].entry(a,b,c,d), 0.);
+                    combined_vertex[n].emplace(a,b,c,d, asymptotic_vertex[0].entry(a,b,c,d), 0.);
                     
                     if (om_meas < 0 or nu1_meas < 0 or nu2_meas < 0 or use_asymptotic){
                         combined_vertex[n](a,b,c,d) = asymptotic_vertex[n](a,b,c,d);
@@ -565,6 +634,20 @@ namespace evalsim {
         
         template jsx::value evaluateFullVertexFromKernels<double>(jsx::value jParams, jsx::value const& jObservables);
         template jsx::value evaluateFullVertexFromKernels<ut::complex>(jsx::value jParams, jsx::value const& jObservables);
+    
+        std::vector<std::vector<int>> construct_ijkls(int const size){
+            std::vector<std::vector<int>> ijkls(size*size*size*size,std::vector<int>(5));
+            int n=0;
+            for (int i=0; i<size; i++)
+                for (int j=0; j<size; j++)
+                    for (int k=0; k<size; k++)
+                        for (int l=0; l<size; l++){
+                            ijkls[n]=std::vector<int>({n,i,j,k,l});
+                            n+=1;
+                        }
+            
+            return ijkls;
+        };
         
     }
     

@@ -32,10 +32,11 @@ namespace io {
         T const* data() const { return data_.data();};
         std::vector<std::vector<int>> const& ijkl() const { return ijkl_;}
         
-        
+        //Will complatin if an element is not there
         T& operator()(int const i, int const j, int const k, int const l){ return this->operator()(this->index(i,j,k,l)); }
         T const& operator()(int const i, int const j, int const k, int const l) const { return this->operator()(this->index(i,j,k,l)); }
         
+        //Use at to retrieve elements that may or may not be there (= 0 if not there)
         T const at(int const i, int const j, int const k, int const l) const { return this->at(this->index(i,j,k,l)); }
         
         std::string const& entry(int const i, int const j, int const k, int const l) const { return this->entry(this->index(i,j,k,l)); }
@@ -47,21 +48,21 @@ namespace io {
                 throw std::runtime_error("Cannot update element of " + this->name() + " that does not yet exist\n");
             return data_.at(i);
         };
-        inline T const& operator()(int i) const {
+        inline T const& operator()(int const i) const {
             if (data_.find(i) != data_.end())
                 return data_.at(i);
             else
                 return zero;
         };
         
-        inline T const at(int i) const {
+        inline T const at(int const i) const {
             if (data_.find(i) != data_.end())
                 return data_.at(i);
             else
                 return zero;
         };
         
-        inline std::string const& entry(int i) const {
+        inline std::string const& entry(int const i) const {
             if (entries_.find(i) != entries_.end())
                 return entries_.at(i);
             else
@@ -69,11 +70,11 @@ namespace io {
         };
                               
 
-        inline bool is(int i) const { return (data_.find(i) == data_.end()) ? false : true; }
+        inline bool is(int const i) const { return (data_.find(i) == data_.end()) ? false : true; }
 
         void emplace (int const i, int const j, int const k, int const l, std::string const& entry, T const v);
         
-        Tensor& resize(int I, int J, int K, int L, T value = .0);
+        Tensor& resize(int const I, int const J, int const K, int const L, T value = .0);
         Tensor& conj();
         
     private:
