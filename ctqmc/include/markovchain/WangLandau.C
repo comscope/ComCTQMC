@@ -19,7 +19,7 @@ namespace mch {
                 if (restart_){
                     if(jParams("measurements").is(name) and jParams("measurements")(name).is("eta")){
                         eta_[index] = jParams("measurements")(name)("eta").real64();
-                        steps_[index] = jParams("measurements")(name)("steps").int64();
+                        steps_[index] = jParams("measurements")(name)("steps").int64() / mpi::number_of_workers();
                         
                     } else {
                         throw std::runtime_error("WangLandau:: restart:: measurement of space " + name + " does not report previous eta.\n No worm space can be added for a `restart' run.");
