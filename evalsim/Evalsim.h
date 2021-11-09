@@ -1,6 +1,7 @@
 #ifndef EVALSIM_EVALSIM_H
 #define EVALSIM_EVALSIM_H
 
+#include <chrono>
 
 #include "partition/Evalsim.h"
 #include "worm/Evalsim.h"
@@ -60,11 +61,20 @@ namespace evalsim {
         template<typename W>
         void operator()(ut::wrap<W> w, jsx::value const& jParams, jsx::value const& jMeasurements, jsx::value& jObservables) const {
             if( W::name() != cfg::partition::Worm::name() && jParams.is(W::name()) ) {
+                
+                
                 mpi::cout << std::endl << "Begin evaluating " + W::name() + " worm measurements" << std::endl;
+                
+                auto const start = std::chrono::high_resolution_clock::now();
                 
                 jObservables[W::name()] = worm::evalsim<Value>(w, jParams, jMeasurements(W::name()), jMeasurements(cfg::partition::Worm::name()), jObservables);
                 
-                mpi::cout << "End evaluating " + W::name() + " worm measurements" << std::endl;
+                auto const stop = std::chrono::high_resolution_clock::now();
+                auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+                
+                mpi::cout << "End evaluating " + W::name() + " worm measurements. Took " << float(duration.count())/1000.0 << " ms" << std::endl;
+                
+                
             }
         }
         void operator()(ut::wrap<cfg::partition::Worm> w, jsx::value const& jParams, jsx::value const& jMeasurements, jsx::value const& jObservables) const {

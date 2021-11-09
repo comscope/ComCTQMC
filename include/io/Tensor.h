@@ -40,7 +40,9 @@ namespace io {
         T const at(int const i, int const j, int const k, int const l) const { return this->at(this->index(i,j,k,l)); }
         
         std::string const& entry(int const i, int const j, int const k, int const l) const { return this->entry(this->index(i,j,k,l)); }
-        bool const& is(int const i, int const j, int const k, int const l) const { return this->is(this->index(i,j,k,l)); }
+        bool const is(int const i, int const j, int const k, int const l) const { return this->is(this->index(i,j,k,l)); }
+        
+        void clear(){ this->data_.clear(); this->entries_.clear(); I_=0; J_=0; K_=0; L_=0;}
         
         
         inline T& operator()(int const i){

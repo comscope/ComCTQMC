@@ -109,8 +109,8 @@ namespace evalsim {
             template<typename Value>
             std::vector<io::Matrix<Value>> get_hybridisation_moment(std::map<std::string, io::cvec> const& functions, jsx::value const& jParams, jsx::value const& jHybMatrix)
             {
-                std::map<std::string, Value> moments;
-                
+                std::map<std::string, io::Vector<Value>> moments;
+                io::Vector<Value> tmp(2);
                 for(std::size_t i = 0; i < jHybMatrix.size(); ++i)
                     for(std::size_t j = 0; j < jHybMatrix.size(); ++j)
                         if(jHybMatrix(i)(j).string() != "") {
@@ -120,11 +120,15 @@ namespace evalsim {
                             std::string const entry = jHybMatrix(i)(j).string();
                             std::string const entryTransp = jHybMatrix(j)(i).string();
                             
-                            if(!moments.count(entry))
-                                moments[entry] = bath::Fit<Value>(jParams("beta").real64(), functions.at(entry), functions.at(entryTransp)).moment();
+                            if(!moments.count(entry)){
+                                auto const fit = bath::Fit<Value>(jParams("beta").real64(), functions.at(entry), functions.at(entryTransp));
+                                tmp[0] = fit.moment();
+                                tmp[1] = fit.eps();
+                                moments[entry] = tmp;
+                            }
                         }
                 
-                return  { get_matrix(moments, jHybMatrix) };
+                return  { get_function_matrix(moments, jHybMatrix) };
             }
             
             template std::vector<io::Matrix<double>> get_hybridisation_moment<double>(std::map<std::string, io::cvec> const& functions, jsx::value const& jParams, jsx::value const& jHybMatrix);

@@ -8,7 +8,8 @@
 #include "../../../../include/measurements/Measurements.h"
 #include "../../../../include/io/Vector.h"
 #include "../../../../include/io/Matrix.h"
-#include "../../../../include/io/Tensor.h"
+//#include "../../../../include/io/Tensor.h"
+#include "../../../../include/mpi/IOReductions.h"
 #include "../../../../include/atomic/Generate.h"
 #include "../../../../ctqmc/include/bath/Hyb.h"
 #include "../../../../ctqmc/include/Utilities.h"
@@ -74,24 +75,39 @@ namespace evalsim {
             {
                 io::Tensor<Value> tensor(jMatrix.size(), jMatrix.size(), jMatrix.size(), jMatrix.size());
                 
-                for(std::size_t i = 0; i < jMatrix.size(); ++i)
-                    for(std::size_t j = 0; j < jMatrix.size(); ++j)
-                        for(std::size_t k = 0; k < jMatrix.size(); ++k)
-                            for(std::size_t l = 0; l < jMatrix.size(); ++l) {
-                                
-                                //Check for any possible compbination of creation or annihilation operators
-                                //Store the resulting entry in the tensor (would be nice to avoid...)
-                                //So that on output we can know which combination was measured [see get_entries(io::Tensor<Value> ... )]
-                                //This could alternately be specified by worm, but this adds quite a bit of code
-                                for (int i_dagg = 0; i_dagg < 2; i_dagg++)
-                                for (int j_dagg = 0; j_dagg < 2; j_dagg++)
-                                for (int k_dagg = 0; k_dagg < 2; k_dagg++)
-                                for (int l_dagg = 0; l_dagg < 2; l_dagg++){
-                                    auto const entry = std::to_string(2*i+i_dagg)+"_"+std::to_string(2*j+j_dagg)+"_"+std::to_string(2*k+k_dagg)+"_"+std::to_string(2*l+l_dagg);
-                                    if(entries.find(entry) != entries.end()){ tensor.emplace(i, j, k, l, entry, entries.at(entry));}
+                for (auto const& entry : entries){
+                    
+                    std::stringstream str_to_split(entry.first);
+                    std::string str_segment;
+                    std::vector<int> ijkl;
+                    while(std::getline(str_to_split, str_segment, '_'))
+                        ijkl.push_back(int(std::stoi(str_segment) / 2));
+                    
+                    tensor.emplace(ijkl[0], ijkl[1], ijkl[2], ijkl[3], entry.first, entry.second);
+                    
+                }
+                    
+                
+                
+                if (0)
+                    for(std::size_t i = 0; i < jMatrix.size(); ++i)
+                        for(std::size_t j = 0; j < jMatrix.size(); ++j)
+                            for(std::size_t k = 0; k < jMatrix.size(); ++k)
+                                for(std::size_t l = 0; l < jMatrix.size(); ++l) {
+                                    
+                                    //Check for any possible compbination of creation or annihilation operators
+                                    //Store the resulting entry in the tensor (would be nice to avoid...)
+                                    //So that on output we can know which combination was measured [see get_entries(io::Tensor<Value> ... )]
+                                    //This could alternately be specified by worm, but this adds quite a bit of code
+                                    for (int i_dagg = 0; i_dagg < 2; i_dagg++)
+                                    for (int j_dagg = 0; j_dagg < 2; j_dagg++)
+                                    for (int k_dagg = 0; k_dagg < 2; k_dagg++)
+                                    for (int l_dagg = 0; l_dagg < 2; l_dagg++){
+                                        auto const entry = std::to_string(2*i+i_dagg)+"_"+std::to_string(2*j+j_dagg)+"_"+std::to_string(2*k+k_dagg)+"_"+std::to_string(2*l+l_dagg);
+                                        if(entries.find(entry) != entries.end()){ tensor.emplace(i, j, k, l, entry, entries.at(entry));}
+                                    }
+                                    
                                 }
-                                
-                            }
                 
                 return tensor;
             }
@@ -105,15 +121,16 @@ namespace evalsim {
                 for(auto const& function : functions)
                     size = std::min(size, function.second.size());
                 
-                std::vector<io::Tensor<Value>> functionTensor;
-                for(std::size_t n = 0; n < size; ++n) {
+                std::vector<io::Tensor<Value>> functionTensor(size, io::Tensor<Value>());
+                
+                for(std::size_t n = 0; n < size; ++n){
                     std::map<std::string, Value> entries;
                     
                     for(auto& function : functions){
                         entries[function.first] = function.second[n];
                     }
                     
-                    functionTensor.push_back(get_tensor<Value>(entries, jParams, jMatrix));
+                    functionTensor[n] = get_tensor<Value>(entries, jParams, jMatrix);
                 }
                 
                 return functionTensor;

@@ -5,6 +5,7 @@
 #include "../../partition/ReadFunctions.h"
 
 #include "../../../include/JsonX.h"
+#include "../../../include/mpi/IOReductions.h"
 #include "../../../ctqmc/include/config/Worms.h"
 
 #include "functions/Functions.h"

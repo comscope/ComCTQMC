@@ -56,16 +56,6 @@ namespace evalsim {
                 OmegaMap const omega_b_, omega_f_;
             };
         
-            template<typename Value>
-            std::vector<io::cmat> get_green_from_obs(jsx::value const& jParams, jsx::value const& jObservables, jsx::value const& jHybMatrix, std::size_t hybSize, std::string const func_name){
-                
-                //use the green imprsum measurement if available (assume user has a good reason).
-                //Otherwise, use the partition function measurement (which is typically better).
-                return jObservables.is(cfg::green_imprsum::Worm::name()) ?
-                meas::read_matrix_functions_from_obs<ut::complex>(jObservables(cfg::green_imprsum::Worm::name())(func_name), jParams, jParams(cfg::green_imprsum::Worm::name()), jHybMatrix, hybSize) :
-                meas::read_matrix_functions_from_obs<ut::complex>(jObservables(cfg::partition::Worm::name())(func_name), jParams, jParams(cfg::partition::Worm::name()), jHybMatrix, hybSize);
-                
-            }
         }
     }
 }

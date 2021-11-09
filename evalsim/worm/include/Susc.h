@@ -3,6 +3,8 @@
 
 #include "../../partition/Functions.h"
 #include "../../partition/ReadFunctions.h"
+#include "../../partition/ReadDensityMatrix.h"
+#include "../../partition/ReadHamiltonian.h"
 
 #include "../../../include/JsonX.h"
 #include "../../../include/options/Options.h"
@@ -39,6 +41,9 @@ namespace evalsim {
                     
                     template <typename Value>
                     jsx::value qn_susc(jsx::value const& jParams, std::vector<io::ctens> const& susc_tensor);
+                
+                    template <typename Value>
+                    void add_tail(jsx::value jParams, jsx::value const& jWorm, jsx::value const& jMeasurements, jsx::value const& jHybMatrix, std::vector<io::ctens>& susc);
                 
                 }
                 

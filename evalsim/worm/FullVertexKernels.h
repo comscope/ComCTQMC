@@ -1,7 +1,10 @@
 #ifndef EVALSIM_WORM_FULL_VERTEX_KERNELS
 #define EVALSIM_WORM_FULL_VERTEX_KERNELS
 
+
 #include "../../include/JsonX.h"
+#include "../../include/mpi/IOReductions.h"
+
 #include "../../ctqmc/include/config/Worms.h"
 #include "../../ctqmc/include/Params.h"
 #include "../../ctqmc/include/impurity/Tensor.h"

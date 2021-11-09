@@ -19,7 +19,13 @@ namespace evalsim {
                     auto const nMatGF = frequencies.nMatGF();
                     auto const omega_f = frequencies.omega_f();
                     
-                    for(std::size_t nu = 0; nu < nMatGB; ++nu)
+                    int const size = nMatGB;
+                    int const chunk = (size + mpi::number_of_workers() - 1)/mpi::number_of_workers();
+                    int const start = chunk*mpi::rank();
+                    int const end = chunk*(mpi::rank() + 1);
+                    
+                    for (int nu=start; nu<end; nu++){
+                        if (nu >= nMatGB) break;
                         for(std::size_t i_w = 0; i_w < nMatGF; ++i_w){
                             int n = nu*nMatGF + i_w;
                             int w = green_OM.pos(omega_f(i_w));
@@ -46,6 +52,11 @@ namespace evalsim {
                                 }
                             }
                         }
+                    }
+                    
+                    mpi::all_reduce_function_tensor<mpi::op::sum>(connected, start*nMatGF);
+                    
+                    
                 }
                 
                 //instantiations
@@ -83,8 +94,8 @@ namespace evalsim {
                     
                     mpi::cout << "Gathering one-particle green's function ... " << std::flush;
                     
-                    auto const green_half_axis = func::get_green_from_obs<Value>(jParams,jObservables,jHybMatrix,hyb.size(),"green");
-                    auto const green = func::green_function_on_full_axis( green_half_axis );
+                    auto green = std::vector<io::cmat>(); auto self = std::vector<io::cmat>();
+                    func::green_and_self_function_on_full_axis<Value>(jParams, jObservables, jHybMatrix, hyb, hybMoments, frequencies.nMatGF() + frequencies.nMatGB()*2, green, self);
                     func::OmegaMap greenOM(green.size(),false,true);
                     
                     mpi::cout << "Ok" << std::endl;
@@ -101,9 +112,9 @@ namespace evalsim {
                     
                     std::vector<io::ctens> susc_symm(hedin.size(), io::ctens(jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size()));
                     func::hedin::ph::enforce_symmetries<Value>(jParams, frequencies, hedin, susc_symm);
+                    hedin.clear();
                     
                     mpi::cout << "Ok" << std::endl;
-                    
                     
                     jsx::value jObservablesOut;
                     
@@ -137,11 +148,8 @@ namespace evalsim {
                     
                     
                     mpi::cout << "Gathering one-particle green's and self-energy functions ... " << std::flush;
-
-                    auto const green_half_axis = func::get_green_from_obs<Value>(jParams,jObservables,jHybMatrix,hyb.size(),"green");
-                    auto const green = func::green_function_on_full_axis( green_half_axis );
-                    auto const self_half_axis = func::get_green_from_obs<Value>(jParams,jObservables,jHybMatrix,hyb.size(),"self-energy");
-                    auto const self = func::green_function_on_full_axis( self_half_axis );
+                    auto green = std::vector<io::cmat>(); auto self = std::vector<io::cmat>();
+                    func::green_and_self_function_on_full_axis<Value>(jParams, jObservables, jHybMatrix, hyb, hybMoments, frequencies.nMatGF() + frequencies.nMatGB()*2, green, self);
                     func::OmegaMap greenOM(green.size(),false,true);
                     
                     mpi::cout << "Ok" << std::endl;
@@ -159,6 +167,7 @@ namespace evalsim {
                     
                     std::vector<io::ctens> susc_symm(susc.size(), io::ctens(jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size()));
                     func::hedin::ph::enforce_symmetries<Value>(jParams, frequencies, susc, susc_symm);
+                    susc.clear();
                     
                     mpi::cout << "Ok" << std::endl;
                     
@@ -190,13 +199,54 @@ namespace evalsim {
                     auto const omega_b = frequencies.omega_b();
                     auto const omega_f = frequencies.omega_f();
                     
-                    for(std::size_t i_w = 0; i_w < nMatGF; ++i_w)
-                        for(std::size_t nu = 0; nu < nMatGB; ++nu){
+                    int const size = nMatGB;
+                    int const chunk = (size + mpi::number_of_workers() - 1)/mpi::number_of_workers();
+                    int const start = chunk*mpi::rank();
+                    int const end = chunk*(mpi::rank() + 1);
+                    
+                    for (int nu=start; nu<end; nu++){
+                        if (nu >= nMatGB) break;
+                        for(std::size_t i_w = 0; i_w < nMatGF; ++i_w){
                             int n = i_w+nu*nMatGF;
                             
                             int i_w_g = green_OM.pos(omega_f(i_w));
                             int w = green_OM.pos(omega_f(i_w)-omega_b(nu));
                             
+                            //i==j and k==l
+                            if (!omega_b(nu))
+                            for(std::size_t i = 0; i < jHybMatrix.size(); ++i)
+                                for(std::size_t k = 0; k < jHybMatrix.size(); ++k){
+                                    int j=i;
+                                    int l=k;
+                                    
+                                    std::string const entry = jHybMatrix(l)(l).string();
+                                    auto const& occ = jsx::at<io::Vector<Value>>(jOccupation(entry));
+                                    
+                                    auto const disc = green[i_w_g](i,i) * beta*occ[0];
+                                    
+                                    disconnected[n].emplace(i,j,k,l,
+                                                            "do not use disconnected entries",
+                                                            disc);
+                                }
+                            
+                            //i==k and l==j
+                            for(std::size_t i = 0; i < jHybMatrix.size(); ++i)
+                                for(std::size_t j = 0; j < jHybMatrix.size(); ++j){
+                                    int k=i;
+                                    int l=j;
+                                    
+                                    auto const disc = -green[i_w_g](i,i) * green[w](l,l);
+                                    
+                                    if (disconnected[n].is(i,j,k,l))
+                                        disconnected[n](i,j,k,l) += disc;
+                                    else
+                                        disconnected[n].emplace(i,j,k,l,
+                                                                "do not use disconnected entries",
+                                                                disc);
+                                    
+                                }
+                            
+                            if (0)
                             for(std::size_t i = 0; i < jHybMatrix.size(); ++i)
                                 for(std::size_t j = 0; j < jHybMatrix.size(); ++j)
                                     for(std::size_t k = 0; k < jHybMatrix.size(); ++k)
@@ -215,7 +265,10 @@ namespace evalsim {
                                             
                                         }
                         }
+                    }
                     
+                    //Note that we do not need to broadcast disconnect parts across workers,
+                    //because they only need this section to compute susceptibilities on same energy range
                 }
                 
                 template <typename Value>
@@ -280,8 +333,14 @@ namespace evalsim {
                     auto const omega_b = frequencies.omega_b();
                     auto const omega_f = frequencies.omega_f();
                     
-                    for(std::size_t i_w = 0; i_w < nMatGF; ++i_w)
-                        for(std::size_t nu = 0; nu < nMatGB; ++nu){
+                    int const size = nMatGB;
+                    int const chunk = (size + mpi::number_of_workers() - 1)/mpi::number_of_workers();
+                    int const start = chunk*mpi::rank();
+                    int const end = chunk*(mpi::rank() + 1);
+                    
+                    for (int nu=start; nu<end; nu++){
+                        if (nu >= nMatGB) break;
+                        for(std::size_t i_w = 0; i_w < nMatGF; ++i_w){
                             int n = i_w + nu*nMatGF;
                             
                             //swapping operator moves nu -> omega-nu
@@ -307,6 +366,10 @@ namespace evalsim {
                                             
                             }
                         }
+                    }
+                    
+                    mpi::all_reduce_function_tensor<mpi::op::sum>(symm, start*nMatGF);
+                    
                 }
                 
             }
@@ -336,9 +399,8 @@ namespace evalsim {
                     
                     
                     mpi::cout << "Gathering one-particle green's function ... " << std::flush;
-                    
-                    auto const green_half_axis = func::get_green_from_obs<Value>(jParams,jObservables,jHybMatrix,hyb.size(),"green");
-                    auto const green = func::green_function_on_full_axis( green_half_axis );
+                    auto green = std::vector<io::cmat>(); auto self = std::vector<io::cmat>();
+                    func::green_and_self_function_on_full_axis<Value>(jParams, jObservables, jHybMatrix, hyb, hybMoments, frequencies.nMatGF() + frequencies.nMatGB()*2, green, self);
                     func::OmegaMap greenOM(green.size(),false,true);
                     
                     mpi::cout << "Ok" << std::endl;
@@ -355,6 +417,7 @@ namespace evalsim {
                     
                     std::vector<io::ctens> susc_symm(hedin.size(), io::ctens(jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size()));
                     func::hedin::pp::enforce_symmetries<Value>(jParams, frequencies, hedin, susc_symm);
+                    hedin.clear();
                     
                     mpi::cout << "Ok" << std::endl;
                     
@@ -391,11 +454,8 @@ namespace evalsim {
                     
                     
                     mpi::cout << "Gathering one-particle green's and self-energy functions ... " << std::flush;
-                                
-                    auto const green_half_axis = func::get_green_from_obs<Value>(jParams,jObservables,jHybMatrix,hyb.size(),"green");
-                    auto const green = func::green_function_on_full_axis( green_half_axis );
-                    auto const self_half_axis = func::get_green_from_obs<Value>(jParams,jObservables,jHybMatrix,hyb.size(),"self-energy");
-                    auto const self = func::green_function_on_full_axis( self_half_axis );
+                    auto green = std::vector<io::cmat>(); auto self = std::vector<io::cmat>();
+                    func::green_and_self_function_on_full_axis<Value>(jParams, jObservables, jHybMatrix, hyb, hybMoments, frequencies.nMatGF() + frequencies.nMatGB()*2, green, self);
                     func::OmegaMap greenOM(green.size(),false,true);
                     
                     mpi::cout << "Ok" << std::endl;
@@ -413,12 +473,12 @@ namespace evalsim {
                     
                     std::vector<io::ctens> susc_symm(susc.size(), io::ctens(jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size()));
                     func::hedin::pp::enforce_symmetries<Value>(jParams, frequencies, susc, susc_symm);
+                    susc.clear();
                     
                     mpi::cout << "Ok" << std::endl;
                     
                     
                     jsx::value jObservablesOut;
-                    
                     jObservablesOut["susceptibility"] = func::write_functions<Value>(jParams, jHybMatrix, susc_symm);
                     
                     return jObservablesOut;
@@ -444,12 +504,47 @@ namespace evalsim {
                     auto const omega_b = frequencies.omega_b();
                     auto const omega_f = frequencies.omega_f();
                     
-                    for(std::size_t i_w = 0; i_w < nMatGF; ++i_w)
-                        for(std::size_t nu = 0; nu < nMatGB; ++nu){
+                    int const size = nMatGB;
+                    int const chunk = (size + mpi::number_of_workers() - 1)/mpi::number_of_workers();
+                    int const start = chunk*mpi::rank();
+                    int const end = chunk*(mpi::rank() + 1);
+                    
+                    for (int nu=start; nu<end; nu++){
+                        if (nu >= nMatGB) break;
+                        for(std::size_t i_w = 0; i_w < nMatGF; ++i_w){
+
                             int n = i_w+nu*nMatGF;
                             int i_w_g = green_OM.pos(omega_f(i_w));
                             int w = green_OM.pos(omega_b(nu)-omega_f(i_w));
                             
+                            //i==k and j==l
+                            for(std::size_t i = 0; i < jHybMatrix.size(); ++i)
+                                for(std::size_t j = 0; j < jHybMatrix.size(); ++j){
+                                    int k=i;
+                                    int l=j;
+                                    auto const disc = green[i_w_g](i,i)*green[w](j,j);
+                                    disconnected[n].emplace(i,j,k,l,
+                                                            "do not use disconnected entries",
+                                                            disc);
+                                }
+                            
+                            
+                            //i==l and j==k
+                            for(std::size_t i = 0; i < jHybMatrix.size(); ++i)
+                                for(std::size_t j = 0; j < jHybMatrix.size(); ++j){
+                                    int l=i;
+                                    int k=j;
+                                    auto const disc = -green[i_w_g](i,i)*green[w](j,j);
+                                    
+                                    if (disconnected[n].is(i,j,k,l))
+                                        disconnected[n](i,j,k,l) += disc;
+                                    else
+                                        disconnected[n].emplace(i,j,k,l,
+                                                                "do not use disconnected entries",
+                                                                disc);
+                                }
+                            
+                            if(0)
                             for(std::size_t i = 0; i < jHybMatrix.size(); ++i)
                                 for(std::size_t j = 0; j < jHybMatrix.size(); ++j)
                                     for(std::size_t k = 0; k < jHybMatrix.size(); ++k)
@@ -463,7 +558,10 @@ namespace evalsim {
                                                                        disc);
                                         }
                         }
+                    }
                     
+                    //Note that we do not need to broadcast disconnect parts across workers,
+                    //because they only need this section to compute susceptibilities on same energy range
                 }
                 
                 template <typename Value>
@@ -526,8 +624,15 @@ namespace evalsim {
                     auto const omega_b = frequencies.omega_b();
                     auto const omega_f = frequencies.omega_f();
                     
-                    for(std::size_t i_w = 0; i_w < nMatGF; ++i_w)
-                        for(std::size_t nu = 0; nu < nMatGB; ++nu){
+                    int const size = nMatGB;
+                    int const chunk = (size + mpi::number_of_workers() - 1)/mpi::number_of_workers();
+                    int const start = chunk*mpi::rank();
+                    int const end = chunk*(mpi::rank() + 1);
+                    
+                    for (int nu=start; nu<end; nu++){
+                        if (nu >= nMatGB) break;
+                        for(std::size_t i_w = 0; i_w < nMatGF; ++i_w){
+                        
                             int n = i_w + nu*nMatGF;
                             
                             //swapping operator moves nu -> omega-nu
@@ -555,6 +660,10 @@ namespace evalsim {
                                                 
                             }
                         }
+                    }
+                    
+                    mpi::all_reduce_function_tensor<mpi::op::sum>(symm, start*nMatGF);
+                    
                 }
                 
             }

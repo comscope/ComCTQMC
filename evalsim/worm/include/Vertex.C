@@ -29,9 +29,8 @@ namespace evalsim {
                     mpi::cout << "OK" << std::endl;
                     
                     mpi::cout << "Gathering one-particle green's function ... " << std::flush;
-                    
-                    auto const green_half_axis = func::get_green_from_obs<Value>(jParams,jObservables,jHybMatrix,hyb.size(),"green");
-                    auto const green = func::green_function_on_full_axis( green_half_axis );
+                    auto green = std::vector<io::cmat>(); auto self = std::vector<io::cmat>();
+                    func::green_and_self_function_on_full_axis<Value>(jParams, jObservables, jHybMatrix, hyb, hybMoments, frequencies.nMatGF() + frequencies.nMatGB()*2, green, self);
                     func::OmegaMap greenOM(green.size(),false,true);
                     
                     mpi::cout << "Ok" << std::endl;
@@ -83,11 +82,8 @@ namespace evalsim {
                     
                     
                     mpi::cout << "Gathering one-particle green's function ... " << std::flush;
-                    
-                    auto const green_half_axis = func::get_green_from_obs<Value>(jParams,jObservables,jHybMatrix,hyb.size(),"green");
-                    auto const green = func::green_function_on_full_axis( green_half_axis );
-                    auto const self_half_axis = func::get_green_from_obs<Value>(jParams,jObservables,jHybMatrix,hyb.size(),"self-energy");
-                    auto const self = func::green_function_on_full_axis( self_half_axis );
+                    auto green = std::vector<io::cmat>(); auto self = std::vector<io::cmat>();
+                    func::green_and_self_function_on_full_axis<Value>(jParams, jObservables, jHybMatrix, hyb, hybMoments, frequencies.nMatGF() + frequencies.nMatGB()*2, green, self);
                     func::OmegaMap greenOM(green.size(),false,true);
                     
                     mpi::cout << "Ok" << std::endl;

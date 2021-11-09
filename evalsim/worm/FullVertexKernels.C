@@ -168,12 +168,13 @@ namespace evalsim {
             std::tie(hyb, hybMoments) = partition::func::get_hybridisation<Value>(jParams);
             
             //Read in green functions and susc and hedin susceptibilities
-            mpi::cout << "Reading in Hedin and Susc Green's functions ... " << std::flush;
+            mpi::cout << "Reading in Susceptibilities and Green's functions ... " << std::flush;
             
-            std::vector<io::cmat> green_pos = meas::read_matrix_functions_from_obs<ut::complex>(jObservables(cfg::partition::Worm::name())("green"), jParams, jParams(cfg::partition::Worm::name()), jHybMatrix, hyb.size());
-            auto const green = func::green_function_on_full_axis(green_pos);
+            auto green = std::vector<io::cmat>(); auto self = std::vector<io::cmat>();
+            func::green_and_self_function_on_full_axis<Value>(jParams, jObservables, jHybMatrix, hyb, hybMoments, 2*nMatGB + nMatGF, green, self);
             func::OmegaMap greenOM(green.size(),false,true);
             
+            mpi::cout << " ... susc ... " << std::flush;
             
             auto const susc_ph = jObservables.is(cfg::susc_ph::Worm::name()) ?
             rearrange_susc_ph( meas::read_tensor_functions_from_obs<ut::complex>(jObservables(cfg::susc_ph::Worm::name())("susceptibility"), jParams, jParams(cfg::susc_ph::Worm::name()), jHybMatrix, hyb.size())) : std::vector<io::ctens>();
@@ -185,6 +186,8 @@ namespace evalsim {
             auto const do_spp = susc_pp.size() > 0;
             auto const do_stph = susc_tph.size() > 0;
             
+            mpi::cout << " ... hedin ... " << std::flush;
+            
             auto const hedin_ph = jObservables.is(cfg::hedin_ph_imprsum::Worm::name()) ?
                 rearrange_hedin_ph( meas::read_tensor_functions_from_obs<ut::complex>(jObservables(cfg::hedin_ph_imprsum::Worm::name())("susceptibility"), jParams, jParams(cfg::hedin_ph_imprsum::Worm::name()), jHybMatrix, hyb.size())) : std::vector<io::ctens>();
             auto const hedin_pp = jObservables.is(cfg::hedin_pp_imprsum::Worm::name()) ?
@@ -194,6 +197,8 @@ namespace evalsim {
             auto const do_hph = hedin_ph.size() > 0;
             auto const do_hpp = hedin_pp.size() > 0;
             auto const do_htph = hedin_tph.size() > 0;
+            
+            mpi::cout << " ... vertex ... " << std::flush;
             
             std::vector<io::ctens> vertex = jObservables.is(cfg::vertex_imprsum::Worm::name()) ?
             meas::read_tensor_functions_from_obs<ut::complex>(jObservables(cfg::vertex_imprsum::Worm::name())("susceptibility"), jParams, jParams(cfg::vertex_imprsum::Worm::name()), jHybMatrix, hyb.size()) : std::vector<io::ctens>();
@@ -221,7 +226,13 @@ namespace evalsim {
             
             auto const abcds = do_v ? vertex[0].ijkl() : construct_ijkls(jHybMatrix.size());
             
-            for (int n=0; n<nMatGB_kernel; n++){
+            int const size = nMatGB_kernel;
+            int const chunk = (size + mpi::number_of_workers() - 1)/mpi::number_of_workers();
+            int const start = chunk*mpi::rank();
+            int const end = chunk*(mpi::rank() + 1);
+            
+            for (int n=start; n<end; n++){
+                if (n >= nMatGB_kernel) break;
                 
                 int const n_susc_test = omega_b.pos(omega_b_kernel(n));
                 bool const do_conj = n_susc_test < 0 ? true : false;
@@ -281,6 +292,10 @@ namespace evalsim {
                 
             }
             
+            mpi::all_reduce_function_tensor<mpi::op::sum>(kernel_1_ph, start);
+            mpi::all_reduce_function_tensor<mpi::op::sum>(kernel_1_tph, start);
+            mpi::all_reduce_function_tensor<mpi::op::sum>(kernel_1_pp, start);
+            
             mpi::cout << "OK" << std::endl;
             
             //Construct Kernel-2 Functions
@@ -290,73 +305,78 @@ namespace evalsim {
             std::vector<io::ctens> kernel_2_pp(nMatGB_kernel*nMatGF_kernel, io::ctens(jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size()));
             std::vector<io::ctens> kernel_2_tph(nMatGB_kernel*nMatGF_kernel, io::ctens(jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size()));
             
-            for (int om=0; om<nMatGB_kernel; om++)
-            for (int nu=0; nu<nMatGF_kernel; nu++){
-                
-                int const n = nu + om*nMatGF;
-                int const wf = greenOM.pos(omega_f_kernel(nu));
-                int const wb = greenOM.pos(omega_f_kernel(nu)-omega_b_kernel(om));
-                int const wc = greenOM.pos(omega_b_kernel(om)-omega_f_kernel(nu));
-                
-                int const n_susc_test = omega_b.pos(omega_b_kernel(om));
-                bool const do_conj = n_susc_test < 0 ? true : false;
-                int const om_susc = do_conj ? omega_b.pos(-omega_b_kernel(om)) : n_susc_test;
-                int const nu_neg = omega_f_kernel.pos(-omega_f_kernel(nu));
-                int const n_susc = do_conj ? nu_neg + om_susc*nMatGF : nu + om_susc*nMatGF;
-                
-                for(auto const& abcd : abcds){
-                
-                    auto const a=abcd[1];
-                    auto const b=abcd[2];
-                    auto const c=abcd[3];
-                    auto const d=abcd[4];
+            for (int om=start; om<end; om++){
+                if (om >= nMatGB_kernel) break;
+                for (int nu=0; nu<nMatGF_kernel; nu++){
                     
-                    std::string const entry = std::to_string(2*a)+"_"+std::to_string(2*b+1)+"_"+std::to_string(2*c)+"_"+std::to_string(2*d+1);
+                    int const n = nu + om*nMatGF;
+                    int const wf = greenOM.pos(omega_f_kernel(nu));
+                    int const wb = greenOM.pos(omega_f_kernel(nu)-omega_b_kernel(om));
+                    int const wc = greenOM.pos(omega_b_kernel(om)-omega_f_kernel(nu));
                     
-                    kernel_2_ph[n].emplace(a,b,c,d,entry, -kernel_1_ph[om].at(a,b,c,d));
-                    kernel_2_tph[n].emplace(a,b,c,d,entry, -kernel_1_tph[om].at(a,b,c,d));
-                    kernel_2_pp[n].emplace(a,b,c,d,entry, -kernel_1_pp[om].at(a,b,c,d));
+                    int const n_susc_test = omega_b.pos(omega_b_kernel(om));
+                    bool const do_conj = n_susc_test < 0 ? true : false;
+                    int const om_susc = do_conj ? omega_b.pos(-omega_b_kernel(om)) : n_susc_test;
+                    int const nu_neg = omega_f_kernel.pos(-omega_f_kernel(nu));
+                    int const n_susc = do_conj ? nu_neg + om_susc*nMatGF : nu + om_susc*nMatGF;
                     
-                    for(std::size_t i = 0; i < jHybMatrix.size(); ++i)
-                    for(std::size_t j = 0; j < jHybMatrix.size(); ++j){
+                    for(auto const& abcd : abcds){
                     
-                        if (do_hph){
-                            if (do_conj){
-                                kernel_2_ph[n](a,b,c,d)  -= 2.* std::conj(hedin_ph[n_susc].at(a,b,j,i))*U(i,c,j,d)/(green[wf](a,a)*green[wb](b,b));
-                            } else {
-                                kernel_2_ph[n](a,b,c,d)  -= 2.* (hedin_ph[n_susc].at(a,b,j,i))*U(i,c,j,d)/(green[wf](a,a)*green[wb](b,b));
+                        auto const a=abcd[1];
+                        auto const b=abcd[2];
+                        auto const c=abcd[3];
+                        auto const d=abcd[4];
+                        
+                        std::string const entry = std::to_string(2*a)+"_"+std::to_string(2*b+1)+"_"+std::to_string(2*c)+"_"+std::to_string(2*d+1);
+                        
+                        kernel_2_ph[n].emplace(a,b,c,d,entry, -kernel_1_ph[om].at(a,b,c,d));
+                        kernel_2_tph[n].emplace(a,b,c,d,entry, -kernel_1_tph[om].at(a,b,c,d));
+                        kernel_2_pp[n].emplace(a,b,c,d,entry, -kernel_1_pp[om].at(a,b,c,d));
+                        
+                        for(std::size_t i = 0; i < jHybMatrix.size(); ++i)
+                        for(std::size_t j = 0; j < jHybMatrix.size(); ++j){
+                        
+                            if (do_hph){
+                                if (do_conj){
+                                    kernel_2_ph[n](a,b,c,d)  -= 2.* std::conj(hedin_ph[n_susc].at(a,b,j,i))*U(i,c,j,d)/(green[wf](a,a)*green[wb](b,b));
+                                } else {
+                                    kernel_2_ph[n](a,b,c,d)  -= 2.* (hedin_ph[n_susc].at(a,b,j,i))*U(i,c,j,d)/(green[wf](a,a)*green[wb](b,b));
+                                }
                             }
-                        }
+                                
                             
-                        
-                        
-                        if (do_htph){
-                            if (do_conj) {
-                                kernel_2_tph[n](a,b,c,d) -= 2.*std::conj(hedin_tph[n_susc].at(a,i,j,d))*U(i,c,b,j)/(green[wf](a,a)*green[wb](d,d));
-                            } else {
-                                kernel_2_tph[n](a,b,c,d) -= 2.*(hedin_tph[n_susc].at(a,i,j,d))*U(i,c,b,j)/(green[wf](a,a)*green[wb](d,d));
-                            }
-                        }
                             
-                        
-                        if (do_hpp){
-                            if (do_conj){
-                                kernel_2_pp[n](a,b,c,d)  +=     std::conj(hedin_pp[n_susc].at(a,i,c,j))*U(j,i,b,d)/(green[wf](a,a)*green[wc](c,c));
-                            } else {
-                                kernel_2_pp[n](a,b,c,d)  +=     (hedin_pp[n_susc].at(a,i,c,j))*U(j,i,b,d)/(green[wf](a,a)*green[wc](c,c));
+                            if (do_htph){
+                                if (do_conj) {
+                                    kernel_2_tph[n](a,b,c,d) -= 2.*std::conj(hedin_tph[n_susc].at(a,i,j,d))*U(i,c,b,j)/(green[wf](a,a)*green[wb](d,d));
+                                } else {
+                                    kernel_2_tph[n](a,b,c,d) -= 2.*(hedin_tph[n_susc].at(a,i,j,d))*U(i,c,b,j)/(green[wf](a,a)*green[wb](d,d));
+                                }
                             }
+                                
+                            
+                            if (do_hpp){
+                                if (do_conj){
+                                    kernel_2_pp[n](a,b,c,d)  +=     std::conj(hedin_pp[n_susc].at(a,i,c,j))*U(j,i,b,d)/(green[wf](a,a)*green[wc](c,c));
+                                } else {
+                                    kernel_2_pp[n](a,b,c,d)  +=     (hedin_pp[n_susc].at(a,i,c,j))*U(j,i,b,d)/(green[wf](a,a)*green[wc](c,c));
+                                }
+                            }
+                            
+                            
                         }
-                        
-                        
                     }
                 }
             }
-      
+            
+            mpi::all_reduce_function_tensor<mpi::op::sum>(kernel_2_ph, start*nMatGF);
+            mpi::all_reduce_function_tensor<mpi::op::sum>(kernel_2_tph, start*nMatGF);
+            mpi::all_reduce_function_tensor<mpi::op::sum>(kernel_2_pp, start*nMatGF);
+            
             mpi::cout << "OK" << std::endl;
             
             //Write results
             mpi::cout << "Outputting results ... " << std::flush;
-            
             
             jsx::value jObservablesOut;
             jsx::value jKernel_1,jKernel_2;
@@ -465,105 +485,83 @@ namespace evalsim {
             std::vector<io::ctens> asymptotic_vertex(nMatGB*nMatGF*nMatGF, io::ctens(jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size()));
             auto const abcds = do_v ? measured_vertex[0].ijkl() : construct_ijkls(jHybMatrix.size());
             
-            for (int om=0; om<nMatGB; om++)
-            for (int nu1=0; nu1<nMatGF; nu1++)
-            for (int nu2=0; nu2<nMatGF; nu2++){
-                
-                int const nu1_ph = omega_f_kernel.pos(omega_f(nu1));
-                int const nu1_tph = nu1_ph;
-                int const nu1_pp = nu1_ph;
-                
-                int const nu2_ph = omega_f_kernel.pos(omega_f(nu2));
-                int const nu2_tph = omega_f_kernel.pos(omega_f(nu1) - omega_b(om));
-                int const nu2_pp = nu2_ph;
-                
-                int const om_ph = omega_b_kernel.pos(omega_b(om));
-                int const om_tph = omega_b_kernel.pos(omega_f(nu1) - omega_f(nu2));
-                int const om_pp = omega_b_kernel.pos(omega_f(nu1) + omega_f(nu2) - omega_b(om));
-                
-                int const n = nu2 + nu1*nMatGF + om*nMatGF*nMatGF;
-                
-                int const n1_ph = nu1_ph + om_ph * nMatGF_kernel;
-                int const n1_tph = nu1_tph + om_tph * nMatGF_kernel;
-                int const n1_pp = nu1_pp + om_pp * nMatGF_kernel;
-                
-                int const n2_ph = nu2_ph + om_ph * nMatGF_kernel;
-                int const n2_tph = nu2_tph + om_tph * nMatGF_kernel;
-                int const n2_pp = nu2_pp + om_pp * nMatGF_kernel;
-                                
-                for(auto const& abcd :abcds){
-                
-                    auto const a=abcd[1];
-                    auto const b=abcd[2];
-                    auto const c=abcd[3];
-                    auto const d=abcd[4];
-                    
-                    if (do_v)
-                        asymptotic_vertex[n].emplace(a,b,c,d,measured_vertex[0].entry(a,b,c,d), -2.*U(a,c,b,d));
-                    else
-                        asymptotic_vertex[n].emplace(a,b,c,d, std::to_string(2*a)+"_"+std::to_string(2*b+1)+"_"+std::to_string(2*c)+"_"+std::to_string(2*d+1) , -2.*U(a,c,b,d));
-                        
-                    
-                    //PH
-                    if(1)
-                    if (om_ph>=0){
-                        asymptotic_vertex[n](a,b,c,d) += kernel_1_ph[om_ph].at(a,b,c,d);
-                        if (nu1_tph>=0 and nu2_ph>=0 and 1){
-                            //1;
-                            asymptotic_vertex[n](a,b,c,d) += kernel_2_ph[n1_ph].at(a,b,c,d) + kernel_2_ph[n2_ph].at(a,b,c,d);// + kernel_1_ph[om_ph].at(a,b,c,d);
-                            
-                            
-                        } else if (0) {
-                            if (nu1_ph>=0 and 0)
-                                asymptotic_vertex[n](a,b,c,d) += kernel_2_ph[n1_ph].at(a,b,c,d) + 0.5*kernel_1_ph[om_ph].at(a,b,c,d);
-                            else if (nu2_ph>=0 and 0)
-                                asymptotic_vertex[n](a,b,c,d) += kernel_2_ph[n2_ph].at(a,b,c,d) + 0.5*kernel_1_ph[om_ph].at(a,b,c,d);
-                            else
-                                asymptotic_vertex[n](a,b,c,d) -= 2.*kernel_1_ph[om_ph].at(a,b,c,d);
-                        }
-                    }
-                    
-                    //TPH
-                    if(1)
-                    if (om_tph>=0){
-                        asymptotic_vertex[n](a,b,c,d) += kernel_1_tph[om_tph].at(a,b,c,d);
-                        if (nu1_tph>=0 and nu2_tph>=0 and 1){
-                            
-                            asymptotic_vertex[n](a,b,c,d) += kernel_2_tph[n1_tph].at(a,b,c,d) + kernel_2_tph[n2_tph].at(a,b,c,d);// + kernel_1_tph[om_tph].at(a,b,c,d);;
-                            
-                            
-                        } else if (0) {
-                            if (nu1_tph>=0)
-                                asymptotic_vertex[n](a,b,c,d) += kernel_2_tph[n1_tph].at(a,b,c,d) - 0.5*kernel_1_tph[om_tph].at(a,b,c,d);
-                            else if (nu2_tph>=0)
-                                asymptotic_vertex[n](a,b,c,d) += kernel_2_tph[n2_tph].at(a,b,c,d) - 0.5*kernel_1_tph[om_tph].at(a,b,c,d);
-                            else
-                                asymptotic_vertex[n](a,b,c,d) -= 2.*kernel_1_tph[om_tph].at(a,b,c,d);
-                        }
-                        
-                    }
-                    
-                    //PP
-                    if(1)
-                    if (om_pp>=0){
-                        asymptotic_vertex[n](a,b,c,d) += kernel_1_pp[om_pp].at(a,b,c,d);
-                        if (nu1_pp>=0 and nu2_pp>=0 and 1){
-                            
-                            asymptotic_vertex[n](a,b,c,d) += kernel_2_pp[n1_pp].at(a,b,c,d) + kernel_2_pp[n2_pp].at(a,b,c,d);// + kernel_1_pp[om_pp].at(a,b,c,d);
-                            
-                        } else if (0){
-                            if (nu1_pp>=0)
-                                asymptotic_vertex[n](a,b,c,d) += kernel_2_pp[n1_pp].at(a,b,c,d) - kernel_1_pp[om_pp].at(a,b,c,d);
-                            else if (nu2_pp>=0)
-                                asymptotic_vertex[n](a,b,c,d) += kernel_2_pp[n2_pp].at(a,b,c,d) - kernel_1_pp[om_pp].at(a,b,c,d);
-                            else
-                                asymptotic_vertex[n](a,b,c,d) -= 3.*kernel_1_pp[om_pp].at(a,b,c,d);
-                        }
-                    }
-                    
-                }
+            int const size = nMatGB;
+            int const chunk = (size + mpi::number_of_workers() - 1)/mpi::number_of_workers();
+            int const start = chunk*mpi::rank();
+            int const end = chunk*(mpi::rank() + 1);
             
+            for (int om=start; om<end; om++){
+                if (om >= nMatGB) break;
+                for (int nu1=0; nu1<nMatGF; nu1++)
+                for (int nu2=0; nu2<nMatGF; nu2++){
+                    
+                    int const nu1_ph = omega_f_kernel.pos(omega_f(nu1));
+                    int const nu1_tph = nu1_ph;
+                    int const nu1_pp = nu1_ph;
+                    
+                    int const nu2_ph = omega_f_kernel.pos(omega_f(nu2));
+                    int const nu2_tph = omega_f_kernel.pos(omega_f(nu1) - omega_b(om));
+                    int const nu2_pp = nu2_ph;
+                    
+                    int const om_ph = omega_b_kernel.pos(omega_b(om));
+                    int const om_tph = omega_b_kernel.pos(omega_f(nu1) - omega_f(nu2));
+                    int const om_pp = omega_b_kernel.pos(omega_f(nu1) + omega_f(nu2) - omega_b(om));
+                    
+                    int const n = nu2 + nu1*nMatGF + om*nMatGF*nMatGF;
+                    
+                    int const n1_ph = nu1_ph + om_ph * nMatGF_kernel;
+                    int const n1_tph = nu1_tph + om_tph * nMatGF_kernel;
+                    int const n1_pp = nu1_pp + om_pp * nMatGF_kernel;
+                    
+                    int const n2_ph = nu2_ph + om_ph * nMatGF_kernel;
+                    int const n2_tph = nu2_tph + om_tph * nMatGF_kernel;
+                    int const n2_pp = nu2_pp + om_pp * nMatGF_kernel;
+                                    
+                    for(auto const& abcd :abcds){
+                    
+                        auto const a=abcd[1];
+                        auto const b=abcd[2];
+                        auto const c=abcd[3];
+                        auto const d=abcd[4];
+                        
+                        if (do_v)
+                            asymptotic_vertex[n].emplace(a,b,c,d,measured_vertex[0].entry(a,b,c,d), -2.*U(a,c,b,d));
+                        else
+                            asymptotic_vertex[n].emplace(a,b,c,d, std::to_string(2*a)+"_"+std::to_string(2*b+1)+"_"+std::to_string(2*c)+"_"+std::to_string(2*d+1) , -2.*U(a,c,b,d));
+                            
+                        
+                        //PH
+                        if (om_ph>=0){
+                            asymptotic_vertex[n](a,b,c,d) += kernel_1_ph[om_ph].at(a,b,c,d);
+                            if (nu1_tph>=0 and nu2_ph>=0){
+                                asymptotic_vertex[n](a,b,c,d) += kernel_2_ph[n1_ph].at(a,b,c,d) + kernel_2_ph[n2_ph].at(a,b,c,d);
+                            }
+                        }
+                        
+                        //TPH
+                        if (om_tph>=0){
+                            asymptotic_vertex[n](a,b,c,d) += kernel_1_tph[om_tph].at(a,b,c,d);
+                            if (nu1_tph>=0 and nu2_tph>=0){
+                                asymptotic_vertex[n](a,b,c,d) += kernel_2_tph[n1_tph].at(a,b,c,d) + kernel_2_tph[n2_tph].at(a,b,c,d);
+                            }
+                            
+                        }
+                        
+                        //PP
+                        if (om_pp>=0){
+                            asymptotic_vertex[n](a,b,c,d) += kernel_1_pp[om_pp].at(a,b,c,d);
+                            if (nu1_pp>=0 and nu2_pp>=0){
+                                asymptotic_vertex[n](a,b,c,d) += kernel_2_pp[n1_pp].at(a,b,c,d) + kernel_2_pp[n2_pp].at(a,b,c,d);
+                            }
+                                
+                        }
+                        
+                    }
+                
+                }
             }
+            
+            mpi::all_reduce_function_tensor<mpi::op::sum>(asymptotic_vertex, start*nMatGF*nMatGF);
             
             mpi::cout << "OK" << std::endl;
             
@@ -576,42 +574,46 @@ namespace evalsim {
             
             std::vector<io::ctens> combined_vertex(asymptotic_vertex.size(), io::ctens(jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size()));
 
-            for (int om=0; om<nMatGB; om++)
-            for (int nu1=0; nu1<nMatGF; nu1++)
-            for (int nu2=0; nu2<nMatGF; nu2++){
-                
-                int const nu_prod = std::abs(omega_f(nu1) * (omega_f(nu1) - omega_b(om)) * (omega_f(nu2) - omega_b(om)) * omega_f(nu2));
-                int const is_static = 1;//!omega_b(om);
-                int const is_diag = nu1 == nu2;
-                int const use_asymptotic = nu_prod > asymptotic_cutoff_l_4*(is_static + is_diag - is_static*is_diag);
-                
-                int const om_meas = omega_b_meas.pos(omega_b(om));
-                int const nu1_meas = omega_f_meas.pos(omega_f(nu1));
-                int const nu2_meas = omega_f_meas.pos(omega_f(nu2));
-                
-                int const n = nu1 + nu2*nMatGF + om*nMatGF*nMatGF;
-                
-                int const n_meas = nu1_meas + nu2_meas*frequencies_meas.nMatGF() + om_meas*frequencies_meas.nMatGF()*frequencies_meas.nMatGF();
-                
-                for(auto const& abcd : abcds){
-                
-                    auto const a=abcd[1];
-                    auto const b=abcd[2];
-                    auto const c=abcd[3];
-                    auto const d=abcd[4];
+            for (int om=start; om<end; om++){
+                if (om >= nMatGB) break;
+                for (int nu1=0; nu1<nMatGF; nu1++)
+                for (int nu2=0; nu2<nMatGF; nu2++){
                     
-                    combined_vertex[n].emplace(a,b,c,d, asymptotic_vertex[0].entry(a,b,c,d), 0.);
+                    int const nu_prod = std::abs(omega_f(nu1) * (omega_f(nu1) - omega_b(om)) * (omega_f(nu2) - omega_b(om)) * omega_f(nu2));
+                    int const is_static = 1;//!omega_b(om);
+                    int const is_diag = nu1 == nu2;
+                    int const use_asymptotic = nu_prod > asymptotic_cutoff_l_4*(is_static + is_diag - is_static*is_diag);
                     
-                    if (om_meas < 0 or nu1_meas < 0 or nu2_meas < 0 or use_asymptotic){
-                        combined_vertex[n](a,b,c,d) = asymptotic_vertex[n](a,b,c,d);
-                    } else {
-                        combined_vertex[n](a,b,c,d) = measured_vertex[n_meas](a,b,c,d);
-                    }
+                    int const om_meas = omega_b_meas.pos(omega_b(om));
+                    int const nu1_meas = omega_f_meas.pos(omega_f(nu1));
+                    int const nu2_meas = omega_f_meas.pos(omega_f(nu2));
+                    
+                    int const n = nu1 + nu2*nMatGF + om*nMatGF*nMatGF;
+                    
+                    int const n_meas = nu1_meas + nu2_meas*frequencies_meas.nMatGF() + om_meas*frequencies_meas.nMatGF()*frequencies_meas.nMatGF();
+                    
+                    for(auto const& abcd : abcds){
+                    
+                        auto const a=abcd[1];
+                        auto const b=abcd[2];
+                        auto const c=abcd[3];
+                        auto const d=abcd[4];
                         
+                        combined_vertex[n].emplace(a,b,c,d, asymptotic_vertex[0].entry(a,b,c,d), 0.);
+                        
+                        if (om_meas < 0 or nu1_meas < 0 or nu2_meas < 0 or use_asymptotic){
+                            combined_vertex[n](a,b,c,d) = asymptotic_vertex[n](a,b,c,d);
+                        } else {
+                            combined_vertex[n](a,b,c,d) = measured_vertex[n_meas](a,b,c,d);
+                        }
+                            
+                        
+                    }
                     
                 }
-                
             }
+            
+            mpi::all_reduce_function_tensor<mpi::op::sum>(combined_vertex, start*nMatGF*nMatGF);
             
             mpi::cout << "OK" << std::endl;
             
@@ -636,15 +638,16 @@ namespace evalsim {
         template jsx::value evaluateFullVertexFromKernels<ut::complex>(jsx::value jParams, jsx::value const& jObservables);
     
         std::vector<std::vector<int>> construct_ijkls(int const size){
-            std::vector<std::vector<int>> ijkls(size*size*size*size,std::vector<int>(5));
+            std::vector<std::vector<int>> ijkls;
             int n=0;
             for (int i=0; i<size; i++)
                 for (int j=0; j<size; j++)
                     for (int k=0; k<size; k++)
-                        for (int l=0; l<size; l++){
-                            ijkls[n]=std::vector<int>({n,i,j,k,l});
-                            n+=1;
-                        }
+                        for (int l=0; l<size; l++)
+                            if ((i==j and k==l) or (i==l and j==k)){
+                                ijkls.push_back(std::vector<int>({n,i,j,k,l}));
+                                n+=1;
+                            }
             
             return ijkls;
         };

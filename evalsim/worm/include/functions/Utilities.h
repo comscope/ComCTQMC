@@ -5,6 +5,11 @@
 #include <vector>
 #include <string>
 
+#include "Measurements.h"
+
+#include "../../../partition/Functions.h"
+
+#include "../../../../include/measurements/Measurements.h"
 #include "../../../../include/measurements/Measurements.h"
 #include "../../../../include/io/Matrix.h"
 #include "../../../../ctqmc/include/Utilities.h"
@@ -43,8 +48,21 @@ namespace evalsim {
                 
             };
         
-        std::vector<io::cmat> green_function_on_full_axis(std::vector<io::cmat>const& green);
+        template <typename Value>
+        void extend_hyb(std::vector<io::cmat>& hyb, std::vector<io::Matrix<Value>> const& hybMoments, int const nf, double const beta);
+        
+        template <typename Value>
+        void green_and_self_function_on_full_axis(jsx::value const& jParams, jsx::value const& jObservables, jsx::value const& jHybMatrix,
+                                                  std::vector<io::cmat> & hyb, std::vector<io::Matrix<Value>> const& hybMoments, int const nf,
+                                                  std::vector<io::cmat>& green, std::vector<io::cmat>& self);
             
+        template<typename Value>
+        std::vector<io::cmat> get_green_from_obs(jsx::value const& jParams, jsx::value const& jObservables, jsx::value const& jHybMatrix, std::size_t hybSize, std::string const func_name);
+        
+        
+        template<typename Value>
+        std::vector<io::Matrix<Value>> get_moments_from_obs(jsx::value const& jParams, jsx::value const& jObservables, jsx::value const& jHybMatrix, std::size_t hybSize, std::string const func_name);
+        
         }
         
     }

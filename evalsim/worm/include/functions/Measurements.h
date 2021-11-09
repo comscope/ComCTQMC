@@ -8,7 +8,6 @@
 #include <cstring>
 #include <random>
 
-
 #include "../../../../include/JsonX.h"
 #include "../../../../include/io/Vector.h"
 #include "../../../../include/io/Matrix.h"
@@ -263,6 +262,24 @@ namespace evalsim {
                 return matrix;
                 
             }
+        
+            template<typename Value>
+            std::vector<io::Matrix<Value>>  read_matrix_moments_from_obs(jsx::value const& jFunctions, jsx::value const& jParams, jsx::value const& jPartition, jsx::value const& jHybMatrix, int hybSize){
+                
+                std::map<std::string, io::Vector<Value>> functions;
+                
+                for(auto const& function : jFunctions.object()) {
+                    auto temp = jsx::at<io::Vector<Value>>(function.second("moments"));
+                    
+                    functions[function.first] = temp;
+                }
+                
+                std::vector<io::Matrix<Value>> matrix = func::get_function_matrix<Value>(functions, jHybMatrix);
+                
+                return matrix;
+                
+            }
+        
             
             template<typename Value>
             std::vector<io::ctens>  read_tensor_functions_from_obs(jsx::value const& jFunctions, jsx::value const& jParams, jsx::value const& jPartition, jsx::value const& jHybMatrix, int hybSize){

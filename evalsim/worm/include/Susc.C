@@ -51,9 +51,15 @@ namespace evalsim {
                         
                         mpi::cout << "Ok" << std::endl;
                         
+                        mpi::cout << "Adding high-frequency tail ... " << std::flush;
+                        
+                        func::susc::ph::add_tail<Value>(jParams, jWorm, jPartition, jHybMatrix, susc_symm);
+                        
+                        mpi::cout << "Ok" << std::endl;
+                        
                         jObservablesOut["susceptibility"] = func::write_functions<Value>(jParams, jHybMatrix, susc_symm);
                         
-                        jObservablesOut["qn"] = qn_susc<Value>(jParams,susc_symm);
+                        jObservablesOut["qn"] = qn_susc<Value>(jParams, susc_symm);
                         
                         return jObservablesOut;
                     }
@@ -71,6 +77,63 @@ namespace evalsim {
                     template jsx::value non_impr_est_evalsim<ut::complex>(jsx::value, jsx::value const&, jsx::value const&, jsx::value const&, jsx::value const&);
                     template jsx::value impr_est_evalsim<ut::complex>(jsx::value, jsx::value const&, jsx::value const&, jsx::value const&, jsx::value const&);
                     //------------//
+                    
+                    template <typename Value>
+                    void add_tail(jsx::value jParams, jsx::value const& jWorm, jsx::value const& jPartition, jsx::value const& jHybMatrix, std::vector<io::ctens>& susc){
+                        
+                        auto const nTail = jWorm("tail fit end").int64();
+                        auto const nFit = jWorm("tail fit start").int64();
+                        auto const beta = jParams("beta").real64();
+                        
+                        jsx::value jHamiltonian = partition::get_hamiltonian<Value>(jParams);
+                        jsx::value jDensityMatrix = partition::meas::read_density_matrix<Value>(jParams, jPartition("density matrix"));
+                        
+                        //-----------------------Get moments-----------------------//
+                        std::vector<jsx::value> jcc(jHybMatrix.size(), jsx::array_t(jHybMatrix.size()));
+                        std::vector<jsx::value> jC(jHybMatrix.size(), jsx::array_t(jHybMatrix.size()));
+                        for(std::size_t i = 0; i < jHybMatrix.size(); ++i) {
+                            for(std::size_t j = 0; j < jHybMatrix.size(); ++j) {
+                                linalg::mult<Value>('c', 'n', 1., jParams("operators")(i), jParams("operators")(j), .0, jcc[i](j));
+                                
+                                linalg::mult<Value>('n', 'n',  1., jHamiltonian, jcc[i](j), .0, jC[i](j));
+                                linalg::mult<Value>('n', 'n', -1., jcc[i](j), jHamiltonian, 1., jC[i](j));
+                                
+                            }
+                        }
+                        
+                        io::rtens moments(jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size());
+                        auto const omega = func::iOmega(beta, false);
+                        for(auto const& ijkl : susc[0].ijkl()){
+                            
+                            auto const i = ijkl[1];
+                            auto const j = ijkl[2];
+                            auto const k = ijkl[3];
+                            auto const l = ijkl[4];
+                            
+                            jsx::value moment;
+                                        
+                            linalg::mult<Value>('n', 'n',  1., jC[i](j), jcc[k](l), .0, moment);
+                            linalg::mult<Value>('n', 'n', -1., jcc[k](l), jC[i](j), 1., moment);
+                            
+                            moments.emplace(i, j, k, l, susc[0].entry(ijkl[0]), ut::real(linalg::trace<Value>(jDensityMatrix, moment)));
+
+                            if(i == j and k == l and i == k) moments(i, j, k, l) = moments(i, j, k, l) - (jsx::at<io::rvec>(jPartition("flavor k"))[2*i] + jsx::at<io::rvec>(jPartition("flavor k"))[2*i + 1])/beta;
+                            
+                            ut::complex A = .0, B = .0;
+                            for(std::size_t n = nFit; n < nTail; ++n) {
+                                auto const chi = susc[n](i,j,k,l);
+                                auto const chi2 = std::conj(chi)*chi;
+                                A += moments(i,j,k,l)*chi + omega(n).imag()*omega(n).imag() * chi2; B += chi2;
+                            }
+                            auto const alpha = -A/B;
+                            
+                            for(std::size_t n = nTail; n < susc.size(); ++n){
+                                susc[n](i,j,k,l) = -moments(i, j, k, l)/(omega(n).imag()*omega(n).imag() + alpha);
+                            }
+                            
+                        }
+                        
+                    }
                     
                     template <typename Value>
                     void compute_and_subtract_disconnected(jsx::value const& jParams, jsx::value const& jOccupation, BosonFrequencies<Value> const& frequencies, std::vector<io::ctens>& full_in_connected_out){
@@ -157,7 +220,9 @@ namespace evalsim {
                             
                         }
                         
+                        
                         auto const& jObs = jParams("observables record");
+                        if (!jObs.is<jsx::empty_t>())
                         for (auto const& entry : jObs.object() ){
                                 
                             auto jHam = entry.second;
