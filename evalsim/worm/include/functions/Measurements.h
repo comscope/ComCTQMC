@@ -12,6 +12,7 @@
 #include "../../../../include/io/Vector.h"
 #include "../../../../include/io/Matrix.h"
 #include "../../../../include/io/Tensor.h"
+#include "../../../../include/external/irbasis.hpp"
 
 #include "Functions.h"
 #include "Bessel.h"
@@ -41,6 +42,201 @@ namespace evalsim {
                 
             io::cvec collapse_antisymmetric_function(io::cvec const& function);
                 
+            
+                template <typename T, typename ...> struct Read_intermediate_rep_function;
+                
+                template<typename T>
+                struct Read_intermediate_rep_function<T>{
+                    
+                    Read_intermediate_rep_function(jsx::value const& jParams, jsx::value const& jPartition){ throw std::runtime_error("Error: Read_intermediate_rep_function requires specialization\n");}
+                    
+                    io::cvec operator()(jsx::value const& jFunction){
+                        
+                        return io::cvec();
+                    }
+                };
+            
+            
+            
+                template<typename T, typename Time>
+                struct Read_intermediate_rep_function<T,Time>{
+                    
+                    Read_intermediate_rep_function(jsx::value const& jParams, jsx::value const& jPartition) :
+                    beta_(jParams("beta").real64()),
+                    nMatGF_((std::is_same<T,double>::value ? 1 : 2) * (jPartition.is("matsubara cutoff") ? jPartition("matsubara cutoff").int64() : 50 )){
+                        
+                        double const wmax = jPartition("cutoff").real64();
+                        double lambda = irbasis::get_closest_lambda(wmax*beta_);
+                        
+                        std::string const type{ std::is_same<Time,Fermion>::value ? "F" : "B" };
+                        b_ = irbasis::load(type, lambda, "./irbasis.h5");
+                        
+                    }
+                    
+                    io::cvec operator()(jsx::value const& jFunction){
+                        
+                        auto ir_function = jsx::at<io::cvec>(jFunction);
+                        
+                        int ntau = 10*nMatGF_;
+                        io::cvec tau_function(ntau, 0);
+                        auto const shift = (std::is_same<T,double>::value ? 0 : nMatGF_/2);
+                        
+                        for (int t=0; t<ntau; t++){
+                            double x = 2.*t/(ntau-1) - 1;
+                            
+                            for (int l=0; l<b_.dim(); l++){
+                                
+                                tau_function[t] += ir_function[l]*b_.ulx(l,x);
+                            }
+                        }
+                        
+                        io::cvec omega_function(nMatGF_, 0);
+                        for (int t=0; t<ntau; t++){
+                            
+                            double const phi = M_PI*t/(ntau-1);
+                            ut::complex const fact{ std::cos(2.*phi), std::sin(2.*phi) };
+                            ut::complex val{ std::is_same<Time,Fermion>::value ? ut::complex{ std::cos(phi), std::sin(phi) } : 1. };
+                            
+                            for (int n=0; n<nMatGF_; n++){
+                                omega_function[n] += tau_function[t]*val;
+                                val *= fact;
+                            }
+                        }
+                        
+                        auto scaling = -2./ntau/beta_;
+                        for (auto & x : omega_function)
+                            x *= scaling;
+                            
+                        return omega_function;
+                    }
+                    
+                private:
+                    int const nMatGF_;
+                    double const beta_;
+                    
+                    irbasis::basis b_;
+                    
+                };
+            
+            
+            template<typename T>
+            struct Read_intermediate_rep_function<T,Fermion,Boson>{
+                
+                Read_intermediate_rep_function(jsx::value const& jParams, jsx::value const& jPartition) :
+                beta_(jParams("beta").real64()),
+                nMatGB_((std::is_same<T,double>::value ? 1 : 2) * jPartition("boson cutoff").int64()),
+                nMatGF_((std::is_same<T,double>::value ? 1 : 2) * (jPartition.is("matsubara cutoff") ? jPartition("matsubara cutoff").int64() : 50 ) ){
+                    
+                    double const wmax = jPartition("cutoff").real64();
+                    double lambda = irbasis::get_closest_lambda(wmax*beta_);
+                    b_ = irbasis::load("F", lambda, "./irbasis.h5");
+                    
+                }
+                
+                io::cvec operator()(jsx::value const& jFunction){
+                    
+                    auto ir_function = jsx::at<io::cvec>(jFunction);
+                    int ntau = 10*nMatGF_;
+                    io::cmat tau_function(nMatGB_, ntau, 0);
+                    auto const shift = nMatGF_/2;
+                    
+                    for (int t=0; t<ntau; t++){
+                        double x = 2.*t/(ntau-1) - 1;
+                            
+                        for (int om=0; om<nMatGB_; om++){
+                            for (int l=0; l<b_.dim(); l++){
+                                int const n = om*b_.dim() + l;
+                                
+                                tau_function(om,t) += ir_function[n]*b_.ulx(l,x);
+                            }
+                        }
+                    }
+                        
+                    io::cvec omega_function(nMatGF_*nMatGB_, 0);
+                    for (int t=0; t<ntau; t++){
+                            
+                        double const phi = M_PI*t/(ntau-1);
+                        ut::complex const fact{ std::cos(2.*phi), std::sin(2.*phi) };
+                        ut::complex val = ut::complex{ std::cos(phi), std::sin(phi) };
+                            
+                        for (int om=0; om<nMatGB_; om++){
+                            auto it_f = omega_function.begin()+om*nMatGF_ + shift;
+                            auto it_b = it_f - 1;
+                            
+                            for (int nu=shift; nu<nMatGF_; nu++){
+                                *it_f++ += tau_function(om,t)*val;
+                                *it_b-- += tau_function(om,t)*std::conj(val);
+                                val *= fact;
+                            }
+                        }
+                    }
+                    
+                    auto scaling = -2./ntau/beta_;
+                    for (auto & x : omega_function)
+                        x *= scaling;
+                    
+                    return omega_function;
+                }
+                
+            private:
+                int const nMatGF_, nMatGB_;
+                double const beta_;
+                
+                irbasis::basis b_;
+                
+            };
+                
+                template<typename T>
+                struct Read_intermediate_rep_function<T,Fermion,Fermion,Boson>{
+                    
+                    Read_intermediate_rep_function(jsx::value const& jParams, jsx::value const& jPartition) :
+                    nMatGB_((std::is_same<T,double>::value ? 1 : 2) * jPartition("boson cutoff").int64()),
+                    nMatGF_(2*(jPartition.is("matsubara cutoff") ? jPartition("matsubara cutoff").int64() : 50 )),
+                    nPol_(jPartition("fermion cutoff").int64()),
+                    beta_(jParams("beta").real64()),
+                    Tnl_(nPol_,nMatGF_){}
+                    
+                    io::cvec operator()(jsx::value const& jFunction){
+                        
+                        io::cvec legendre_function = jsx::at<io::cvec>(jFunction);
+                        
+                        io::cvec function(nMatGF_*nMatGF_*nMatGB_,0);
+                        
+                        for (int l=0; l<nPol_; l++)
+                            for (int m=0; m<nPol_; m++){
+                                
+                                int const s = m%2 ? 1 : -1;
+                                double const adj=-s*std::sqrt(2*l+1.)*std::sqrt(2*m+1.)/beta_;
+                                
+                                for (int k=0; k<nMatGB_; k++){
+                                    int n = l + m*nPol_ + k*nPol_*nPol_;
+                                    legendre_function[n]*=adj;
+                                    
+                                    for (int i=0; i<nMatGF_; i++){
+                                        int const i_=i-nMatGF_/2;
+                                        for (int j=0; j<nMatGF_; j++){
+                                            int const j_=j-nMatGF_/2;
+                                            
+                                            function[i + j*nMatGF_ + k*nMatGF_*nMatGF_] += legendre_function[n]*Tnl_(i_,l)*std::conj(Tnl_(j_,m));
+                                            
+                                        }
+                                    }
+                                }
+                            }
+                        
+                        
+                        return function;
+                        
+                    }
+                    
+                private:
+                    int const nMatGB_,nMatGF_,nPol_;
+                    double const beta_;
+                    
+                    be::Transform<T,Fermion> Tnl_;
+                    
+                };
+            
                 
                 template <typename T, typename ...> struct Read_legendre_function;
                 
@@ -197,9 +393,12 @@ namespace evalsim {
                 inline io::cvec read_function(jsx::value const& jFunction, jsx::value const& jParams, jsx::value const& jPartition, int hybSize, bool scale, bool force_matsubara = false) {
                     if(force_matsubara or (jPartition.is("basis") ? jPartition("basis").string() == "matsubara" : true)) {
                         return read_matsubara_function(jParams,jPartition, jFunction, scale);
-                    }else if(jPartition.is("basis") ? jPartition("basis").string() == "legendre" : true) {
+                    }else if(jPartition.is("basis") ? jPartition("basis").string() == "legendre" : false) {
                          Read_legendre_function<double,Args ...> rlf(jParams,jPartition);
                         return rlf(jFunction);
+                    }else if(jPartition.is("basis") ? jPartition("basis").string() == "intermediate representation" : false) {
+                        Read_intermediate_rep_function<Value,Args ...> irf(jParams,jPartition);
+                        return irf(jFunction);
                     }else
                         throw std::runtime_error("read_function: unknown basis option");
                     

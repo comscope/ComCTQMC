@@ -39,6 +39,12 @@ find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
 add_link_options(${BLAS_LINKER_FLAGS})
 
+find_package(HDF5 COMPONENTS C REQUIRED)
+include_directories(${HDF5_INCLUDE_DIRS})
+
+find_package(Boost REQUIRED)
+include_directories(${Boost_INCLUDE_DIRS})
+
 IF(NOT CMAKE_BUILD_TYPE EQUAL "DEBUG")
 	add_definitions(-DNDEBUG)
 ENDIF()
@@ -63,14 +69,17 @@ target_link_libraries(ctqmc
     ${MPI_LIBRARIES}
     ${LAPACK_LIBRARIES}
     ${BLAS_LIBRARIES}
+    ${Boost_LIBRARIES}
+    ${HDF5_LIBRARIES}
     CUDA::cudart)
 ELSE()
 target_link_libraries(ctqmc
     ${MPI_LIBRARIES}
     ${LAPACK_LIBRARIES}
-    ${BLAS_LIBRARIES})
+    ${BLAS_LIBRARIES} 
+    ${Boost_LIBRARIES}
+    ${HDF5_LIBRARIES})
 ENDIF()
-
 add_executable(ctqmc_x)
 if (CMAKE_CUDA_COMPILER)
 	target_sources(ctqmc_x PRIVATE ctqmc/device/planar_complex/Main.C)

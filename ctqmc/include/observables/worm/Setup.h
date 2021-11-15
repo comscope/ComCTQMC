@@ -18,6 +18,8 @@ namespace obs {
             observables.template add<worm::Observable<Mode, Value, worm::FuncType::Matsubara, measType, Worm>>(sweep, store, jWorm, data);
         else if(jWorm("basis").string() == "legendre")
             observables.template add<worm::Observable<Mode, Value, worm::FuncType::Legendre, measType, Worm>>(sweep, store, jWorm, data);
+        else if(jWorm("basis").string() == "intermediate representation")
+            observables.template add<worm::Observable<Mode, Value, worm::FuncType::IntermediateRepresentation, measType, Worm>>(sweep, store, jWorm, data);
         else
             throw std::runtime_error("Unknown basis option");
     }

@@ -53,7 +53,7 @@ namespace evalsim {
                         
                         mpi::cout << "Adding high-frequency tail ... " << std::flush;
                         
-                        func::susc::ph::add_tail<Value>(jParams, jWorm, jPartition, jHybMatrix, susc_symm);
+                        //func::susc::ph::add_tail<Value>(jParams, jWorm, jPartition, jHybMatrix, susc_symm);
                         
                         mpi::cout << "Ok" << std::endl;
                         
@@ -116,7 +116,7 @@ namespace evalsim {
                             linalg::mult<Value>('n', 'n', -1., jcc[k](l), jC[i](j), 1., moment);
                             
                             moments.emplace(i, j, k, l, susc[0].entry(ijkl[0]), ut::real(linalg::trace<Value>(jDensityMatrix, moment)));
-
+                            
                             if(i == j and k == l and i == k) moments(i, j, k, l) = moments(i, j, k, l) - (jsx::at<io::rvec>(jPartition("flavor k"))[2*i] + jsx::at<io::rvec>(jPartition("flavor k"))[2*i + 1])/beta;
                             
                             ut::complex A = .0, B = .0;
@@ -126,6 +126,7 @@ namespace evalsim {
                                 A += moments(i,j,k,l)*chi + omega(n).imag()*omega(n).imag() * chi2; B += chi2;
                             }
                             auto const alpha = -A/B;
+                            
                             
                             for(std::size_t n = nTail; n < susc.size(); ++n){
                                 susc[n](i,j,k,l) = -moments(i, j, k, l)/(omega(n).imag()*omega(n).imag() + alpha);

@@ -21,6 +21,12 @@ namespace obs {
         struct data_trait<FuncType::Legendre, Value> {
             using type = Value;
         };
+    
+    
+        template<typename Value>
+        struct data_trait<FuncType::IntermediateRepresentation, Value> {
+            using type = ut::complex;
+        };
         
         template<FuncType funcType, typename Value> using data_trait_t = typename data_trait<funcType, Value>::type;
         
