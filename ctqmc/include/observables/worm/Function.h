@@ -64,7 +64,7 @@ namespace obs {
             
             double const wmax = size;
             double lambda = irbasis::get_closest_lambda(wmax*ut::beta());
-            
+            sign_ = partType == PartType::Fermion ? -1 : 1;
             std::string const type{ partType == PartType::Fermion ? "F" : "B" };
             b_ = irbasis::load(type, lambda, "./irbasis.h5");
             data_.resize(b_.dim());
@@ -81,7 +81,7 @@ namespace obs {
             int sign = 1;
             if(key < 0) {
                 key += ut::KeyMax;
-                sign = -1;
+                sign *= sign_;
             }
             
             double x = 2.*key/ut::KeyMax - 1;
@@ -96,6 +96,7 @@ namespace obs {
         };
         
     private:
+        int sign_;
         std::vector<double> data_;
         irbasis::basis b_;
     };
