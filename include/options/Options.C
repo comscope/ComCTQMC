@@ -75,6 +75,8 @@ namespace opt {
         std::vector<std::string> qn_to_delete;
         for(auto& qn : jqn.object()){
             if(qn.second.is<jsx::object_t>()) {
+                if (!jParams.is("basis"))
+                    mpi::cout << "Autocompletion of quantum numbers and observables requires a description of the basis\n";
                 Basis<Value> basis = get_basis<Value>(jParams("basis"));
                 
                 if(!basis.qns().count(qn.first))
