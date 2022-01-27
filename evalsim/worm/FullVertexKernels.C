@@ -220,11 +220,12 @@ namespace evalsim {
             //Construct Kernel-1 Functions
             mpi::cout << "Calculating Kernel-1 functions ... " << std::flush;
             
+            std::vector<io::ctens> kernel_0(1, io::ctens(jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size()));
             std::vector<io::ctens> kernel_1_ph(nMatGB_kernel, io::ctens(jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size()));
             std::vector<io::ctens> kernel_1_pp(nMatGB_kernel, io::ctens(jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size()));
             std::vector<io::ctens> kernel_1_tph(nMatGB_kernel, io::ctens(jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size()));
             
-            auto const abcds = do_v ? vertex[0].ijkl() : construct_ijkls(jHybMatrix.size());
+            auto const abcds = do_v ? vertex[0].ijkl() : construct_ijkls(jHybMatrix.size(), U);
             
             int const size = nMatGB_kernel;
             int const chunk = (size + mpi::number_of_workers() - 1)/mpi::number_of_workers();
@@ -246,6 +247,8 @@ namespace evalsim {
                     auto const d=abcd[4];
                     
                     std::string const entry = std::to_string(2*a)+"_"+std::to_string(2*b+1)+"_"+std::to_string(2*c)+"_"+std::to_string(2*d+1);
+                    
+                    if (!n) kernel_0[n].emplace(a,b,c,d,entry,-2.*U(a,c,b,d));
                     
                     kernel_1_ph[n].emplace(a,b,c,d,entry,0.);
                     kernel_1_tph[n].emplace(a,b,c,d,entry,0.);
@@ -379,7 +382,9 @@ namespace evalsim {
             mpi::cout << "Outputting results ... " << std::flush;
             
             jsx::value jObservablesOut;
-            jsx::value jKernel_1,jKernel_2;
+            jsx::value jKernel_0,jKernel_1,jKernel_2;
+            
+            jKernel_0["static"] = func::write_functions<Value>(jParams, jHybMatrix, kernel_0);
             
             if (do_sph)
                 jKernel_1["ph"] = func::write_functions<Value>(jParams, jHybMatrix, kernel_1_ph);
@@ -394,6 +399,8 @@ namespace evalsim {
                 jKernel_2["tph"] = func::write_functions<Value>(jParams, jHybMatrix, kernel_2_tph);
             if (do_hpp)
                 jKernel_2["pp"] = func::write_functions<Value>(jParams, jHybMatrix, kernel_2_pp);
+            
+            jObservablesOut["kernel 0"] = std::move(jKernel_0);
             
             if (do_sph or do_spp or do_stph)
                 jObservablesOut["kernel 1"] = std::move(jKernel_1);
@@ -483,7 +490,7 @@ namespace evalsim {
             mpi::cout << "Calculating Asymptotic Vertex from kernels ... " << std::flush;
             
             std::vector<io::ctens> asymptotic_vertex(nMatGB*nMatGF*nMatGF, io::ctens(jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size()));
-            auto const abcds = do_v ? measured_vertex[0].ijkl() : construct_ijkls(jHybMatrix.size());
+            auto const abcds = do_v ? measured_vertex[0].ijkl() : construct_ijkls(jHybMatrix.size(), U);
             
             int const size = nMatGB;
             int const chunk = (size + mpi::number_of_workers() - 1)/mpi::number_of_workers();
@@ -553,7 +560,7 @@ namespace evalsim {
                             if (nu1_pp>=0 and nu2_pp>=0){
                                 asymptotic_vertex[n](a,b,c,d) += kernel_2_pp[n1_pp].at(a,b,c,d) + kernel_2_pp[n2_pp].at(a,b,c,d);
                             }
-                                
+                            
                         }
                         
                     }
@@ -637,20 +644,25 @@ namespace evalsim {
         template jsx::value evaluateFullVertexFromKernels<double>(jsx::value jParams, jsx::value const& jObservables);
         template jsx::value evaluateFullVertexFromKernels<ut::complex>(jsx::value jParams, jsx::value const& jObservables);
     
-        std::vector<std::vector<int>> construct_ijkls(int const size){
+        
+        template <typename Value>
+        std::vector<std::vector<int>> construct_ijkls(int const size, InteractionTensor<Value> const& U){
             std::vector<std::vector<int>> ijkls;
             int n=0;
             for (int i=0; i<size; i++)
                 for (int j=0; j<size; j++)
                     for (int k=0; k<size; k++)
                         for (int l=0; l<size; l++)
-                            if ((i==j and k==l) or (i==l and j==k)){
+                            if (std::abs(U(i,k,j,l)) > 1e-8 || (i==j and j==k and k==l) ){
                                 ijkls.push_back(std::vector<int>({n,i,j,k,l}));
                                 n+=1;
                             }
             
             return ijkls;
         };
+        
+        template std::vector<std::vector<int>> construct_ijkls<double>(int const size, InteractionTensor<double> const& U);
+        template std::vector<std::vector<int>> construct_ijkls<ut::complex>(int const size, InteractionTensor<ut::complex> const& U);
         
     }
     
