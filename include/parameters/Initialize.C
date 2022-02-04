@@ -184,8 +184,8 @@ It would be nice to do this in a more automatic fashion...
                 jParams["basis"]["transformation"] = cmat_to_rmat(cmat);
                 
             }
-            
-            if (jParams("hloc").is("two body") and jParams("hloc")("two body").is<io::cvec>()){
+                                    
+            if (jParams("hloc").is("two body") and jParams("hloc")("two body").is<jsx::object_t>() and jParams("hloc")("two body").is("real")){
                 
                 auto jTwoBody = jParams("hloc")("two body");
                 auto const cvec = jsx::at<io::cvec>( jTwoBody );
