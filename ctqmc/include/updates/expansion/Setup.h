@@ -7,6 +7,8 @@
 #include "InsertErasePairCsc.h"
 #include "InsertErasePairStd.h"
 #include "InsertEraseQuadStd.h"
+#include "GlobalSpinFlip.h"
+#include "OpShift.h"
 
 #include "../../markovchain/Update.h"
 #include "../../markovchain/MarkovChain.h"
@@ -29,6 +31,19 @@ namespace upd {
             if (jParams("quad insert").boolean()){
                         markovChain.add(mch::unique_update_ptr<Value>(new upd::Generic< QuadInsertStd<Space>, Mode, Value >(1., jParams, data)),
                                         mch::unique_update_ptr<Value>(new upd::Generic< QuadEraseStd<Space>, Mode, Value >(1., jParams, data)));
+            }
+            
+            if (jParams("spin flip").real64() > 0){
+                markovChain.add(mch::unique_update_ptr<Value>(new upd::Generic< SpinFlip<Space>, Mode, Value >(jParams("spin flip").real64(), jParams, data)),
+                                mch::unique_update_ptr<Value>(new upd::Generic< SpinFlip<Space>, Mode, Value >(jParams("spin flip").real64(), jParams, data)));
+            }
+            
+            if (jParams("shift").boolean()){
+                markovChain.add(mch::unique_update_ptr<Value>(new upd::Generic< RShift<Space>, Mode, Value >(1.0, jParams, data)),
+                                mch::unique_update_ptr<Value>(new upd::Generic< RShift<Space>, Mode, Value >(1.0, jParams, data)));
+                
+                markovChain.add(mch::unique_update_ptr<Value>(new upd::Generic< LShift<Space>, Mode, Value >(1.0, jParams, data)),
+                                mch::unique_update_ptr<Value>(new upd::Generic< LShift<Space>, Mode, Value >(1.0, jParams, data)));
             }
             
             if (!stream)

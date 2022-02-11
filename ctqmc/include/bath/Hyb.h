@@ -76,6 +76,8 @@ namespace bath {
         
         Value operator()(int flavorL, int flavorR, ut::KeyType key) const;
         
+        int flavors() const { return flavors_; }
+        
     private:
         int const flavors_;
         std::map<std::string, Simple<Value>> data_;

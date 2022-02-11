@@ -67,6 +67,8 @@ namespace params {
         defaults_["error"] = "parallel";
         defaults_["all errors"] = false;
         defaults_["quad insert"] = false;
+        defaults_["shift"] = true;
+        defaults_["spin flip"] = 0.0;
         defaults_["seed"] = 41085;
         defaults_["seed inc"] = 857;
         defaults_["expansion histogram"] = true;
