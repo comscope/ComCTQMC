@@ -69,7 +69,7 @@ int imp::get_pci_ids(std::vector<char>& pciIds) {
 void imp::init_device(int const deviceId, std::size_t processesPerDevice) {
     //int deviceId = mpi::rank_on_node(); //cudaErrchk(cudaDeviceGetByPCIBusId(&deviceId, pciId.data()));
     cudaErrchk(cudaSetDevice(deviceId));
-    
+        
     cudaDeviceProp deviceProperties; cudaErrchk(cudaGetDeviceProperties(&deviceProperties, deviceId));
     //if(deviceProperties.computeMode != cudaComputeModeExclusive && deviceProperties.computeMode != cudaComputeModeExclusiveProcess)
       //  throw std::runtime_error("Please set GPU compute mode to \"cudaComputeModeExclusive\" or \"cudaComputeModeExclusiveProcess\"");
@@ -235,8 +235,9 @@ imp::Matrix<Device, Value>::~Matrix() {
 
 //-------------------------------------------------------------------------------------------------------------------------------------------------
 
+namespace imp{
 template <>
-void imp::add<double>(double* dest, double fact, Matrix<Device, double> const& source) {
+void add<double>(double* dest, double fact, Matrix<Device, double> const& source) {
     int const N = source.I()*source.J(); int const one = 1;
     
 #if defined(USE_CUDA_SINGLE) || defined(USE_CUDA_MIXED)
@@ -275,7 +276,7 @@ void imp::add<double>(double* dest, double fact, Matrix<Device, double> const& s
 
 //TODO: do this with cudaMemcpy2d so that the cuda planar complex -> ut::complex
 template <>
-void imp::add<ut::complex>(ut::complex* dest, ut::complex fact, Matrix<Device, ut::complex> const& source) {
+void add<ut::complex>(ut::complex* dest, ut::complex fact, Matrix<Device, ut::complex> const& source) {
     int const N = source.I()*source.J(); int const one = 1;
     
     cuda_value_t<ut::complex>* planar_complex_temp = new cuda_value_t<ut::complex>[cuda_value<ut::complex>::size*N];
@@ -296,7 +297,7 @@ void imp::add<ut::complex>(ut::complex* dest, ut::complex fact, Matrix<Device, u
     delete[] ut_complex_temp;
     
 }
-
+}
 
 
 
