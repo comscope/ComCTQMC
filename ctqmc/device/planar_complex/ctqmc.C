@@ -21,7 +21,11 @@ namespace ctqmc{
     std::vector<std::int64_t> mcIds; //Id of Markov chain
     if(mpi::rank() == mpi::master) {
         
-        int deviceCount = 0; cudaErrchk(cudaGetDeviceCount(&deviceCount));
+        try {
+            int deviceCount = 0; cudaErrchk(cudaGetDeviceCount(&deviceCount));
+        } catch (std::runtime_error &exc) {
+            std::cerr << "CUDA error collecting device count: " << exc.what() << std::endl;
+        }
         std::map<std::string,int> rank_on_node;
         
         std::int64_t mcId = 0;
@@ -34,14 +38,13 @@ namespace ctqmc{
             if(rank_on_node[nodeName] < deviceCount)
                 deviceId[rank] = rank_on_node[nodeName];
             
-            //mpi::cout << rank_on_node[nodeName] << " " << nodeName << " " << rank << " " << deviceId[rank] << "\n";
-            
             mcIds.push_back(mcId);
             mcId += (deviceId[rank] != -1 and streamsPerProcess) ? streamsPerProcess : 1;
             mcIds.push_back(mcId);
         }
     }
     mpi::bcast(deviceId, mpi::master);  mpi::scatter(mcIds, 2, mpi::master);
+
     
     jsx::value jSimulation = jsx::array_t(mcIds.back() - mcIds.front());
     for(auto mcId = mcIds.front(); mcId < mcIds.back(); ++mcId)
