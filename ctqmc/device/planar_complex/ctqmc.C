@@ -21,8 +21,9 @@ namespace ctqmc{
     std::vector<std::int64_t> mcIds; //Id of Markov chain
     if(mpi::rank() == mpi::master) {
         
+        int deviceCount = 0; 
         try {
-            int deviceCount = 0; cudaErrchk(cudaGetDeviceCount(&deviceCount));
+            cudaErrchk(cudaGetDeviceCount(&deviceCount));
         } catch (std::runtime_error &exc) {
             std::cerr << "CUDA error collecting device count: " << exc.what() << std::endl;
         }
