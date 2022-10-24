@@ -143,7 +143,7 @@ namespace linalg {
     
     double spectral_norm(io::rmat const& matrix) {
         char const jobu = 'N', jobvt = 'N';
-        int const m = matrix.I(), n = matrix.J(), lda = matrix.I(), ldu = 1, ldvt = 1, lwork = std::max(1, std::max(3*std::min(m, n) + std::max(m, n), 5*std::min(m, n)));
+        int const m = matrix.I(), n = matrix.J(), lda = matrix.I(), ldu = m, ldvt = n, lwork = std::max(1, std::max(3*std::min(m, n) + std::max(m, n), 5*std::min(m, n)));
         io::rmat a(matrix); double s[std::min(m, n)]; double work[lwork];
         int info;
         
