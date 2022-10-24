@@ -54,7 +54,16 @@ namespace evalsim {
     }
 
     jsx::value get_observables(jsx::value & jParams, std::string const name) {
-        jsx::value jMeasurements = mpi::read(name);  io::from_tagged_json(jMeasurements);
+        jsx::value jMeasurements;
+        if (jParams.is("directories")) {
+            evalsim::MeasurementCombiner combiner;
+            combiner.combine(jParams, name);
+            jMeasurements = combiner.data();
+            
+        } else {
+            jMeasurements = mpi::read(name);
+        }
+        io::from_tagged_json(jMeasurements);
         
         if(jParams.is("complex") ? jParams("complex").boolean() : false)
             return evalsim::evalsim<ut::complex>(jParams, jMeasurements);

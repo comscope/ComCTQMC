@@ -5,6 +5,7 @@
 
 #include "partition/Evalsim.h"
 #include "worm/Evalsim.h"
+#include "include/combine_results.h"
 
 #include "../ctqmc/include/config/Worms.h"
 #include "../ctqmc/include/Params.h"
