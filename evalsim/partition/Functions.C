@@ -307,14 +307,18 @@ namespace evalsim {
                 
                 std::vector<io::cmat> aux(selfenergy.size(), io::cmat(norb, norb));
                 
-                for(std::size_t n = 0; n < size; ++n) {
-                    io::cmat aux_inv(norb, norb);
-                    
+                for(std::size_t n = 0; n < size; ++n){
                     for(std::size_t i = 0; i < norb; ++i)
-                        for(std::size_t j = 0; j < norb; ++j)
-                                aux_inv(i, j) = (i == j ? iomega(n) + selfMoments[0](i,j) : .0) - selfenergy[n](i, j);
+                        aux[n](i, i) = 1./(iomega(n) + selfMoments[0](i,i)  - selfenergy[n](i, i));
                         
-                    aux[n] = linalg::inv(aux_inv);
+                    for(std::size_t i = 0; i < norb; ++i)
+                        for(std::size_t j = 0; j < norb; ++i)
+                            if (i!=j){
+                                aux[n](i, j) = -2./(iomega(n) + selfMoments[0](i,j)  - selfenergy[n](i, j));
+                                aux[n](i, j) += aux[n](i, i) + aux[n](j, j);
+                                aux[n](i, j) *= 0.5;
+                            }
+                    
                 }
                 
                 return aux;
