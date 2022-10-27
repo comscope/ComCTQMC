@@ -305,18 +305,24 @@ namespace evalsim {
                 
                 std::size_t const norb = jHybMatrix.size();
                 
-                std::vector<io::cmat> aux(selfenergy.size(), io::cmat(norb, norb));
+                std::vector<io::cmat> aux(size, io::cmat(norb, norb));
                 
                 for(std::size_t n = 0; n < size; ++n){
+                    io::cmat aux_inv(norb, norb);
+                    
+                    //the standard auxilliary for the diagonal
                     for(std::size_t i = 0; i < norb; ++i)
-                        aux[n](i, i) = 1./(iomega(n) + selfMoments[0](i,i)  - selfenergy[n](i, i));
-                        
+                        for(std::size_t j = 0; j < norb; ++j)
+                            aux_inv(i, j) = (i == j ? iomega(n) : .0) + selfMoments[0](i,j) - selfenergy[n](i, j);
+                    
+                    //but if there are off-diagonals, we do the full inverse
+                    aux[n] = linalg::inv(aux_inv);
+
+                    //and actually want to continue an effective density matrix element 
                     for(std::size_t i = 0; i < norb; ++i)
-                        for(std::size_t j = 0; j < norb; ++i)
+                        for(std::size_t j = 0; j < norb; ++j)
                             if (i!=j){
-                                aux[n](i, j) = -2./(iomega(n) + selfMoments[0](i,j)  - selfenergy[n](i, j));
-                                aux[n](i, j) += aux[n](i, i) + aux[n](j, j);
-                                aux[n](i, j) *= 0.5;
+                                aux[n](i, j) = 0.5 * (aux[n](i, i) + aux[n](j, j) + 2*aux[n](i, j));
                             }
                     
                 }

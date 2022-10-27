@@ -28,4 +28,5 @@ partition/Probabilities.o \
 partition/Occupation.o \
 partition/Moments.o \
 partition/Functions.o \
-partition/Evalsim.o
+partition/Evalsim.o \
+include/combine_results.o
