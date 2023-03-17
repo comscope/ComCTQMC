@@ -44,8 +44,8 @@ namespace evalsim {
                     
                     mpi::cout << "Enforcing symmetries ... " << std::flush;
                     
-                    std::vector<io::ctens> susc_symm(greentwo.size(), io::ctens(jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size()));
-                    func::vertex::enforce_symmetries<Value>(jParams, frequencies, greentwo,susc_symm);
+                    //std::vector<io::ctens> susc_symm(greentwo.size(), io::ctens(jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size()));
+                    //func::vertex::enforce_symmetries<Value>(jParams, frequencies, greentwo, susc_symm);
                     
                     mpi::cout << "Ok" << std::endl;
                     
@@ -54,7 +54,7 @@ namespace evalsim {
                     
                     jsx::value jObservablesOut;
                     
-                    jObservablesOut["susceptibility"] = func::write_functions<Value>(jParams, jHybMatrix, susc_symm);
+                    jObservablesOut["susceptibility"] = func::write_functions<Value>(jParams, jHybMatrix, greentwo);
                     
                     mpi::cout << "Ok" << std::endl;
                     
@@ -98,8 +98,8 @@ namespace evalsim {
                     
                     mpi::cout << "Enforcing symmetries ... " << std::flush;
                     
-                    std::vector<io::ctens> susc_symm(greentwo.size(), io::ctens(jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size()));
-                    func::vertex::enforce_symmetries<Value>(jParams, frequencies, greentwo, susc_symm);
+                    //std::vector<io::ctens> susc_symm(greentwo.size(), io::ctens(jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size()));
+                    //func::vertex::enforce_symmetries<Value>(jParams, frequencies, greentwo, susc_symm);
                     
                     mpi::cout << "Ok" << std::endl;
                     
@@ -109,7 +109,7 @@ namespace evalsim {
                         
                         mpi::cout << "Computing full vertex ... " << std::flush;
                         
-                        func::vertex::compute_full_vertex<Value>(jParams, frequencies, green, greenOM, susc_symm, full_vertex);
+                        func::vertex::compute_full_vertex<Value>(jParams, frequencies, green, greenOM, greentwo, full_vertex);
                         
                         mpi::cout << "Ok" << std::endl;
                     }
@@ -119,7 +119,7 @@ namespace evalsim {
                     
                     jsx::value jObservablesOut;
                     
-                    jObservablesOut["susceptibility"] = func::write_functions<Value>(jParams, jHybMatrix, susc_symm);
+                    jObservablesOut["susceptibility"] = func::write_functions<Value>(jParams, jHybMatrix, greentwo);
                     
                     if(jWorm.is("full") ? jWorm("full").boolean() : false)
                         jObservablesOut["full vertex"] = func::write_functions<Value>(jParams, jHybMatrix, full_vertex);
@@ -200,19 +200,19 @@ namespace evalsim {
                                 if (i_w_g < 0 or w < 0) throw std::runtime_error("vertex:: insufficient frequencies in green's function to compute disconnected part");
                                 
                                 for(auto const ijkl : full_in_connected_out[n].ijkl()){
-                                
-                                auto const i = ijkl[1];
-                                auto const j = ijkl[2];
-                                auto const k = ijkl[3];
-                                auto const l = ijkl[4];
                                     
-                                auto const disconnected = -(
-                                                            ((i == j and k==l and !omega_b(nu)) ? green[i_w_g](i,j)*green[w](k,l) : 0) -
-                                                            ((i == l and j==k and i_w==j_w) ? green[i_w_g](i,l)*green[w](j,k) : 0 )
-                                                            )*beta;
-                                                
-                                //Due to the read function, full is the wrong sign leading to the flipped signs below.
-                                full_in_connected_out[n](i,j,k,l) = disconnected - full_in_connected_out[n](i,j,k,l);
+                                    auto const i = ijkl[1];
+                                    auto const j = ijkl[2];
+                                    auto const k = ijkl[3];
+                                    auto const l = ijkl[4];
+                                        
+                                    auto const disconnected = -(
+                                                                ((i == j and k==l and !omega_b(nu)) ? green[i_w_g](i,j)*green[w](k,l) : 0) -
+                                                                ((i == l and j==k and i_w==j_w) ? green[i_w_g](i,l)*green[w](j,k) : 0 )
+                                                                )*beta;
+                                                    
+                                    //Due to the read function, full is the wrong sign leading to the flipped signs below.
+                                    full_in_connected_out[n](i,j,k,l) = disconnected - full_in_connected_out[n](i,j,k,l);
                                                 
                                 }
                             }

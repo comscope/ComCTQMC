@@ -16,6 +16,7 @@
 
 #include "Functions.h"
 #include "Bessel.h"
+#include "intermediate_rep.h"
 
 namespace evalsim {
     
@@ -63,61 +64,38 @@ namespace evalsim {
                     
                     Read_intermediate_rep_function(jsx::value const& jParams, jsx::value const& jPartition) :
                     beta_(jParams("beta").real64()),
-                    nMatGF_((std::is_same<T,double>::value ? 1 : 2) * (jPartition.is("matsubara cutoff") ? jPartition("matsubara cutoff").int64() : 50 )){
-                        
-                        double const wmax = jPartition("cutoff").real64();
-                        double lambda = irbasis::get_closest_lambda(wmax*beta_);
-                        
-                        std::string const type{ std::is_same<Time,Fermion>::value ? "F" : "B" };
-                        b_ = irbasis::load(type, lambda, "./irbasis.h5");
-                        
-                    }
+                    nMatGF_((std::is_same<T,double>::value ? 1 : 2) * (jPartition.is("matsubara cutoff") ? jPartition("matsubara cutoff").int64() : 50 )),
+                    Tnl_(std::is_same<Time,Fermion>::value ? "F" : "B", nMatGF_, jPartition("cutoff").int64(), beta_){ }
                     
                     io::cvec operator()(jsx::value const& jFunction){
                         
-                        auto ir_function = jsx::at<io::cvec>(jFunction);
-                        
-                        int ntau = 10*nMatGF_;
-                        io::cvec tau_function(ntau, 0);
                         auto const shift = (std::is_same<T,double>::value ? 0 : nMatGF_/2);
                         
-                        for (int t=0; t<ntau; t++){
-                            double x = 2.*t/(ntau-1) - 1;
-                            
-                            for (int l=0; l<b_.dim(); l++){
-                                
-                                tau_function[t] += ir_function[l]*b_.ulx(l,x);
-                            }
-                        }
+                        auto ir_function = jsx::at<io::cvec>(jFunction);
                         
-                        io::cvec omega_function(nMatGF_, 0);
-                        for (int t=0; t<ntau; t++){
-                            
-                            double const phi = M_PI*t/(ntau-1);
-                            ut::complex const fact{ std::cos(2.*phi), std::sin(2.*phi) };
-                            ut::complex val{ std::is_same<Time,Fermion>::value ? ut::complex{ std::cos(phi), std::sin(phi) } : 1. };
-                            
+                        io::cvec function(nMatGF_, 0);
+
+                        for (int l=0; l<Tnl_.nPol(); l++){
                             for (int n=0; n<nMatGF_; n++){
-                                omega_function[n] += tau_function[t]*val;
-                                val *= fact;
+                                int const n_ = n - shift;
+                                function[n] += ir_function[l]*Tnl_(n_,l);
                             }
                         }
-                        
-                        auto scaling = -2./ntau/beta_;
-                        for (auto & x : omega_function)
-                            x *= scaling;
                             
-                        return omega_function;
+                        auto scaling = -2./beta_;
+                        for (auto & x : function)
+                            x *= scaling;
+                        
+                        return function;
                     }
                     
                 private:
                     int const nMatGF_;
                     double const beta_;
                     
-                    irbasis::basis b_;
+                    ir::Transform<T> Tnl_;
                     
                 };
-            
             
             template<typename T>
             struct Read_intermediate_rep_function<T,Fermion,Boson>{
@@ -125,117 +103,112 @@ namespace evalsim {
                 Read_intermediate_rep_function(jsx::value const& jParams, jsx::value const& jPartition) :
                 beta_(jParams("beta").real64()),
                 nMatGB_((std::is_same<T,double>::value ? 1 : 2) * jPartition("boson cutoff").int64()),
-                nMatGF_((std::is_same<T,double>::value ? 1 : 2) * (jPartition.is("matsubara cutoff") ? jPartition("matsubara cutoff").int64() : 50 ) ){
-                    
-                    double const wmax = jPartition("cutoff").real64();
-                    double lambda = irbasis::get_closest_lambda(wmax*beta_);
-                    b_ = irbasis::load("F", lambda, "./irbasis.h5");
-                    
-                }
+                nMatGF_(2 * jPartition("fermion cutoff").int64()),
+                Tnl_("F", nMatGF_/2, jPartition("ir cutoff").real64(), beta_){}
                 
                 io::cvec operator()(jsx::value const& jFunction){
                     
                     auto ir_function = jsx::at<io::cvec>(jFunction);
-                    int ntau = 10*nMatGF_;
-                    io::cmat tau_function(nMatGB_, ntau, 0);
                     auto const shift = nMatGF_/2;
                     
-                    for (int t=0; t<ntau; t++){
-                        double x = 2.*t/(ntau-1) - 1;
-                            
-                        for (int om=0; om<nMatGB_; om++){
-                            for (int l=0; l<b_.dim(); l++){
-                                int const n = om*b_.dim() + l;
-                                
-                                tau_function(om,t) += ir_function[n]*b_.ulx(l,x);
-                            }
-                        }
-                    }
-                        
-                    io::cvec omega_function(nMatGF_*nMatGB_, 0);
-                    for (int t=0; t<ntau; t++){
-                            
-                        double const phi = M_PI*t/(ntau-1);
-                        ut::complex const fact{ std::cos(2.*phi), std::sin(2.*phi) };
-                        ut::complex val = ut::complex{ std::cos(phi), std::sin(phi) };
-                            
-                        for (int om=0; om<nMatGB_; om++){
-                            auto it_f = omega_function.begin()+om*nMatGF_ + shift;
-                            auto it_b = it_f - 1;
-                            
-                            for (int nu=shift; nu<nMatGF_; nu++){
-                                *it_f++ += tau_function(om,t)*val;
-                                *it_b-- += tau_function(om,t)*std::conj(val);
-                                val *= fact;
-                            }
-                        }
-                    }
+                    io::cvec function(nMatGF_*nMatGB_,0);
                     
-                    auto scaling = -2./ntau/beta_;
-                    for (auto & x : omega_function)
+                    for (int m=0; m<nMatGB_; m++)
+                        for (int n=0; n<nMatGF_; n++){
+                            int const n_ = n - shift;
+                            
+                            for (int l=0; l<Tnl_.nPol(); l++){
+                                function[m*nMatGF_+n] += ir_function[m*Tnl_.nPol()+l]*Tnl_(n_,l);
+                            }
+                        }
+                    
+                    auto scaling = -2./beta_;
+                    for (auto & x : function){
                         x *= scaling;
-                    
-                    return omega_function;
+                    }
+                    return function;
                 }
                 
             private:
-                int const nMatGF_, nMatGB_;
+                int nMatGF_, nMatGB_;
                 double const beta_;
                 
-                irbasis::basis b_;
-                
+                ir::Transform<T> Tnl_;
             };
+            
+            template<typename T>
+            struct Read_intermediate_rep_function<T,Fermion,Fermion,Boson>{
                 
-                template<typename T>
-                struct Read_intermediate_rep_function<T,Fermion,Fermion,Boson>{
+                Read_intermediate_rep_function(jsx::value const& jParams, jsx::value const& jPartition) :
+                beta_(jParams("beta").real64()),
+                nMatGB_((std::is_same<T,double>::value ? 1 : 2) * jPartition("boson cutoff").int64()),
+                nMatGF_(2 * jPartition("fermion cutoff").int64()),
+                Tnl_("F", nMatGF_/2, jPartition("ir cutoff").real64(), beta_){}
+                
+                io::cvec operator()(jsx::value const& jFunction){
                     
-                    Read_intermediate_rep_function(jsx::value const& jParams, jsx::value const& jPartition) :
-                    nMatGB_((std::is_same<T,double>::value ? 1 : 2) * jPartition("boson cutoff").int64()),
-                    nMatGF_(2*(jPartition.is("matsubara cutoff") ? jPartition("matsubara cutoff").int64() : 50 )),
-                    nPol_(jPartition("fermion cutoff").int64()),
-                    beta_(jParams("beta").real64()),
-                    Tnl_(nPol_,nMatGF_){}
+                    auto ir_function = jsx::at<io::cvec>(jFunction);
+                    auto const shift = nMatGF_/2;
                     
-                    io::cvec operator()(jsx::value const& jFunction){
-                        
-                        io::cvec legendre_function = jsx::at<io::cvec>(jFunction);
-                        
-                        io::cvec function(nMatGF_*nMatGF_*nMatGB_,0);
-                        
-                        for (int l=0; l<nPol_; l++)
-                            for (int m=0; m<nPol_; m++){
+                    io::cvec function(nMatGF_*nMatGF_*nMatGB_,0);
+                    for (int m=0; m<1; m++)
+                        for (int n1=0; n1<nMatGF_; n1++){
+                            int const n1_ = n1 - shift;
+                            
+                            for (int n2=0; n2<nMatGF_; n2++){
+                                int const n2_ = n2 - shift;
                                 
-                                int const s = m%2 ? 1 : -1;
-                                double const adj=-s*std::sqrt(2*l+1.)*std::sqrt(2*m+1.)/beta_;
+                                int const n = m*nMatGF_*nMatGF_ + n1*nMatGF_ + n2;
                                 
-                                for (int k=0; k<nMatGB_; k++){
-                                    int n = l + m*nPol_ + k*nPol_*nPol_;
-                                    legendre_function[n]*=adj;
-                                    
-                                    for (int i=0; i<nMatGF_; i++){
-                                        int const i_=i-nMatGF_/2;
-                                        for (int j=0; j<nMatGF_; j++){
-                                            int const j_=j-nMatGF_/2;
-                                            
-                                            function[i + j*nMatGF_ + k*nMatGF_*nMatGF_] += legendre_function[n]*Tnl_(i_,l)*std::conj(Tnl_(j_,m));
-                                            
-                                        }
+                                for (int l1=0; l1<Tnl_.nPol(); l1++){
+                                    for (int l2=0; l2<Tnl_.nPol(); l2++){ //Tnl_.nPol()
+                                        double const s = l2%2 ? 1 : -1;
+                                        function[n] += s*ir_function[m*Tnl_.nPol()*Tnl_.nPol() + l1*Tnl_.nPol() + l2] * Tnl_(n1_,l1) * std::conj(Tnl_(n2_,l2));
                                     }
                                 }
                             }
-                        
-                        
-                        return function;
-                        
+                        }
+                    
+                    std::cout  << "\n";
+                    std::cout  << "\n";
+                    
+                    ut::complex i{0,1};
+                    for (int l1=0; l1<6; l1++){
+                        for (int l2=0; l2<6; l2++){
+                            ut::complex orthogonality = 0;
+                            auto arg = std::sqrt(2.*l1+1)*std::sqrt(2.*l2+1);
+                            
+                            ut::complex const s = l2%2 ? 1 : i;
+                            
+                            for (int n1=0; n1<nMatGF_; n1++){
+                                int const n1_ = n1 - shift;
+                                
+                                for (int n2=0; n2<nMatGF_; n2++){
+                                    int const n2_ = n2 - shift;
+                                    
+                                    orthogonality += s*Tnl_(n1_,l1) * Tnl_(n2_,l2);
+                                }
+                            }
+                            std::cout << arg*std::abs(orthogonality) << " ";
+                        }
+                        std::cout  << "\n";
                     }
+                    std::cout  << "\n";
                     
-                private:
-                    int const nMatGB_,nMatGF_,nPol_;
-                    double const beta_;
                     
-                    be::Transform<T,Fermion> Tnl_;
-                    
-                };
+                    auto scaling = -4./beta_;
+                    for (auto & x : function){
+                        x *= scaling;
+                    }
+                    return function;
+                }
+                
+            private:
+                int nMatGF_, nMatGB_;
+                double const beta_;
+                
+                ir::Transform<T> Tnl_;
+            };
             
                 
                 template <typename T, typename ...> struct Read_legendre_function;
@@ -273,7 +246,7 @@ namespace evalsim {
                                 int const s = m%2 ? 1 : -1;
                                 double const adj=-s*std::sqrt(2*l+1.)*std::sqrt(2*m+1.)/beta_;
                                 
-                                for (int k=0; k<nMatGB_; k++){
+                                for (int k=0; k<1; k++){
                                     int n = l + m*nPol_ + k*nPol_*nPol_;
                                     legendre_function[n]*=adj;
                                     
@@ -289,6 +262,29 @@ namespace evalsim {
                                 }
                             }
                         
+                        
+                        std::cout  << "\n";
+                        std::cout  << "\n";
+                        
+                        ut::complex i{0,1};
+                        for (int l1=0; l1<6; l1++){
+                            for (int l2=0; l2<6; l2++){
+                                ut::complex orthogonality = 0;
+                                
+                                for (int n1=0; n1<nMatGF_; n1++){
+                                    int const n1_ = n1 - nMatGF_/2;
+                                    
+                                    for (int n2=0; n2<nMatGF_; n2++){
+                                        int const n2_ = n2 - nMatGF_/2;
+                                        
+                                        orthogonality += Tnl_(n1_,l1) * Tnl_(n2_,l2);
+                                    }
+                                }
+                                std::cout << std::abs(orthogonality) << " ";
+                            }
+                            std::cout  << "\n";
+                        }
+                        std::cout  << "\n";
                         
                         return function;
                         

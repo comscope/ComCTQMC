@@ -110,15 +110,15 @@ namespace evalsim {
                     
                     mpi::cout << "Enforcing symmetries ... " << std::flush;
                     
-                    std::vector<io::ctens> susc_symm(hedin.size(), io::ctens(jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size()));
-                    func::hedin::ph::enforce_symmetries<Value>(jParams, frequencies, hedin, susc_symm);
-                    hedin.clear();
+                    //std::vector<io::ctens> susc_symm(hedin.size(), io::ctens(jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size()));
+                    //func::hedin::ph::enforce_symmetries<Value>(jParams, frequencies, hedin, susc_symm);
+                    //hedin.clear();
                     
                     mpi::cout << "Ok" << std::endl;
                     
                     jsx::value jObservablesOut;
                     
-                    jObservablesOut["susceptibility"] = func::write_functions<Value>(jParams, jHybMatrix, susc_symm);
+                    jObservablesOut["susceptibility"] = func::write_functions<Value>(jParams, jHybMatrix, hedin);
                     
                     return jObservablesOut;
                     
@@ -165,16 +165,16 @@ namespace evalsim {
                     
                     mpi::cout << "Enforcing symmetries ... " << std::flush;
                     
-                    std::vector<io::ctens> susc_symm(susc.size(), io::ctens(jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size()));
-                    func::hedin::ph::enforce_symmetries<Value>(jParams, frequencies, susc, susc_symm);
-                    susc.clear();
+                    //std::vector<io::ctens> susc_symm(susc.size(), io::ctens(jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size(), jHybMatrix.size()));
+                    //func::hedin::ph::enforce_symmetries<Value>(jParams, frequencies, susc, susc_symm);
+                    //susc.clear();
                     
                     mpi::cout << "Ok" << std::endl;
                     
                     
                     jsx::value jObservablesOut;
                     
-                    jObservablesOut["susceptibility"] = func::write_functions<Value>(jParams, jHybMatrix, susc_symm);
+                    jObservablesOut["susceptibility"] = func::write_functions<Value>(jParams, jHybMatrix, susc);
                     
                     return jObservablesOut;
                 }

@@ -66,7 +66,7 @@ namespace meas {
 
         for(std::size_t i = 0; i < arg.size(); ++i)
             for(std::size_t j = 0; j < arg.size(); ++j){
-                cov[i*arg.size() + j] = arg[i]*std::conj(arg[j]);
+                cov[i*arg.size() + j] = std::imag(arg[i])*std::imag(arg[j]);
                 if ( std::isnan(cov[i*arg.size() + j].real()) ) { is_bad_worker = true; break; }
             }
         
