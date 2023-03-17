@@ -297,6 +297,10 @@ namespace evalsim {
             template<typename Value>
             std::vector<io::cmat> get_aux_green(jsx::value const& jParams, std::vector<io::cmat> const& selfenergy, std::vector<io::Matrix<Value>> const& selfMoments)
             {
+                //This MUST match how things are done in analytical continuation connections
+                //Currently -- we are connected to Portobello
+                //Do not change without working with developers of connected packages
+                //  ID in portobello: dd6ec036-64af-445f-b577-209586826604
                 
                 iOmega const iomega(jParams("beta").real64());
                 jsx::value const jHybMatrix = jParams("hybridisation")("matrix");
@@ -322,7 +326,8 @@ namespace evalsim {
                     for(std::size_t i = 0; i < norb; ++i)
                         for(std::size_t j = 0; j < norb; ++j)
                             if (i!=j){
-                                aux[n](i, j) = 0.5 * (aux[n](i, i) + aux[n](j, j) + 2*aux[n](i, j));
+                                auto const sign = selfenergy[0](i,j).imag() > 0 ? -1.0 : 1.0;
+                                aux[n](i, j) = 0.5 * (aux[n](i, i) + aux[n](j, j) + 2*sign*aux[n](i, j));
                             }
                     
                 }
