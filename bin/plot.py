@@ -40,7 +40,7 @@ def Arguments(add_help=False):
                      help="plot a slice of vertex_key at omega_boson = cutoff")
                      
     group.add_argument("--key", dest="key",
-                     default="2_1_0_3",
+                     default="",
                      help="Name vertex component to plot")
                      
     group.add_argument("--cutoff", dest="cutoff",
@@ -49,21 +49,22 @@ def Arguments(add_help=False):
                      
     return parser
 
-def scatter(ax, func):
-    
+def scatter(ax, func, label):
     n = len(func)
     x = list(range(n))
-    ax.scatter(x,func)
+    ax.plot(x,func, label = label)
     
 def image(fig, ax, func, nf, nb, ib):
-    divnorm=colors.TwoSlopeNorm(vmin=-5., vcenter=0., vmax=10)
     
     func = np.array(func)
     func = func.reshape(nb,nf,nf)
-    nr = 10
+    nr = 40
     mid = int((nf+ib)/2)
-    cs = ax.imshow(func[ib,:,:], interpolation='bilinear')
-    #cs = ax.imshow(func[ib,mid-nr:mid+nr,mid-nr:mid+nr], interpolation='bilinear', cmap = "coolwarm", norm=divnorm)
+    if 0 and np.min(func) < 0 and np.max(func) > 0:
+        divnorm=colors.TwoSlopeNorm(vmin=np.min(func), vcenter=0, vmax=np.max(func))
+        cs = ax.imshow(func[ib,mid-nr:mid+nr,mid-nr:mid+nr], interpolation='bilinear', cmap = "coolwarm", norm=divnorm)
+    else:
+        cs = ax.imshow(func[ib,:,:], interpolation='bilinear')
     fig.colorbar(cs, ax=ax)
 
 def main():
@@ -75,51 +76,83 @@ def main():
     with open(f"{opts.name}.obs.json", "r") as f:
         data = f.read()
         obs = json.loads(data)
-    
+        
+    if opts.is_vertex:
+        with open(f"{opts.name}.json", "r") as f:
+            data = f.read()
+            data = json.loads(data)
+            try:
+                space = opts.space.split(" ")
+                if len(space)>1:
+                    space = " ".join(space[:-1])
+                else:
+                    space = space[0]
+                nb = int(data[space]["boson cutoff"])
+                nf = 2*int(data[space]["fermion cutoff"])
+            except:
+                space = "kernels"
+                nb = int(data[space]["vertex boson cutoff"])
+                nf = 2*int(data[space]["vertex fermion cutoff"])
+        
     field = obs[opts.space]
     for k in opts.field.split(","):
         field=field[k]
     
     if opts.field == "expansion histogram":
         fig,ax = plt.subplots(1,1)
-        scatter(ax,field)
+        scatter(ax,field, "expansion histogram")
         plt.show()
         return
         
     if opts.is_vertex:
-        if 1:
+        if opts.key == "":
             for key in field.keys():
                 fig,ax = plt.subplots(2,1)
-                re = image(fig, ax[0], field[key]["function"]["real"], 40, 10, opts.cutoff)
-                im = image(fig, ax[1], field[key]["function"]["imag"], 40, 10, opts.cutoff)
+                re = image(fig, ax[0], field[key]["function"]["real"], nf, nb, opts.cutoff)
+                im = image(fig, ax[1], field[key]["function"]["imag"], nf, nb, opts.cutoff)
                 ax[0].set_title(key)
-        else:
+        elif opts.key == "charge":
             for sign in [-1,1]:
                 fig,ax = plt.subplots(2,1)
                 key1 = "0_1_0_1"
                 key2 = "0_1_2_3"
-                re = image(fig, ax[0], np.array(field[key1]["function"]["real"]) + sign*np.array(field[key2]["function"]["real"]), 100, 10, opts.cutoff)
-                im = image(fig, ax[1], np.array(field[key1]["function"]["imag"]) + sign*np.array(field[key2]["function"]["imag"]), 100, 10, opts.cutoff)
+                re = image(fig, ax[0], np.array(field[key1]["function"]["real"]) + sign*np.array(field[key2]["function"]["real"]), nf, nb, opts.cutoff)
+                im = image(fig, ax[1], np.array(field[key1]["function"]["imag"]) + sign*np.array(field[key2]["function"]["imag"]), nf, nb, opts.cutoff)
                 ax[0].set_title(sign)
+        else:
+            key = opts.key
+            fig,ax = plt.subplots(2,1)
+            re = image(fig, ax[0], field[key]["function"]["real"], nf, nb, opts.cutoff)
+            im = image(fig, ax[1], field[key]["function"]["imag"], nf, nb, opts.cutoff)
+            ax[0].set_title(key)
+            
         
         plt.show()
         return
     
-    for key in field.keys():
-        fig,ax = plt.subplots(2,1)
+        
+    if opts.key == "":
+        keys = field.keys()
+    else:
+        keys = [opts.key]
+    
+    fig,ax = plt.subplots(2,1)
+    for key in keys:
+        
         im = field[key]["function"]["imag"]
         re = field[key]["function"]["real"]
         
         cutoff = min(opts.cutoff, len(im))
         
-        scatter(ax[0],im[:cutoff])
+        scatter(ax[0],im[:cutoff], key)
         ax[0].set_ylabel(f"Im[{opts.field}]")
         
-        scatter(ax[1],re[:cutoff])
+        scatter(ax[1],re[:cutoff], key)
         ax[1].set_ylabel(f"Re[{opts.field}]")
         ax[1].set_xlabel(f"n")
         ax[0].set_title(key)
-        
+
+    plt.legend()
     plt.show()
     
     
