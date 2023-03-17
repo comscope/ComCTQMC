@@ -1,5 +1,6 @@
 target_sources(ctqmc
 	PRIVATE
+include/combine_results.C
 worm/FullVertexKernels.C
 worm/Green.C
 worm/GreenImpr.C

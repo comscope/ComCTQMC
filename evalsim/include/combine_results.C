@@ -8,6 +8,7 @@ void MeasurementCombiner::combine(jsx::value const& jParams, std::string const n
     for (auto & d : dirs){
         
         auto dir_name = d.string();
+        std::cout << dir_name << "\n";
         auto const jMeasurements = mpi::read(dir_name + name);
         
         if (first){ data_ = jMeasurements;}
